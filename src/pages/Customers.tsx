@@ -1,9 +1,14 @@
 import { useState } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign } from "lucide-react";
-import { customers as initialCustomers, employees, Customer, CustomerTask, monthNames } from "@/data/mockData";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2 } from "lucide-react";
+import { useCustomers } from "@/hooks/useCustomers";
+import { Task } from "@/hooks/useProjects";
+import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
 
-function ProgressBar({ tasks }: { tasks: CustomerTask[] }) {
+const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const YEARS = [2025, 2026, 2027];
+
+function ProgressBar({ tasks }: { tasks: Task[] }) {
   const done = tasks.filter(t => t.status === "Done").length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
   return (
@@ -14,29 +19,61 @@ function ProgressBar({ tasks }: { tasks: CustomerTask[] }) {
   );
 }
 
+const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "" };
+
 export default function Customers() {
-  const [customers, setCustomers] = useState(initialCustomers);
+  const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask } = useCustomers();
+  const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", detail: "", paymentFee: "", projectTitle: "", note: "", month: 1 });
+  const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", month: 1 });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
+  const [filterYear, setFilterYear] = useState<number>(2026);
+
+  // Task modal state
+  const [taskModal, setTaskModal] = useState<{ customerId: string; task?: Task } | null>(null);
+  const [taskForm, setTaskForm] = useState(emptyTask);
+
+  // Edit customer modal
+  const [editModal, setEditModal] = useState<typeof form & { id: string } | null>(null);
 
   const months = [...new Set(customers.map(c => c.month))].sort();
   const filtered = filterMonth === "all" ? customers : customers.filter(c => c.month === filterMonth);
-  const grouped: Record<number, Customer[]> = {};
+  const grouped: Record<number, typeof customers> = {};
   filtered.forEach(c => { if (!grouped[c.month]) grouped[c.month] = []; grouped[c.month].push(c); });
 
-  const addCustomer = () => {
+  const handleAddCustomer = async () => {
     if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    const cust: Customer = { id: Date.now().toString(), ...form, tasks: [] };
-    setCustomers(prev => [...prev, cust]);
-    setForm({ name: "", detail: "", paymentFee: "", projectTitle: "", note: "", month: 1 });
+    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, month: form.month });
+    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", month: 1 });
     setShowAdd(false);
-    toast({ title: "Customer added!" });
   };
+
+  const openAddTask = (customerId: string) => {
+    setTaskForm(emptyTask);
+    setTaskModal({ customerId });
+  };
+
+  const openEditTask = (customerId: string, task: Task) => {
+    setTaskForm({ name: task.name, status: task.status, priority: task.priority, assigned_to: task.assigned_to || [], due_date: task.due_date || "", start_date: task.start_date || "", link: task.link || "", comments: task.comments || "" });
+    setTaskModal({ customerId, task });
+  };
+
+  const handleSaveTask = async () => {
+    if (!taskModal || !taskForm.name.trim()) { toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" }); return; }
+    if (taskModal.task) {
+      await updateTask(taskModal.task.id, taskForm);
+    } else {
+      await addTask({ ...taskForm, task_type: "customer", customer_id: taskModal.customerId });
+    }
+    setTaskModal(null);
+  };
+
+  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
     <div className="p-6 page-enter">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Customers</h1>
@@ -47,100 +84,149 @@ export default function Customers() {
         </button>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-2 mb-6 animate-stagger-2 flex-wrap">
-        <button onClick={() => setFilterMonth("all")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>All</button>
-        {months.map(m => (
-          <button key={m} onClick={() => setFilterMonth(m)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-            {monthNames[m]}
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-6 animate-stagger-2">
+        {/* Year filter */}
+        <div className="flex gap-1">
+          {YEARS.map(y => (
+            <button key={y} onClick={() => setFilterYear(y)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${filterYear === y ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              {y}
+            </button>
+          ))}
+        </div>
+        <div className="w-px h-5 bg-border" />
+        {/* Month filter */}
+        <div className="flex flex-wrap gap-1.5">
+          <button onClick={() => setFilterMonth("all")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+            All
           </button>
-        ))}
+          {months.map(m => (
+            <button key={m} onClick={() => setFilterMonth(m)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              {monthNames[m]}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Add Modal */}
+      {/* Add Customer Modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold">New Customer</h3>
-              <button onClick={() => setShowAdd(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="space-y-4">
-              {[
-                { label: "Customer Name", key: "name", placeholder: "Customer name..." },
-                { label: "Project Title", key: "projectTitle", placeholder: "Project title..." },
-                { label: "Payment Fee", key: "paymentFee", placeholder: "e.g. 25000" },
-                { label: "Detail", key: "detail", placeholder: "Project details..." },
-                { label: "Note", key: "note", placeholder: "Notes..." },
-              ].map(f => (
-                <div key={f.key}>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">{f.label}</label>
-                  <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                    value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} placeholder={f.placeholder} />
-                </div>
-              ))}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={form.month} onChange={e => setForm({ ...form, month: Number(e.target.value) })}>
-                  {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowAdd(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={addCustomer} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Add</button>
-            </div>
-          </div>
-        </div>
+        <CustomerModal
+          title="New Customer"
+          form={form}
+          setForm={setForm as any}
+          onSave={handleAddCustomer}
+          onClose={() => setShowAdd(false)}
+          monthNames={monthNames}
+        />
       )}
 
+      {/* Task Modal */}
+      {taskModal && (
+        <TaskModal
+          task={taskModal.task}
+          taskForm={taskForm}
+          setTaskForm={setTaskForm}
+          employees={employees}
+          onSave={handleSaveTask}
+          onClose={() => setTaskModal(null)}
+        />
+      )}
+
+      {/* Customer Cards */}
       <div className="space-y-8">
         {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([month, custs]) => (
           <div key={month} className="animate-stagger-3">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-success flex items-center justify-center text-white text-xs font-bold">{monthNames[Number(month)]?.slice(0, 3)}</div>
-              <h2 className="text-lg font-bold text-foreground">{monthNames[Number(month)]} 2026</h2>
+              <div className="w-8 h-8 rounded-lg bg-gradient-success flex items-center justify-center text-white text-xs font-bold">
+                {monthNames[Number(month)]?.slice(0, 3)}
+              </div>
+              <h2 className="text-lg font-bold text-foreground">{monthNames[Number(month)]} {filterYear}</h2>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{custs.length} customers</span>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {custs.map(cust => (
-                <div key={cust.id} className="bg-card rounded-2xl border border-border/60 p-5 card-hover">
+                <div key={cust.id} className="bg-card rounded-2xl border border-border/60 p-5 card-hover group">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-foreground">{cust.name}</h3>
-                        {cust.paymentFee && (
+                        {cust.payment_fee && (
                           <span className="flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full"
                             style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
-                            <DollarSign className="w-2.5 h-2.5" />{cust.paymentFee}
+                            <DollarSign className="w-2.5 h-2.5" />{cust.payment_fee}
                           </span>
                         )}
                       </div>
-                      {cust.projectTitle && <p className="text-xs text-muted-foreground mt-0.5">{cust.projectTitle}</p>}
+                      {cust.project_title && <p className="text-xs text-muted-foreground mt-0.5">{cust.project_title}</p>}
                       {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
                     </div>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-2">{cust.tasks.length} tasks</span>
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => openAddTask(cust.id)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-colors"
+                        title="Add task"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteCustomer(cust.id)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors"
+                        title="Delete customer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </button>
+                    </div>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-1">{cust.tasks.length} tasks</span>
                   </div>
                   {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
-                  <button onClick={() => setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] }))}
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-3">
-                    {expanded[cust.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    {expanded[cust.id] ? "Hide" : "Show"} tasks
-                  </button>
+
+                  {/* Expand toggle + add task */}
+                  <div className="flex items-center gap-3 mt-3">
+                    <button onClick={() => setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] }))}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      {expanded[cust.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      {expanded[cust.id] ? "Hide" : "Show"} tasks
+                    </button>
+                    <button onClick={() => openAddTask(cust.id)}
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                      <Plus className="w-3.5 h-3.5" /> Add task
+                    </button>
+                  </div>
+
+                  {/* Tasks list */}
                   {expanded[cust.id] && (
                     <div className="mt-3 space-y-2">
                       {cust.tasks.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-2">No tasks yet</p>
+                        <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
                       ) : cust.tasks.map(task => (
-                        <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50">
+                        <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 group/task">
                           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                           <span className="text-xs font-medium text-foreground flex-1 truncate">{task.name}</span>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {task.link && <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80"><ExternalLink className="w-3 h-3" /></a>}
-                            <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>{task.status}</span>
+                            {task.link && (
+                              <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
+                              {task.status}
+                            </span>
+                            <button
+                              onClick={() => openEditTask(cust.id, task)}
+                              className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all"
+                            >
+                              <Pencil className="w-3 h-3 text-primary" />
+                            </button>
+                            <button
+                              onClick={() => deleteTask(task.id, cust.id)}
+                              className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all"
+                            >
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -151,6 +237,153 @@ export default function Customers() {
             </div>
           </div>
         ))}
+        {Object.keys(grouped).length === 0 && (
+          <div className="text-center py-16 text-muted-foreground">
+            <Users2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No customers found</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function CustomerModal({ title, form, setForm, onSave, onClose, monthNames }: {
+  title: string;
+  form: any;
+  setForm: (f: any) => void;
+  onSave: () => void;
+  onClose: () => void;
+  monthNames: string[];
+}) {
+  const fields = [
+    { label: "Customer Name", key: "name", placeholder: "Customer name..." },
+    { label: "Project Title", key: "project_title", placeholder: "Project title..." },
+    { label: "Payment Fee", key: "payment_fee", placeholder: "e.g. 25000" },
+    { label: "Detail", key: "detail", placeholder: "Project details..." },
+    { label: "Note", key: "note", placeholder: "Notes..." },
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="space-y-4">
+          {fields.map(f => (
+            <div key={f.key}>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">{f.label}</label>
+              <input
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form[f.key] || ""}
+                onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                placeholder={f.placeholder}
+              />
+            </div>
+          ))}
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
+            <select
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+              value={form.month}
+              onChange={e => setForm({ ...form, month: Number(e.target.value) })}
+            >
+              {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+          <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: {
+  task?: Task;
+  taskForm: any;
+  setTaskForm: (f: any) => void;
+  employees: { name: string }[];
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold">{task ? "Edit Task" : "Add Task"}</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Task Name</label>
+            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              value={taskForm.name} onChange={e => setTaskForm({ ...taskForm, name: e.target.value })} placeholder="Task name..." autoFocus />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Status</label>
+              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value })}>
+                <option>To Do</option><option>In Progress</option><option>Done</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Priority</label>
+              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}>
+                <option>High</option><option>Medium</option><option>Low</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Assigned To</label>
+            <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+              onChange={e => { const v = e.target.value; if (v && !taskForm.assigned_to.includes(v)) setTaskForm({ ...taskForm, assigned_to: [...taskForm.assigned_to, v] }); }}>
+              <option value="">Select...</option>
+              {employees.map(e => <option key={e.name} value={e.name}>{e.name}</option>)}
+            </select>
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {taskForm.assigned_to.map((a: string) => (
+                <span key={a} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
+                  {a.split(" ")[0]}
+                  <button onClick={() => setTaskForm({ ...taskForm, assigned_to: taskForm.assigned_to.filter((x: string) => x !== a) })}><X className="w-3 h-3" /></button>
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Start Date</label>
+              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={taskForm.start_date} onChange={e => setTaskForm({ ...taskForm, start_date: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Due Date</label>
+              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={taskForm.due_date} onChange={e => setTaskForm({ ...taskForm, due_date: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Link</label>
+            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+              value={taskForm.link} onChange={e => setTaskForm({ ...taskForm, link: e.target.value })} placeholder="https://..." />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Note</label>
+            <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
+              value={taskForm.comments} onChange={e => setTaskForm({ ...taskForm, comments: e.target.value })} placeholder="Optional note..." />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-5">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
+          <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {task ? "Save" : "Add Task"}</button>
+        </div>
       </div>
     </div>
   );

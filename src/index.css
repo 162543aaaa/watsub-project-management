@@ -123,7 +123,19 @@
     min-height: 400px;
   }
 
-  /* Nav item in sidebar */
+  /* Top nav item */
+  .top-nav-item {
+    @apply flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer relative;
+    color: hsl(215 20% 62%);
+    border-bottom: 2px solid transparent;
+  }
+
+  .top-nav-item:hover {
+    background: hsl(215 20% 100% / 0.07);
+    color: hsl(215 20% 88%);
+  }
+
+  /* Nav item in sidebar (legacy) */
   .nav-item {
     @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-out cursor-pointer;
     color: hsl(var(--sidebar-foreground));
@@ -331,6 +343,10 @@
 .animate-slide-right { animation: slideInRight 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }

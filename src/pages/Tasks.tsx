@@ -10,10 +10,13 @@ import { toast } from "@/hooks/use-toast";
 type TaskStatus = "To Do" | "In Progress" | "Done";
 type TaskPriority = "Low" | "Medium" | "High";
 const COLUMNS: TaskStatus[] = ["To Do", "In Progress", "Done"];
+const YEARS = [2025, 2026, 2027];
+const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 interface AllTask extends Task {
   _source?: "standalone" | "project" | "customer";
   _sourceName?: string;
+  _month?: number;
 }
 
 function getColStyle(col: TaskStatus) {
@@ -49,7 +52,7 @@ function TaskModal({ task, employees, onSave, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in shadow-lg" style={{ boxShadow: "var(--shadow-lg)" }}>
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold">{form.id ? "Edit Task" : "New Task"}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
@@ -58,7 +61,7 @@ function TaskModal({ task, employees, onSave, onClose }: {
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
             <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-              value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Enter task name..." />
+              value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Enter task name..." autoFocus />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -122,21 +125,31 @@ export default function Tasks() {
   const [modal, setModal] = useState<{ open: boolean; task: Partial<Task> | null }>({ open: false, task: null });
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<"all" | "High" | "Medium" | "Low">("all");
+  const [filterMonth, setFilterMonth] = useState<number | "all">("all");
+  const [filterYear, setFilterYear] = useState<number>(2026);
 
-  // Build allTasks from all sources
+  // Build allTasks from all sources with month info
   const allTasks = useMemo<AllTask[]>(() => {
-    const standalone = tasks.map(t => ({ ...t, _source: "standalone" as const, _sourceName: undefined }));
+    const standalone = tasks.map(t => ({ ...t, _source: "standalone" as const, _sourceName: undefined, _month: undefined }));
     const projectTasks: AllTask[] = projects.flatMap(p =>
-      p.tasks.map(t => ({ ...t, _source: "project" as const, _sourceName: p.name }))
+      p.tasks.map(t => ({ ...t, _source: "project" as const, _sourceName: p.name, _month: p.month }))
     );
     const customerTasks: AllTask[] = customers.flatMap(c =>
-      c.tasks.map(t => ({ ...t, _source: "customer" as const, _sourceName: c.name }))
+      c.tasks.map(t => ({ ...t, _source: "customer" as const, _sourceName: c.name, _month: c.month }))
     );
     return [...standalone, ...projectTasks, ...customerTasks];
   }, [tasks, projects, customers]);
 
+  // Available months from tasks
+  const availableMonths = useMemo(() => {
+    const months = new Set<number>();
+    allTasks.forEach(t => { if (t._month) months.add(t._month); });
+    return [...months].sort();
+  }, [allTasks]);
+
   const filtered = useMemo(() => {
     let result = allTasks;
+    if (filterMonth !== "all") result = result.filter(t => t._month === filterMonth);
     if (priorityFilter !== "all") result = result.filter(t => t.priority === priorityFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -147,7 +160,7 @@ export default function Tasks() {
       );
     }
     return result;
-  }, [allTasks, search, priorityFilter]);
+  }, [allTasks, search, priorityFilter, filterMonth]);
 
   const loading = loadingTasks || loadingProjects || loadingCustomers;
 
@@ -191,7 +204,7 @@ export default function Tasks() {
       <div className="flex items-center justify-between mb-5 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Tasks</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{allTasks.length} total tasks (standalone + projects + customers)</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{allTasks.length} total · {filtered.length} shown</p>
         </div>
         <button onClick={() => setModal({ open: true, task: null })} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Task
@@ -199,31 +212,55 @@ export default function Tasks() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-5 animate-stagger-2">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search tasks..."
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
-          />
+      <div className="space-y-3 mb-5 animate-stagger-2">
+        {/* Row 1: Search + Priority */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search tasks..."
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
+            />
+          </div>
+          <div className="flex gap-1.5">
+            {(["all", "High", "Medium", "Low"] as const).map(p => (
+              <button key={p} onClick={() => setPriorityFilter(p)}
+                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+                {p === "all" ? "All" : p}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-1.5">
-          {(["all", "High", "Medium", "Low"] as const).map(p => (
-            <button key={p} onClick={() => setPriorityFilter(p)}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-              {p === "all" ? "All Priority" : p}
+        {/* Row 2: Year + Month */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1">
+            {YEARS.map(y => (
+              <button key={y} onClick={() => setFilterYear(y)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterYear === y ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+                {y}
+              </button>
+            ))}
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <button onClick={() => setFilterMonth("all")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+            All months
+          </button>
+          {availableMonths.map(m => (
+            <button key={m} onClick={() => setFilterMonth(m)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              {monthNames[m]?.slice(0, 3)}
             </button>
           ))}
         </div>
-        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} tasks shown</span>
       </div>
 
       {/* Kanban */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-stagger-3">
-        {COLUMNS.map((col, ci) => {
+        {COLUMNS.map((col) => {
           const style = getColStyle(col);
           const colT = colTasks(col);
           return (
@@ -250,6 +287,7 @@ export default function Tasks() {
                       <div className="mb-1.5">
                         <span className="text-[10px] font-semibold text-muted-foreground">
                           {task._source === "project" ? "🚀" : "💼"} {task._sourceName}
+                          {task._month && <span className="ml-1 opacity-60">· {monthNames[task._month]?.slice(0, 3)}</span>}
                         </span>
                       </div>
                     )}
@@ -269,8 +307,8 @@ export default function Tasks() {
                           </button>
                         )}
                         <button onClick={() => handleDeleteTask(task)}
-                          className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-red-50 transition-colors">
-                          <Trash2 className="w-3 h-3 text-red-400" />
+                          className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-destructive/10 transition-colors">
+                          <Trash2 className="w-3 h-3 text-destructive" />
                         </button>
                       </div>
                     </div>
