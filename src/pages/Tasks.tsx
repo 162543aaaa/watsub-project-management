@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { Plus, Pencil, Trash2, X, Save } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search } from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
+import { useProjects } from "@/hooks/useProjects";
+import { useCustomers } from "@/hooks/useCustomers";
 import type { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
@@ -9,13 +11,18 @@ type TaskStatus = "To Do" | "In Progress" | "Done";
 type TaskPriority = "Low" | "Medium" | "High";
 const COLUMNS: TaskStatus[] = ["To Do", "In Progress", "Done"];
 
+interface AllTask extends Task {
+  _source?: "standalone" | "project" | "customer";
+  _sourceName?: string;
+}
+
 function getColStyle(col: TaskStatus) {
   if (col === "Done") return { bg: "hsl(142 71% 45% / 0.06)", border: "hsl(142 71% 45% / 0.2)" };
   if (col === "In Progress") return { bg: "hsl(191 91% 37% / 0.06)", border: "hsl(191 91% 37% / 0.2)" };
   return { bg: "hsl(220 14% 96%)", border: "hsl(220 13% 88%)" };
 }
 
-function PriorityBadge({ priority }: { priority: string }) {
+function PriorityBadge({ priority }: { priority?: string }) {
   if (!priority) return null;
   return (
     <span className={priority === "High" ? "badge-high" : priority === "Medium" ? "badge-medium" : "badge-low"}>
@@ -108,9 +115,41 @@ function TaskModal({ task, employees, onSave, onClose }: {
 }
 
 export default function Tasks() {
-  const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
+  const { tasks, loading: loadingTasks, addTask, updateTask, deleteTask } = useTasks();
+  const { projects, loading: loadingProjects, updateTask: updateProjectTask, deleteTask: deleteProjectTask } = useProjects();
+  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask, deleteTask: deleteCustomerTask } = useCustomers();
   const { employees } = useEmployees();
   const [modal, setModal] = useState<{ open: boolean; task: Partial<Task> | null }>({ open: false, task: null });
+  const [search, setSearch] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | "High" | "Medium" | "Low">("all");
+
+  // Build allTasks from all sources
+  const allTasks = useMemo<AllTask[]>(() => {
+    const standalone = tasks.map(t => ({ ...t, _source: "standalone" as const, _sourceName: undefined }));
+    const projectTasks: AllTask[] = projects.flatMap(p =>
+      p.tasks.map(t => ({ ...t, _source: "project" as const, _sourceName: p.name }))
+    );
+    const customerTasks: AllTask[] = customers.flatMap(c =>
+      c.tasks.map(t => ({ ...t, _source: "customer" as const, _sourceName: c.name }))
+    );
+    return [...standalone, ...projectTasks, ...customerTasks];
+  }, [tasks, projects, customers]);
+
+  const filtered = useMemo(() => {
+    let result = allTasks;
+    if (priorityFilter !== "all") result = result.filter(t => t.priority === priorityFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(t =>
+        t.name?.toLowerCase().includes(q) ||
+        t.assigned_to?.some(a => a.toLowerCase().includes(q)) ||
+        t._sourceName?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [allTasks, search, priorityFilter]);
+
+  const loading = loadingTasks || loadingProjects || loadingCustomers;
 
   const handleSave = async (form: Partial<Task>) => {
     if (form.id) {
@@ -120,28 +159,75 @@ export default function Tasks() {
     }
   };
 
-  const colTasks = (col: TaskStatus) => tasks.filter(t => t.status === col);
+  const handleDeleteTask = async (task: AllTask) => {
+    if (task._source === "project" && task.project_id) {
+      await deleteProjectTask(task.id, task.project_id);
+    } else if (task._source === "customer" && task.customer_id) {
+      await deleteCustomerTask(task.id, task.customer_id);
+    } else {
+      await deleteTask(task.id);
+    }
+  };
+
+  const handleStatusToggle = async (task: AllTask) => {
+    const nextStatus: Record<TaskStatus, TaskStatus> = { "To Do": "In Progress", "In Progress": "Done", "Done": "To Do" };
+    const newStatus = nextStatus[task.status as TaskStatus] || "To Do";
+    if (task._source === "project" && task.project_id) {
+      await updateProjectTask(task.id, { status: newStatus });
+    } else if (task._source === "customer" && task.customer_id) {
+      await updateCustomerTask(task.id, { status: newStatus });
+    } else {
+      await updateTask(task.id, { status: newStatus });
+    }
+  };
+
+  const colTasks = (col: TaskStatus) => filtered.filter(t => t.status === col);
 
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
     <div className="p-6 page-enter">
-      <div className="flex items-center justify-between mb-6 animate-stagger-1">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Tasks</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage tasks with Kanban board</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{allTasks.length} total tasks (standalone + projects + customers)</p>
         </div>
         <button onClick={() => setModal({ open: true, task: null })} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Task
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-5 animate-stagger-2">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search tasks..."
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
+          />
+        </div>
+        <div className="flex gap-1.5">
+          {(["all", "High", "Medium", "Low"] as const).map(p => (
+            <button key={p} onClick={() => setPriorityFilter(p)}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              {p === "all" ? "All Priority" : p}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} tasks shown</span>
+      </div>
+
+      {/* Kanban */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-stagger-3">
         {COLUMNS.map((col, ci) => {
           const style = getColStyle(col);
           const colT = colTasks(col);
           return (
-            <div key={col} className={`kanban-col animate-stagger-${ci + 1}`}
+            <div key={col} className="kanban-col"
               style={{ background: style.bg, borderColor: style.border }}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -149,39 +235,61 @@ export default function Tasks() {
                   <span className="text-sm font-semibold text-foreground">{col}</span>
                   <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{colT.length}</span>
                 </div>
-                <button onClick={() => setModal({ open: true, task: { status: col } })}
-                  className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-background transition-colors text-muted-foreground hover:text-foreground">
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
+                {col === "To Do" && (
+                  <button onClick={() => setModal({ open: true, task: { status: col } })}
+                    className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-background transition-colors text-muted-foreground hover:text-foreground">
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
               <div className="space-y-3">
                 {colT.map(task => (
-                  <div key={task.id} className="bg-card rounded-xl p-3.5 border border-border/60 group card-hover">
+                  <div key={`${task._source}-${task.id}`} className="bg-card rounded-xl p-3.5 border border-border/60 group card-hover">
+                    {/* Source label */}
+                    {task._source !== "standalone" && (
+                      <div className="mb-1.5">
+                        <span className="text-[10px] font-semibold text-muted-foreground">
+                          {task._source === "project" ? "🚀" : "💼"} {task._sourceName}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <span className="text-sm font-medium text-foreground leading-snug flex-1">{task.name}</span>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
-                          className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-                          <Pencil className="w-3 h-3 text-muted-foreground" />
-                        </button>
-                        <button onClick={() => deleteTask(task.id)}
+                        {task.link && (
+                          <a href={task.link} target="_blank" rel="noopener noreferrer"
+                            className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+                            <ExternalLink className="w-3 h-3 text-primary" />
+                          </a>
+                        )}
+                        {task._source === "standalone" && (
+                          <button onClick={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
+                            className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+                            <Pencil className="w-3 h-3 text-muted-foreground" />
+                          </button>
+                        )}
+                        <button onClick={() => handleDeleteTask(task)}
                           className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-red-50 transition-colors">
                           <Trash2 className="w-3 h-3 text-red-400" />
                         </button>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
+                      <button onClick={() => handleStatusToggle(task)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
+                        {task.status}
+                      </button>
                       <PriorityBadge priority={task.priority} />
                       {task.due_date && (
                         <span className="text-xs text-muted-foreground">
-                          📅 {new Date(task.due_date).toLocaleDateString("en", { day: "numeric", month: "short" })}
+                          📅 {new Date(task.due_date).toLocaleDateString("th", { day: "numeric", month: "short" })}
                         </span>
                       )}
                     </div>
                     {task.assigned_to && task.assigned_to.length > 0 && (
                       <div className="flex items-center gap-1 mt-2">
                         {task.assigned_to.slice(0, 3).map((a, i) => (
-                          <div key={i} className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold -ml-1 first:ml-0 border border-card ${["bg-gradient-to-br from-cyan-400 to-teal-500", "bg-gradient-to-br from-violet-400 to-purple-500", "bg-gradient-to-br from-rose-400 to-pink-500"][i % 3]}`}>
+                          <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center text-primary-foreground text-[9px] font-bold -ml-1 first:ml-0 border border-card ${i === 0 ? "bg-primary" : i === 1 ? "bg-accent-foreground" : "bg-muted-foreground"}`}>
                             {a.charAt(0)}
                           </div>
                         ))}
@@ -193,6 +301,9 @@ export default function Tasks() {
                     )}
                   </div>
                 ))}
+                {colT.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-8">No tasks</p>
+                )}
               </div>
             </div>
           );
