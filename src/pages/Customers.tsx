@@ -57,7 +57,7 @@ function exportPDF(title: string, html: string) {
 }
 
 export default function Customers() {
-  const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask } = useCustomers();
+  const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, reorderCustomers } = useCustomers();
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
@@ -67,7 +67,6 @@ export default function Customers() {
   const [taskModal, setTaskModal] = useState<{ customerId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
   const [editModal, setEditModal] = useState<typeof form & { id: string } | null>(null);
-  const [custOrders, setCustOrders] = useState<Record<number, string[]>>({});
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -105,14 +104,8 @@ export default function Customers() {
     setTaskModal(null);
   };
 
-  const getOrdered = (monthNum: number, custs: typeof customers) => {
-    const order = custOrders[monthNum];
-    if (!order?.length) return custs;
-    const map = new Map(custs.map(c => [c.id, c]));
-    const sorted = order.map(id => map.get(id)).filter(Boolean) as typeof custs;
-    const unsorted = custs.filter(c => !order.includes(c.id));
-    return [...sorted, ...unsorted];
-  };
+  // Customers are already sorted by sort_order from DB
+  const getOrdered = (_monthNum: number, custs: typeof customers) => custs;
 
   const periodLabel = filterMonth === "all" ? `${filterYear}` : `${monthNames[filterMonth]} ${filterYear}`;
 
@@ -289,13 +282,13 @@ export default function Customers() {
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{custs.length} customers</span>
               </div>
               <DndContext sensors={sensors} collisionDetection={closestCenter}
-                onDragEnd={(event: DragEndEvent) => {
+                onDragEnd={async (event: DragEndEvent) => {
                   const { active, over } = event;
                   if (!over || active.id === over.id) return;
-                  setCustOrders(prev => {
-                    const cur = orderedCusts.map(c => c.id);
-                    return { ...prev, [monthNum]: arrayMove(cur, cur.indexOf(active.id as string), cur.indexOf(over.id as string)) };
-                  });
+                  const cur = orderedCusts.map(c => c.id);
+                  const newOrder = arrayMove(cur, cur.indexOf(active.id as string), cur.indexOf(over.id as string));
+                  const reordered = newOrder.map(id => orderedCusts.find(c => c.id === id)!);
+                  await reorderCustomers(reordered);
                 }}>
                 <SortableContext items={ids} strategy={verticalListSortingStrategy}>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

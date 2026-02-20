@@ -56,7 +56,7 @@ function exportPDF(title: string, html: string) {
 }
 
 export default function Projects() {
-  const { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask } = useProjects();
+  const { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects();
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAddProject, setShowAddProject] = useState(false);
@@ -65,7 +65,6 @@ export default function Projects() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
-  const [projOrders, setProjOrders] = useState<Record<number, string[]>>({});
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -153,14 +152,8 @@ export default function Projects() {
     exportPDF(`Projects – ${periodLabel}`, html);
   };
 
-  const getOrdered = (monthNum: number, projs: typeof projects) => {
-    const order = projOrders[monthNum];
-    if (!order?.length) return projs;
-    const map = new Map(projs.map(p => [p.id, p]));
-    const sorted = order.map(id => map.get(id)).filter(Boolean) as typeof projs;
-    const unsorted = projs.filter(p => !order.includes(p.id));
-    return [...sorted, ...unsorted];
-  };
+  // Projects are already sorted by sort_order from DB; just return them as-is for display
+  const getOrdered = (_monthNum: number, projs: typeof projects) => projs;
 
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
@@ -352,13 +345,13 @@ export default function Projects() {
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{projs.length} projects</span>
               </div>
               <DndContext sensors={sensors} collisionDetection={closestCenter}
-                onDragEnd={(event: DragEndEvent) => {
+                onDragEnd={async (event: DragEndEvent) => {
                   const { active, over } = event;
                   if (!over || active.id === over.id) return;
-                  setProjOrders(prev => {
-                    const cur = orderedProjs.map(p => p.id);
-                    return { ...prev, [monthNum]: arrayMove(cur, cur.indexOf(active.id as string), cur.indexOf(over.id as string)) };
-                  });
+                  const cur = orderedProjs.map(p => p.id);
+                  const newOrder = arrayMove(cur, cur.indexOf(active.id as string), cur.indexOf(over.id as string));
+                  const reordered = newOrder.map(id => orderedProjs.find(p => p.id === id)!);
+                  await reorderProjects(reordered);
                 }}>
                 <SortableContext items={ids} strategy={verticalListSortingStrategy}>
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-start">

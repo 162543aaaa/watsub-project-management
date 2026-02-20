@@ -12,7 +12,7 @@ export function useTasks() {
       .from("tasks")
       .select("*")
       .eq("task_type", "standalone")
-      .order("created_at", { ascending: false });
+      .order("sort_order", { ascending: true });
     if (error) { console.error(error); setLoading(false); return; }
     setTasks((data || []) as Task[]);
     setLoading(false);
@@ -22,7 +22,7 @@ export function useTasks() {
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("sort_order", { ascending: true });
     if (error) { console.error(error); return []; }
     return (data || []) as Task[];
   };
@@ -51,5 +51,15 @@ export function useTasks() {
     toast({ title: "ลบงานสำเร็จ!" });
   };
 
-  return { tasks, loading, addTask, updateTask, deleteTask, fetchAllTasks, refetch: fetchTasks };
+  // Persist reorder for standalone tasks (by column)
+  const reorderTasks = async (reordered: Task[]) => {
+    setTasks(prev => {
+      const others = prev.filter(t => !reordered.find(r => r.id === t.id));
+      return [...reordered, ...others];
+    });
+    const updates = reordered.map((t, idx) => supabase.from("tasks").update({ sort_order: idx + 1 }).eq("id", t.id));
+    await Promise.all(updates);
+  };
+
+  return { tasks, loading, addTask, updateTask, deleteTask, fetchAllTasks, refetch: fetchTasks, reorderTasks };
 }

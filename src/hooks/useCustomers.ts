@@ -12,6 +12,7 @@ export interface Customer {
   note?: string;
   month: number;
   created_at?: string;
+  sort_order?: number;
   tasks: Task[];
 }
 
@@ -23,14 +24,14 @@ export function useCustomers() {
     const { data: custData, error: custError } = await supabase
       .from("customers")
       .select("*")
-      .order("created_at", { ascending: true });
+      .order("sort_order", { ascending: true });
     if (custError) { console.error(custError); setLoading(false); return; }
 
     const { data: taskData, error: taskError } = await supabase
       .from("tasks")
       .select("*")
       .eq("task_type", "customer")
-      .order("created_at", { ascending: true });
+      .order("sort_order", { ascending: true });
     if (taskError) { console.error(taskError); }
 
     const customers = (custData || []).map(c => ({
@@ -86,5 +87,15 @@ export function useCustomers() {
     toast({ title: "ลบงานสำเร็จ!" });
   };
 
-  return { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, refetch: fetchCustomers };
+  // Persist reordered customers for a given month
+  const reorderCustomers = async (reordered: Customer[]) => {
+    setCustomers(prev => {
+      const others = prev.filter(c => !reordered.find(r => r.id === c.id));
+      return [...others, ...reordered].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    });
+    const updates = reordered.map((c, idx) => supabase.from("customers").update({ sort_order: idx + 1 }).eq("id", c.id));
+    await Promise.all(updates);
+  };
+
+  return { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, refetch: fetchCustomers, reorderCustomers };
 }

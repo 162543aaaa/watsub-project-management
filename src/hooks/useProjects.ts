@@ -16,6 +16,7 @@ export interface Task {
   project_id?: string;
   customer_id?: string;
   created_at?: string;
+  sort_order?: number;
 }
 
 export interface Project {
@@ -24,6 +25,7 @@ export interface Project {
   month: number;
   note?: string;
   created_at?: string;
+  sort_order?: number;
   tasks: Task[];
 }
 
@@ -35,14 +37,14 @@ export function useProjects() {
     const { data: projData, error: projError } = await supabase
       .from("projects")
       .select("*")
-      .order("created_at", { ascending: true });
+      .order("sort_order", { ascending: true });
     if (projError) { console.error(projError); setLoading(false); return; }
 
     const { data: taskData, error: taskError } = await supabase
       .from("tasks")
       .select("*")
       .eq("task_type", "project")
-      .order("created_at", { ascending: true });
+      .order("sort_order", { ascending: true });
     if (taskError) { console.error(taskError); }
 
     const projects = (projData || []).map(p => ({
@@ -99,5 +101,15 @@ export function useProjects() {
     toast({ title: "ลบงานสำเร็จ!" });
   };
 
-  return { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask, refetch: fetchProjects };
+  // Persist reordered projects for a given month
+  const reorderProjects = async (reordered: Project[]) => {
+    setProjects(prev => {
+      const others = prev.filter(p => !reordered.find(r => r.id === p.id));
+      return [...others, ...reordered].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    });
+    const updates = reordered.map((p, idx) => supabase.from("projects").update({ sort_order: idx + 1 }).eq("id", p.id));
+    await Promise.all(updates);
+  };
+
+  return { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask, refetch: fetchProjects, reorderProjects };
 }

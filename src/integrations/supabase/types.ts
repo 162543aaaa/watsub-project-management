@@ -24,6 +24,7 @@ export type Database = {
           note: string | null
           payment_fee: string | null
           project_title: string | null
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
@@ -35,6 +36,7 @@ export type Database = {
           note?: string | null
           payment_fee?: string | null
           project_title?: string | null
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
@@ -46,6 +48,7 @@ export type Database = {
           note?: string | null
           payment_fee?: string | null
           project_title?: string | null
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -198,6 +201,7 @@ export type Database = {
           month: number
           name: string
           note: string | null
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
@@ -206,6 +210,7 @@ export type Database = {
           month?: number
           name: string
           note?: string | null
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
@@ -214,6 +219,7 @@ export type Database = {
           month?: number
           name?: string
           note?: string | null
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -230,6 +236,7 @@ export type Database = {
           name: string
           priority: string
           project_id: string | null
+          sort_order: number | null
           start_date: string | null
           status: string
           task_type: string
@@ -246,6 +253,7 @@ export type Database = {
           name: string
           priority?: string
           project_id?: string | null
+          sort_order?: number | null
           start_date?: string | null
           status?: string
           task_type?: string
@@ -262,6 +270,7 @@ export type Database = {
           name?: string
           priority?: string
           project_id?: string | null
+          sort_order?: number | null
           start_date?: string | null
           status?: string
           task_type?: string
