@@ -212,7 +212,7 @@ function SortableCard({ id, children }: { id: string; children: React.ReactNode 
 }
 
 export default function Tasks() {
-  const { tasks, loading: loadingTasks, addTask, updateTask, deleteTask } = useTasks();
+  const { tasks, loading: loadingTasks, addTask, updateTask, deleteTask, reorderTasks } = useTasks();
   const { projects, loading: loadingProjects, updateTask: updateProjectTask, deleteTask: deleteProjectTask } = useProjects();
   const { customers, loading: loadingCustomers, updateTask: updateCustomerTask, deleteTask: deleteCustomerTask } = useCustomers();
   const { employees } = useEmployees();
@@ -222,8 +222,6 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<"all" | "High" | "Medium" | "Low">("all");
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
-  // Local order state per column (stores task IDs)
-  const [colOrders, setColOrders] = useState<Record<TaskStatus, string[]>>({ "To Do": [], "In Progress": [], "Done": [] });
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -262,26 +260,22 @@ export default function Tasks() {
 
   const loading = loadingTasks || loadingProjects || loadingCustomers;
 
-  // Apply local ordering; fallback to natural order
-  const getOrderedColTasks = (col: TaskStatus) => {
-    const colT = filtered.filter(t => t.status === col);
-    const order = colOrders[col];
-    if (!order.length) return colT;
-    const map = new Map(colT.map(t => [`${t._source}-${t.id}`, t]));
-    const sorted = order.map(k => map.get(k)).filter(Boolean) as AllTask[];
-    const unsorted = colT.filter(t => !order.includes(`${t._source}-${t.id}`));
-    return [...sorted, ...unsorted];
-  };
+  const getColTasks = (col: TaskStatus) => filtered.filter(t => t.status === col);
 
-  const handleDragEnd = (col: TaskStatus) => (event: DragEndEvent) => {
+  const handleDragEnd = (col: TaskStatus) => async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    setColOrders(prev => {
-      const colT = getOrderedColTasks(col).map(t => `${t._source}-${t.id}`);
-      const oldIdx = colT.indexOf(active.id as string);
-      const newIdx = colT.indexOf(over.id as string);
-      return { ...prev, [col]: arrayMove(colT, oldIdx, newIdx) };
-    });
+    const colT = getColTasks(col);
+    const ids = colT.map(t => `${t._source}-${t.id}`);
+    const oldIdx = ids.indexOf(active.id as string);
+    const newIdx = ids.indexOf(over.id as string);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const reordered = arrayMove(colT, oldIdx, newIdx);
+    // Only persist standalone tasks; project/customer task order is managed in their own pages
+    const standaloneReordered = reordered.filter(t => t._source === "standalone") as Task[];
+    if (standaloneReordered.length > 0) {
+      await reorderTasks(standaloneReordered);
+    }
   };
 
   const handleSave = async (form: Partial<AllTask>) => {
@@ -378,7 +372,7 @@ export default function Tasks() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-stagger-3">
         {COLUMNS.map((col) => {
           const style = getColStyle(col);
-          const colT = getOrderedColTasks(col);
+          const colT = getColTasks(col);
           const ids = colT.map(t => `${t._source}-${t.id}`);
           return (
             <div key={col} className="kanban-col" style={{ background: style.bg, borderColor: style.border }}>
