@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, forwardRef } from "react";
 import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, GripVertical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
@@ -34,14 +34,15 @@ function getColStyle(col: TaskStatus) {
   return { bg: "hsl(220 14% 96%)", border: "hsl(220 13% 88%)" };
 }
 
-function PriorityBadge({ priority }: { priority?: string }) {
+const PriorityBadge = forwardRef<HTMLSpanElement, { priority?: string }>(({ priority }, ref) => {
   if (!priority) return null;
   return (
-    <span className={priority === "High" ? "badge-high" : priority === "Medium" ? "badge-medium" : "badge-low"}>
+    <span ref={ref} className={priority === "High" ? "badge-high" : priority === "Medium" ? "badge-medium" : "badge-low"}>
       {priority}
     </span>
   );
-}
+});
+PriorityBadge.displayName = "PriorityBadge";
 
 function TaskModal({ task, employees, onSave, onClose }: {
   task: Partial<Task> | null;
