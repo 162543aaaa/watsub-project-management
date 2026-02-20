@@ -101,14 +101,31 @@ export function useProjects() {
     toast({ title: "ลบงานสำเร็จ!" });
   };
 
-  // Persist reordered projects for a given month
+  // Persist reordered projects — assigns new sort_order values and updates local state immediately
   const reorderProjects = async (reordered: Project[]) => {
+    // Assign new sort_order using month-based offset so cross-month ordering is stable
+    const withNewOrder = reordered.map((p, idx) => ({
+      ...p,
+      sort_order: p.month * 10000 + idx,
+    }));
+    const reorderedIds = new Set(reordered.map(p => p.id));
+
+    // Optimistic update: replace old objects with new sort_order values in place
     setProjects(prev => {
-      const others = prev.filter(p => !reordered.find(r => r.id === p.id));
-      return [...others, ...reordered].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      const updated = prev.map(p => {
+        const found = withNewOrder.find(r => r.id === p.id);
+        return found ? found : p;
+      });
+      // Keep overall list sorted by sort_order so grouping stays correct
+      return updated.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     });
-    const updates = reordered.map((p, idx) => supabase.from("projects").update({ sort_order: idx + 1 }).eq("id", p.id));
-    await Promise.all(updates);
+
+    // Persist to DB
+    await Promise.all(
+      withNewOrder
+        .filter(p => reorderedIds.has(p.id))
+        .map(p => supabase.from("projects").update({ sort_order: p.sort_order }).eq("id", p.id))
+    );
   };
 
   return { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask, refetch: fetchProjects, reorderProjects };
