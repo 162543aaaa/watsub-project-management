@@ -57,7 +57,9 @@ export type Database = {
           email: string
           id: string
           name: string
+          phone: string | null
           position: string
+          promptpay_qr: string | null
           role: string
           updated_at: string
         }
@@ -67,7 +69,9 @@ export type Database = {
           email?: string
           id?: string
           name: string
+          phone?: string | null
           position?: string
+          promptpay_qr?: string | null
           role?: string
           updated_at?: string
         }
@@ -77,7 +81,9 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          phone?: string | null
           position?: string
+          promptpay_qr?: string | null
           role?: string
           updated_at?: string
         }
