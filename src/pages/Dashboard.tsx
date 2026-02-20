@@ -10,6 +10,45 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 const today = new Date("2026-02-20");
 
+const avatarGradients = [
+  "from-cyan-400 to-teal-500",
+  "from-violet-400 to-purple-500",
+  "from-rose-400 to-pink-500",
+  "from-amber-400 to-orange-500",
+  "from-emerald-400 to-green-500",
+];
+
+// Define StatCard BEFORE Dashboard so no ref warning
+function StatCard({ label, value, sub, icon: Icon, gradient, trend, trendLabel }: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  gradient: string;
+  trend: "up" | "down" | "neutral";
+  trendLabel?: string;
+}) {
+  return (
+    <div className="stat-card">
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${gradient}`}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex items-center gap-1">
+          {trend === "up" && <TrendingUp className="w-3 h-3 text-green-500" />}
+          {trend === "down" && <TrendingDown className="w-3 h-3 text-red-400" />}
+          {trend === "neutral" && <Minus className="w-3 h-3 text-muted-foreground" />}
+        </div>
+      </div>
+      <div className="text-2xl font-bold text-foreground">{value}</div>
+      <div className="text-sm text-muted-foreground mt-0.5">{label}</div>
+      {(sub || trendLabel) && (
+        <div className="text-[11px] text-muted-foreground/70 mt-1">{trendLabel || sub}</div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { tasks: standaloneTasks, loading: loadingTasks } = useTasks();
   const { projects, loading: loadingProjects } = useProjects();
@@ -54,14 +93,6 @@ export default function Dashboard() {
     { name: "In Progress", value: stats.inProgress, color: "hsl(191 91% 37%)" },
     { name: "To Do", value: stats.todo, color: "hsl(215 14% 75%)" },
   ].filter(d => d.value > 0);
-
-  const avatarGradients = [
-    "from-cyan-400 to-teal-500",
-    "from-violet-400 to-purple-500",
-    "from-rose-400 to-pink-500",
-    "from-amber-400 to-orange-500",
-    "from-emerald-400 to-green-500",
-  ];
 
   if (loading) {
     return (
@@ -294,36 +325,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, sub, icon: Icon, gradient, trend, trendLabel }: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  gradient: string;
-  trend: "up" | "down" | "neutral";
-  trendLabel?: string;
-}) {
-  return (
-    <div className="stat-card">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${gradient}`}>
-          <Icon className="w-5 h-5 text-white" />
-        </div>
-        <div className="flex items-center gap-1">
-          {trend === "up" && <TrendingUp className="w-3 h-3 text-green-500" />}
-          {trend === "down" && <TrendingDown className="w-3 h-3 text-red-400" />}
-          {trend === "neutral" && <Minus className="w-3 h-3 text-muted-foreground" />}
-        </div>
-      </div>
-      <div className="text-2xl font-bold text-foreground">{value}</div>
-      <div className="text-sm text-muted-foreground mt-0.5">{label}</div>
-      {(sub || trendLabel) && (
-        <div className="text-[11px] text-muted-foreground/70 mt-1">{trendLabel || sub}</div>
-      )}
     </div>
   );
 }
