@@ -1,11 +1,19 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, GripVertical } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
 import type { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type TaskStatus = "To Do" | "In Progress" | "Done";
 type TaskPriority = "Low" | "Medium" | "High";
@@ -16,6 +24,7 @@ const monthNames = ["", "January", "February", "March", "April", "May", "June", 
 interface AllTask extends Task {
   _source?: "standalone" | "project" | "customer";
   _sourceName?: string;
+  _sourceId?: string;
   _month?: number;
 }
 
@@ -117,30 +126,53 @@ function TaskModal({ task, employees, onSave, onClose }: {
   );
 }
 
+// Sortable card wrapper
+function SortableCard({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      className="relative"
+    >
+      <div {...attributes} {...listeners}
+        className="absolute top-3 left-2 z-10 cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+        style={{ touchAction: "none" }}>
+        <GripVertical className="w-3 h-3" />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function Tasks() {
   const { tasks, loading: loadingTasks, addTask, updateTask, deleteTask } = useTasks();
   const { projects, loading: loadingProjects, updateTask: updateProjectTask, deleteTask: deleteProjectTask } = useProjects();
   const { customers, loading: loadingCustomers, updateTask: updateCustomerTask, deleteTask: deleteCustomerTask } = useCustomers();
   const { employees } = useEmployees();
-  const [modal, setModal] = useState<{ open: boolean; task: Partial<Task> | null }>({ open: false, task: null });
+  const navigate = useNavigate();
+  const [modal, setModal] = useState<{ open: boolean; task: Partial<AllTask> | null }>({ open: false, task: null });
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<"all" | "High" | "Medium" | "Low">("all");
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
+  // Local order state per column (stores task IDs)
+  const [colOrders, setColOrders] = useState<Record<TaskStatus, string[]>>({ "To Do": [], "In Progress": [], "Done": [] });
 
-  // Build allTasks from all sources with month info
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  // Build allTasks from all sources
   const allTasks = useMemo<AllTask[]>(() => {
-    const standalone = tasks.map(t => ({ ...t, _source: "standalone" as const, _sourceName: undefined, _month: undefined }));
+    const standalone = tasks.map(t => ({ ...t, _source: "standalone" as const, _sourceName: undefined, _sourceId: undefined, _month: undefined }));
     const projectTasks: AllTask[] = projects.flatMap(p =>
-      p.tasks.map(t => ({ ...t, _source: "project" as const, _sourceName: p.name, _month: p.month }))
+      p.tasks.map(t => ({ ...t, _source: "project" as const, _sourceName: p.name, _sourceId: p.id, _month: p.month }))
     );
     const customerTasks: AllTask[] = customers.flatMap(c =>
-      c.tasks.map(t => ({ ...t, _source: "customer" as const, _sourceName: c.name, _month: c.month }))
+      c.tasks.map(t => ({ ...t, _source: "customer" as const, _sourceName: c.name, _sourceId: c.id, _month: c.month }))
     );
     return [...standalone, ...projectTasks, ...customerTasks];
   }, [tasks, projects, customers]);
 
-  // Available months from tasks
   const availableMonths = useMemo(() => {
     const months = new Set<number>();
     allTasks.forEach(t => { if (t._month) months.add(t._month); });
@@ -164,8 +196,34 @@ export default function Tasks() {
 
   const loading = loadingTasks || loadingProjects || loadingCustomers;
 
-  const handleSave = async (form: Partial<Task>) => {
-    if (form.id) {
+  // Apply local ordering; fallback to natural order
+  const getOrderedColTasks = (col: TaskStatus) => {
+    const colT = filtered.filter(t => t.status === col);
+    const order = colOrders[col];
+    if (!order.length) return colT;
+    const map = new Map(colT.map(t => [`${t._source}-${t.id}`, t]));
+    const sorted = order.map(k => map.get(k)).filter(Boolean) as AllTask[];
+    const unsorted = colT.filter(t => !order.includes(`${t._source}-${t.id}`));
+    return [...sorted, ...unsorted];
+  };
+
+  const handleDragEnd = (col: TaskStatus) => (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setColOrders(prev => {
+      const colT = getOrderedColTasks(col).map(t => `${t._source}-${t.id}`);
+      const oldIdx = colT.indexOf(active.id as string);
+      const newIdx = colT.indexOf(over.id as string);
+      return { ...prev, [col]: arrayMove(colT, oldIdx, newIdx) };
+    });
+  };
+
+  const handleSave = async (form: Partial<AllTask>) => {
+    if (form.id && form._source === "project" && form.project_id) {
+      await updateProjectTask(form.id, { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, comments: form.comments });
+    } else if (form.id && form._source === "customer" && form.customer_id) {
+      await updateCustomerTask(form.id, { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, comments: form.comments });
+    } else if (form.id) {
       await updateTask(form.id, { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, comments: form.comments });
     } else {
       await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", comments: form.comments || "", task_type: "standalone" });
@@ -185,16 +243,15 @@ export default function Tasks() {
   const handleStatusToggle = async (task: AllTask) => {
     const nextStatus: Record<TaskStatus, TaskStatus> = { "To Do": "In Progress", "In Progress": "Done", "Done": "To Do" };
     const newStatus = nextStatus[task.status as TaskStatus] || "To Do";
-    if (task._source === "project" && task.project_id) {
-      await updateProjectTask(task.id, { status: newStatus });
-    } else if (task._source === "customer" && task.customer_id) {
-      await updateCustomerTask(task.id, { status: newStatus });
-    } else {
-      await updateTask(task.id, { status: newStatus });
-    }
+    if (task._source === "project") await updateProjectTask(task.id, { status: newStatus });
+    else if (task._source === "customer") await updateCustomerTask(task.id, { status: newStatus });
+    else await updateTask(task.id, { status: newStatus });
   };
 
-  const colTasks = (col: TaskStatus) => filtered.filter(t => t.status === col);
+  const navigateToSource = (task: AllTask) => {
+    if (task._source === "project") navigate("/projects");
+    else if (task._source === "customer") navigate("/customers");
+  };
 
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
@@ -213,17 +270,11 @@ export default function Tasks() {
 
       {/* Filters */}
       <div className="space-y-3 mb-5 animate-stagger-2">
-        {/* Row 1: Search + Priority */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[180px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search tasks..."
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
-            />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
           </div>
           <div className="flex gap-1.5">
             {(["all", "High", "Medium", "Low"] as const).map(p => (
@@ -234,7 +285,6 @@ export default function Tasks() {
             ))}
           </div>
         </div>
-        {/* Row 2: Year + Month */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1">
             {YEARS.map(y => (
@@ -262,10 +312,10 @@ export default function Tasks() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-stagger-3">
         {COLUMNS.map((col) => {
           const style = getColStyle(col);
-          const colT = colTasks(col);
+          const colT = getOrderedColTasks(col);
+          const ids = colT.map(t => `${t._source}-${t.id}`);
           return (
-            <div key={col} className="kanban-col"
-              style={{ background: style.bg, borderColor: style.border }}>
+            <div key={col} className="kanban-col" style={{ background: style.bg, borderColor: style.border }}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-green-500" : col === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
@@ -279,70 +329,85 @@ export default function Tasks() {
                   </button>
                 )}
               </div>
-              <div className="space-y-3">
-                {colT.map(task => (
-                  <div key={`${task._source}-${task.id}`} className="bg-card rounded-xl p-3.5 border border-border/60 group card-hover">
-                    {/* Source label */}
-                    {task._source !== "standalone" && (
-                      <div className="mb-1.5">
-                        <span className="text-[10px] font-semibold text-muted-foreground">
-                          {task._source === "project" ? "🚀" : "💼"} {task._sourceName}
-                          {task._month && <span className="ml-1 opacity-60">· {monthNames[task._month]?.slice(0, 3)}</span>}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-medium text-foreground leading-snug flex-1">{task.name}</span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {task.link && (
-                          <a href={task.link} target="_blank" rel="noopener noreferrer"
-                            className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-                            <ExternalLink className="w-3 h-3 text-primary" />
-                          </a>
-                        )}
-                        {task._source === "standalone" && (
-                          <button onClick={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
-                            className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-                            <Pencil className="w-3 h-3 text-muted-foreground" />
-                          </button>
-                        )}
-                        <button onClick={() => handleDeleteTask(task)}
-                          className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-destructive/10 transition-colors">
-                          <Trash2 className="w-3 h-3 text-destructive" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <button onClick={() => handleStatusToggle(task)}
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
-                        {task.status}
-                      </button>
-                      <PriorityBadge priority={task.priority} />
-                      {task.due_date && (
-                        <span className="text-xs text-muted-foreground">
-                          📅 {new Date(task.due_date).toLocaleDateString("th", { day: "numeric", month: "short" })}
-                        </span>
-                      )}
-                    </div>
-                    {task.assigned_to && task.assigned_to.length > 0 && (
-                      <div className="flex items-center gap-1 mt-2">
-                        {task.assigned_to.slice(0, 3).map((a, i) => (
-                          <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center text-primary-foreground text-[9px] font-bold -ml-1 first:ml-0 border border-card ${i === 0 ? "bg-primary" : i === 1 ? "bg-accent-foreground" : "bg-muted-foreground"}`}>
-                            {a.charAt(0)}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd(col)}>
+                <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-3">
+                    {colT.map(task => {
+                      const cardId = `${task._source}-${task.id}`;
+                      return (
+                        <SortableCard key={cardId} id={cardId}>
+                          <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover">
+                            {/* Source label + navigate */}
+                            {task._source !== "standalone" && (
+                              <div className="mb-1.5 flex items-center justify-between">
+                                <span className="text-[10px] font-semibold text-muted-foreground">
+                                  {task._source === "project" ? "🚀" : "💼"} {task._sourceName}
+                                  {task._month && <span className="ml-1 opacity-60">· {monthNames[task._month]?.slice(0, 3)}</span>}
+                                </span>
+                                <button
+                                  onClick={() => navigateToSource(task)}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[10px] text-primary font-medium hover:underline"
+                                  title={`Go to ${task._source === "project" ? "Projects" : "Customers"}`}
+                                >
+                                  View <ArrowUpRight className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            )}
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <span className="text-sm font-medium text-foreground leading-snug flex-1">{task.name}</span>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {task.link && (
+                                  <a href={task.link} target="_blank" rel="noopener noreferrer"
+                                    className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+                                    <ExternalLink className="w-3 h-3 text-primary" />
+                                  </a>
+                                )}
+                                {/* All tasks are now editable */}
+                                <button onClick={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
+                                  className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+                                  <Pencil className="w-3 h-3 text-muted-foreground" />
+                                </button>
+                                <button onClick={() => handleDeleteTask(task)}
+                                  className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-destructive/10 transition-colors">
+                                  <Trash2 className="w-3 h-3 text-destructive" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button onClick={() => handleStatusToggle(task)}
+                                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
+                                {task.status}
+                              </button>
+                              <PriorityBadge priority={task.priority} />
+                              {task.due_date && (
+                                <span className="text-xs text-muted-foreground">
+                                  📅 {new Date(task.due_date).toLocaleDateString("th", { day: "numeric", month: "short" })}
+                                </span>
+                              )}
+                            </div>
+                            {task.assigned_to && task.assigned_to.length > 0 && (
+                              <div className="flex items-center gap-1 mt-2">
+                                {task.assigned_to.slice(0, 3).map((a, i) => (
+                                  <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center text-primary-foreground text-[9px] font-bold -ml-1 first:ml-0 border border-card ${i === 0 ? "bg-primary" : i === 1 ? "bg-accent-foreground" : "bg-muted-foreground"}`}>
+                                    {a.charAt(0)}
+                                  </div>
+                                ))}
+                                {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
+                              </div>
+                            )}
+                            {task.comments && (
+                              <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-2">{task.comments}</p>
+                            )}
                           </div>
-                        ))}
-                        {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
-                      </div>
-                    )}
-                    {task.comments && (
-                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-2">{task.comments}</p>
+                        </SortableCard>
+                      );
+                    })}
+                    {colT.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-8">No tasks</p>
                     )}
                   </div>
-                ))}
-                {colT.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-8">No tasks</p>
-                )}
-              </div>
+                </SortableContext>
+              </DndContext>
             </div>
           );
         })}
