@@ -87,14 +87,27 @@ export function useCustomers() {
     toast({ title: "ลบงานสำเร็จ!" });
   };
 
-  // Persist reordered customers for a given month
+  // Persist reordered customers — assigns new sort_order values and updates local state immediately
   const reorderCustomers = async (reordered: Customer[]) => {
+    const withNewOrder = reordered.map((c, idx) => ({
+      ...c,
+      sort_order: c.month * 10000 + idx,
+    }));
+    const reorderedIds = new Set(reordered.map(c => c.id));
+
     setCustomers(prev => {
-      const others = prev.filter(c => !reordered.find(r => r.id === c.id));
-      return [...others, ...reordered].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      const updated = prev.map(c => {
+        const found = withNewOrder.find(r => r.id === c.id);
+        return found ? found : c;
+      });
+      return updated.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     });
-    const updates = reordered.map((c, idx) => supabase.from("customers").update({ sort_order: idx + 1 }).eq("id", c.id));
-    await Promise.all(updates);
+
+    await Promise.all(
+      withNewOrder
+        .filter(c => reorderedIds.has(c.id))
+        .map(c => supabase.from("customers").update({ sort_order: c.sort_order }).eq("id", c.id))
+    );
   };
 
   return { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, refetch: fetchCustomers, reorderCustomers };

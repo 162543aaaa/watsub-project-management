@@ -51,14 +51,28 @@ export function useTasks() {
     toast({ title: "ลบงานสำเร็จ!" });
   };
 
-  // Persist reorder for standalone tasks (by column)
-  const reorderTasks = async (reordered: Task[]) => {
+  // Persist reorder: assign new sort_order within the reordered group,
+  // keep column-based offset so columns don't conflict
+  const reorderTasks = async (reordered: Task[], colIndex: number) => {
+    const withNewOrder = reordered.map((t, idx) => ({
+      ...t,
+      sort_order: colIndex * 10000 + idx,
+    }));
+    const reorderedIds = new Set(reordered.map(t => t.id));
+
     setTasks(prev => {
-      const others = prev.filter(t => !reordered.find(r => r.id === t.id));
-      return [...reordered, ...others];
+      const updated = prev.map(t => {
+        const found = withNewOrder.find(r => r.id === t.id);
+        return found ? found : t;
+      });
+      return updated.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     });
-    const updates = reordered.map((t, idx) => supabase.from("tasks").update({ sort_order: idx + 1 }).eq("id", t.id));
-    await Promise.all(updates);
+
+    await Promise.all(
+      withNewOrder
+        .filter(t => reorderedIds.has(t.id))
+        .map(t => supabase.from("tasks").update({ sort_order: t.sort_order }).eq("id", t.id))
+    );
   };
 
   return { tasks, loading, addTask, updateTask, deleteTask, fetchAllTasks, refetch: fetchTasks, reorderTasks };

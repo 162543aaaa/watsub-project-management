@@ -262,7 +262,7 @@ export default function Tasks() {
 
   const getColTasks = (col: TaskStatus) => filtered.filter(t => t.status === col);
 
-  const handleDragEnd = (col: TaskStatus) => async (event: DragEndEvent) => {
+  const handleDragEnd = (col: TaskStatus, colIndex: number) => async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const colT = getColTasks(col);
@@ -271,10 +271,10 @@ export default function Tasks() {
     const newIdx = ids.indexOf(over.id as string);
     if (oldIdx === -1 || newIdx === -1) return;
     const reordered = arrayMove(colT, oldIdx, newIdx);
-    // Only persist standalone tasks; project/customer task order is managed in their own pages
+    // Only persist standalone tasks; project/customer tasks are ordered in their own pages
     const standaloneReordered = reordered.filter(t => t._source === "standalone") as Task[];
     if (standaloneReordered.length > 0) {
-      await reorderTasks(standaloneReordered);
+      await reorderTasks(standaloneReordered, colIndex);
     }
   };
 
@@ -370,7 +370,7 @@ export default function Tasks() {
 
       {/* Kanban */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-stagger-3">
-        {COLUMNS.map((col) => {
+        {COLUMNS.map((col, colIndex) => {
           const style = getColStyle(col);
           const colT = getColTasks(col);
           const ids = colT.map(t => `${t._source}-${t.id}`);
@@ -389,7 +389,7 @@ export default function Tasks() {
                   </button>
                 )}
               </div>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd(col)}>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd(col, colIndex)}>
                 <SortableContext items={ids} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3">
                     {colT.map(task => {
