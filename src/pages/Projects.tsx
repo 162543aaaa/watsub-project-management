@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save } from "lucide-react";
-import { projects as initialProjects, employees, Project, ProjectTask, monthNames } from "@/data/mockData";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2 } from "lucide-react";
+import { useProjects } from "@/hooks/useProjects";
+import { useEmployees } from "@/hooks/useEmployees";
+import { Task } from "@/hooks/useProjects";
 import { toast } from "@/hooks/use-toast";
 
-function ProgressBar({ tasks }: { tasks: ProjectTask[] }) {
+const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function ProgressBar({ tasks }: { tasks: Task[] }) {
   const done = tasks.filter(t => t.status === "Done").length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
   return (
@@ -15,24 +19,32 @@ function ProgressBar({ tasks }: { tasks: ProjectTask[] }) {
 }
 
 export default function Projects() {
-  const [projects, setProjects] = useState(initialProjects);
+  const { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask } = useProjects();
+  const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", month: 1, note: "" });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
+  const [showTaskModal, setShowTaskModal] = useState<{ projectId: string } | null>(null);
+  const [taskForm, setTaskForm] = useState({ name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "" });
 
   const months = [...new Set(projects.map(p => p.month))].sort();
   const filtered = filterMonth === "all" ? projects : projects.filter(p => p.month === filterMonth);
-  const grouped: Record<number, Project[]> = {};
+  const grouped: Record<number, typeof projects> = {};
   filtered.forEach(p => { if (!grouped[p.month]) grouped[p.month] = []; grouped[p.month].push(p); });
 
-  const addProject = () => {
+  const handleAddProject = async () => {
     if (!newProject.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    const proj: Project = { id: Date.now().toString(), name: newProject.name, month: newProject.month, note: newProject.note, tasks: [], createdAt: new Date().toISOString() };
-    setProjects(prev => [...prev, proj]);
+    await addProject(newProject);
     setNewProject({ name: "", month: 1, note: "" });
     setShowAdd(false);
-    toast({ title: "Project created!" });
+  };
+
+  const handleAddTask = async () => {
+    if (!showTaskModal || !taskForm.name.trim()) { toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" }); return; }
+    await addTask({ ...taskForm, task_type: "project", project_id: showTaskModal.projectId });
+    setTaskForm({ name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", link: "", comments: "" });
+    setShowTaskModal(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -40,6 +52,8 @@ export default function Projects() {
     if (status === "In Progress") return "badge-progress";
     return "badge-todo";
   };
+
+  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
     <div className="p-6 page-enter">
@@ -96,7 +110,84 @@ export default function Projects() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowAdd(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={addProject} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Create</button>
+              <button onClick={handleAddProject} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Task Modal */}
+      {showTaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold">Add Task</h3>
+              <button onClick={() => setShowTaskModal(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Task Name</label>
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={taskForm.name} onChange={e => setTaskForm({ ...taskForm, name: e.target.value })} placeholder="Task name..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Status</label>
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value as Task["status"] })}>
+                    <option>To Do</option><option>In Progress</option><option>Done</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Priority</label>
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value as Task["priority"] })}>
+                    <option>High</option><option>Medium</option><option>Low</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Assigned To</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  onChange={e => { const v = e.target.value; if (v && !taskForm.assigned_to.includes(v)) setTaskForm({ ...taskForm, assigned_to: [...taskForm.assigned_to, v] }); }}>
+                  <option value="">Select...</option>
+                  {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+                </select>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {taskForm.assigned_to.map(a => (
+                    <span key={a} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
+                      {a.split(" ")[0]}
+                      <button onClick={() => setTaskForm({ ...taskForm, assigned_to: taskForm.assigned_to.filter(x => x !== a) })}><X className="w-3 h-3" /></button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Start Date</label>
+                  <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={taskForm.start_date} onChange={e => setTaskForm({ ...taskForm, start_date: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Due Date</label>
+                  <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={taskForm.due_date} onChange={e => setTaskForm({ ...taskForm, due_date: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Link</label>
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={taskForm.link} onChange={e => setTaskForm({ ...taskForm, link: e.target.value })} placeholder="https://..." />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Note</label>
+                <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
+                  value={taskForm.comments} onChange={e => setTaskForm({ ...taskForm, comments: e.target.value })} placeholder="Optional note..." />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowTaskModal(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
+              <button onClick={handleAddTask} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Add Task</button>
             </div>
           </div>
         </div>
@@ -119,18 +210,29 @@ export default function Projects() {
                       <h3 className="font-bold text-foreground">{proj.name}</h3>
                       {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
                     </div>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-2">{proj.tasks.length} tasks</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0">{proj.tasks.length} tasks</span>
+                      <button onClick={() => deleteProject(proj.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                      </button>
+                    </div>
                   </div>
                   {proj.tasks.length > 0 && (
                     <div className="mb-3">
                       <ProgressBar tasks={proj.tasks} />
                     </div>
                   )}
-                  <button onClick={() => setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-2">
-                    {expanded[proj.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    {expanded[proj.id] ? "Hide" : "Show"} tasks
-                  </button>
+                  <div className="flex items-center gap-3 mt-2">
+                    <button onClick={() => setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      {expanded[proj.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      {expanded[proj.id] ? "Hide" : "Show"} tasks
+                    </button>
+                    <button onClick={() => setShowTaskModal({ projectId: proj.id })}
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                      <Plus className="w-3.5 h-3.5" /> Add task
+                    </button>
+                  </div>
                   {expanded[proj.id] && proj.tasks.length > 0 && (
                     <div className="mt-3 space-y-2">
                       {proj.tasks.map(task => (
@@ -144,6 +246,9 @@ export default function Projects() {
                               </a>
                             )}
                             <span className={getStatusColor(task.status)}>{task.status}</span>
+                            <button onClick={() => deleteTask(task.id, proj.id)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-red-100 transition-colors">
+                              <Trash2 className="w-3 h-3 text-red-400" />
+                            </button>
                           </div>
                         </div>
                       ))}

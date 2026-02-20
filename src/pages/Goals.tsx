@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Plus, Target, Users, User, X, Save } from "lucide-react";
-import { goals as initialGoals, employees, Goal, GoalType } from "@/data/mockData";
+import { useGoals, Goal } from "@/hooks/useGoals";
+import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
+
+type GoalType = "individual" | "team";
 
 function ProgressCircle({ pct, size = 80 }: { pct: number; size?: number }) {
   const r = (size - 10) / 2;
@@ -23,30 +26,34 @@ function ProgressCircle({ pct, size = 80 }: { pct: number; size?: number }) {
 }
 
 export default function Goals() {
-  const [goals, setGoals] = useState<Goal[]>(initialGoals);
+  const { goals, loading, addGoal, updateGoal } = useGoals();
+  const { employees } = useEmployees();
   const [showAdd, setShowAdd] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [updateVal, setUpdateVal] = useState("");
-  const [form, setForm] = useState({ title: "", type: "individual" as GoalType, targetValue: 100, currentValue: 0, deadline: "", assignedTo: "" });
+  const [form, setForm] = useState({ title: "", type: "individual" as GoalType, target_value: 100, current_value: 0, deadline: "", assigned_to: "" });
   const [filter, setFilter] = useState<"all" | GoalType>("all");
 
   const filtered = filter === "all" ? goals : goals.filter(g => g.type === filter);
 
-  const addGoal = () => {
+  const handleAdd = async () => {
     if (!form.title.trim() || !form.deadline) { toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" }); return; }
-    setGoals(prev => [...prev, { ...form, id: Date.now().toString() }]);
+    await addGoal(form);
     setShowAdd(false);
-    toast({ title: "Goal created!" });
+    setForm({ title: "", type: "individual", target_value: 100, current_value: 0, deadline: "", assigned_to: "" });
   };
 
-  const updateProgress = (id: string) => {
+  const updateProgress = async (id: string) => {
     const val = Number(updateVal);
     if (isNaN(val)) return;
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, currentValue: Math.min(val, g.targetValue) } : g));
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    await updateGoal(id, { current_value: Math.min(val, goal.target_value) });
     setUpdating(null);
     setUpdateVal("");
-    toast({ title: "Progress updated!" });
   };
+
+  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
     <div className="p-6 page-enter">
@@ -69,7 +76,6 @@ export default function Goals() {
         ))}
       </div>
 
-      {/* Add Modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
@@ -95,14 +101,14 @@ export default function Goals() {
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Target Value</label>
                   <input type="number" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={form.targetValue} onChange={e => setForm({ ...form, targetValue: Number(e.target.value) })} />
+                    value={form.target_value} onChange={e => setForm({ ...form, target_value: Number(e.target.value) })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Current Value</label>
                   <input type="number" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={form.currentValue} onChange={e => setForm({ ...form, currentValue: Number(e.target.value) })} />
+                    value={form.current_value} onChange={e => setForm({ ...form, current_value: Number(e.target.value) })} />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Deadline</label>
@@ -114,7 +120,7 @@ export default function Goals() {
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Assigned To</label>
                   <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={form.assignedTo} onChange={e => setForm({ ...form, assignedTo: e.target.value })}>
+                    value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })}>
                     <option value="">Select member...</option>
                     {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
                   </select>
@@ -123,7 +129,7 @@ export default function Goals() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowAdd(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={addGoal} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Create</button>
+              <button onClick={handleAdd} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Create</button>
             </div>
           </div>
         </div>
@@ -131,12 +137,12 @@ export default function Goals() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {filtered.map((goal, i) => {
-          const pct = goal.targetValue ? Math.round((goal.currentValue / goal.targetValue) * 100) : 0;
+          const pct = goal.target_value ? Math.round((goal.current_value / goal.target_value) * 100) : 0;
           return (
             <div key={goal.id} className={`bg-card rounded-2xl border border-border/60 p-5 card-hover animate-stagger-${Math.min(i + 1, 5)}`}>
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
-                  <ProgressCircle pct={pct} />
+                  <ProgressCircle pct={Math.min(pct, 100)} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
@@ -151,9 +157,9 @@ export default function Goals() {
                     )}
                   </div>
                   <h3 className="text-sm font-semibold text-foreground leading-snug mb-1">{goal.title}</h3>
-                  {goal.assignedTo && <p className="text-xs text-muted-foreground">{goal.assignedTo}</p>}
+                  {goal.assigned_to && <p className="text-xs text-muted-foreground">{goal.assigned_to}</p>}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {goal.currentValue} / {goal.targetValue} · Due {new Date(goal.deadline).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}
+                    {goal.current_value} / {goal.target_value} · Due {new Date(goal.deadline).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 </div>
               </div>
@@ -166,7 +172,7 @@ export default function Goals() {
                     <button onClick={() => setUpdating(null)} className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted"><X className="w-4 h-4" /></button>
                   </div>
                 ) : (
-                  <button onClick={() => { setUpdating(goal.id); setUpdateVal(String(goal.currentValue)); }}
+                  <button onClick={() => { setUpdating(goal.id); setUpdateVal(String(goal.current_value)); }}
                     className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
                     <Target className="w-3.5 h-3.5" /> Update Progress
                   </button>

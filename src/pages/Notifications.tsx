@@ -1,21 +1,12 @@
-import { useState } from "react";
-import { notifications as initial, Notification } from "@/data/mockData";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Bell, CheckCheck, Info, CheckCircle2, XCircle } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function Notifications() {
-  const [notifs, setNotifs] = useState<Notification[]>(initial);
+  const { notifications, loading, markRead, markAllRead, unreadCount } = useNotifications();
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
-  const filtered = filter === "unread" ? notifs.filter(n => !n.isRead) : notifs;
-  const unread = notifs.filter(n => !n.isRead).length;
-
-  const markAll = () => {
-    setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
-    toast({ title: "All notifications marked as read" });
-  };
-
-  const markOne = (id: string) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  const filtered = filter === "unread" ? notifications.filter(n => !n.is_read) : notifications;
 
   const iconMap = { success: CheckCircle2, error: XCircle, info: Info };
   const colorMap = {
@@ -24,17 +15,19 @@ export default function Notifications() {
     info: "text-blue-600 bg-blue-100",
   };
 
+  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+
   return (
     <div className="p-6 page-enter">
       <div className="flex items-center justify-between mb-6 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Notifications</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {unread > 0 ? <span className="text-primary font-semibold">{unread} unread</span> : "All caught up!"} · {notifs.length} total
+            {unreadCount > 0 ? <span className="text-primary font-semibold">{unreadCount} unread</span> : "All caught up!"} · {notifications.length} total
           </p>
         </div>
-        {unread > 0 && (
-          <button onClick={markAll} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
+        {unreadCount > 0 && (
+          <button onClick={markAllRead} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
             <CheckCheck className="w-4 h-4" /> Mark all read
           </button>
         )}
@@ -61,22 +54,22 @@ export default function Notifications() {
               const Icon = iconMap[n.type];
               const colors = colorMap[n.type];
               return (
-                <div key={n.id} className={`flex items-start gap-4 p-4 transition-colors hover:bg-muted/30 ${!n.isRead ? "bg-primary/3" : ""}`}>
+                <div key={n.id} className={`flex items-start gap-4 p-4 transition-colors hover:bg-muted/30 ${!n.is_read ? "bg-primary/[0.03]" : ""}`}>
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${colors}`}>
                     <Icon className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-foreground">{n.title}</span>
-                      {!n.isRead && <span className="w-2 h-2 rounded-full bg-primary animate-pulse-dot" />}
+                      {!n.is_read && <span className="w-2 h-2 rounded-full bg-primary animate-pulse-dot" />}
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5">{n.message}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(n.createdAt).toLocaleString("en", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(n.created_at).toLocaleString("en", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
-                  {!n.isRead && (
-                    <button onClick={() => markOne(n.id)} className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors">
+                  {!n.is_read && (
+                    <button onClick={() => markRead(n.id)} className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors">
                       Read
                     </button>
                   )}

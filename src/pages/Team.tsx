@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, X, Save, Mail } from "lucide-react";
-import { employees as initialEmployees, Employee, projects, customers, standaloneTasksList } from "@/data/mockData";
-import { toast } from "@/hooks/use-toast";
-
-const allTasks = [...projects.flatMap(p => p.tasks), ...customers.flatMap(c => c.tasks), ...standaloneTasksList];
+import { useEmployees, Employee } from "@/hooks/useEmployees";
+import { useTasks } from "@/hooks/useTasks";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useProjects } from "@/hooks/useProjects";
 
 const gradients = [
   "from-cyan-400 to-teal-500",
@@ -14,27 +14,32 @@ const gradients = [
 ];
 
 export default function Team() {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
+  const { tasks: standaloneTasks } = useTasks();
+  const { customers } = useCustomers();
+  const { projects } = useProjects();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee" });
 
+  const allTasks = [
+    ...standaloneTasks,
+    ...projects.flatMap(p => p.tasks),
+    ...customers.flatMap(c => c.tasks),
+  ];
+
   const getStats = (name: string) => {
-    const myTasks = allTasks.filter(t => t.assignedTo.includes(name));
+    const myTasks = allTasks.filter(t => t.assigned_to?.includes(name));
     const done = myTasks.filter(t => t.status === "Done").length;
     return { total: myTasks.length, done, pct: myTasks.length ? Math.round((done / myTasks.length) * 100) : 0 };
   };
 
-  const save = () => {
-    if (!form.name.trim() || !form.position.trim() || !form.email.trim()) {
-      toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" }); return;
-    }
+  const save = async () => {
+    if (!form.name.trim() || !form.position.trim() || !form.email.trim()) return;
     if (editing) {
-      setEmployees(prev => prev.map(e => e.id === editing.id ? { ...editing, ...form } : e));
-      toast({ title: "Employee updated!" });
+      await updateEmployee(editing.id, form);
     } else {
-      setEmployees(prev => [...prev, { id: Date.now().toString(), ...form }]);
-      toast({ title: "Employee added!" });
+      await addEmployee(form);
     }
     setShowAdd(false);
     setEditing(null);
@@ -47,10 +52,7 @@ export default function Team() {
     setShowAdd(true);
   };
 
-  const remove = (id: string) => {
-    setEmployees(prev => prev.filter(e => e.id !== id));
-    toast({ title: "Employee removed" });
-  };
+  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
     <div className="p-6 page-enter">
@@ -63,7 +65,6 @@ export default function Team() {
           className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Employee</button>
       </div>
 
-      {/* Modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
@@ -112,7 +113,7 @@ export default function Team() {
                   <button onClick={() => startEdit(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
-                  <button onClick={() => remove(emp.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
+                  <button onClick={() => deleteEmployee(emp.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
                     <Trash2 className="w-3.5 h-3.5 text-red-400" />
                   </button>
                 </div>
