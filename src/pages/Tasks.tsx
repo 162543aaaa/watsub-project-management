@@ -52,6 +52,19 @@ function TaskModal({ task, employees, onSave, onClose }: {
   const [form, setForm] = useState<Partial<Task>>(task || {
     name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", comments: ""
   });
+  const [assignSearch, setAssignSearch] = useState("");
+  const [assignOpen, setAssignOpen] = useState(false);
+  const assignRef = useState<HTMLDivElement | null>(null);
+
+  const filteredEmployees = employees.filter(e =>
+    e.name.toLowerCase().includes(assignSearch.toLowerCase())
+  );
+
+  const toggleAssign = (name: string) => {
+    const current = form.assigned_to || [];
+    const updated = current.includes(name) ? current.filter(x => x !== name) : [...current, name];
+    setForm({ ...form, assigned_to: updated });
+  };
 
   const save = () => {
     if (!form.name?.trim()) { toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" }); return; }
@@ -88,22 +101,74 @@ function TaskModal({ task, employees, onSave, onClose }: {
               </select>
             </div>
           </div>
+
+          {/* Multi-select Assigned To */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Assigned To</label>
-            <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-              onChange={e => { const v = e.target.value; if (v && !form.assigned_to?.includes(v)) setForm({ ...form, assigned_to: [...(form.assigned_to || []), v] }); }}>
-              <option value="">Select team member...</option>
-              {employees.map((e, i) => <option key={i} value={e.name}>{e.name}</option>)}
-            </select>
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {form.assigned_to?.map(a => (
-                <span key={a} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                  {a.split(" ")[0]}
-                  <button onClick={() => setForm({ ...form, assigned_to: form.assigned_to!.filter(x => x !== a) })}><X className="w-3 h-3" /></button>
-                </span>
-              ))}
-            </div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+              Assigned To
+            </label>
+            {/* Selected pills */}
+            {(form.assigned_to || []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {form.assigned_to!.map(a => (
+                  <span key={a} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                    {a.split(" ")[0]}
+                    <button type="button" onClick={() => toggleAssign(a)} className="hover:text-destructive transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Toggle dropdown */}
+            <button type="button" onClick={() => setAssignOpen(o => !o)}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-muted-foreground hover:border-primary/40 transition-all outline-none">
+              <span>{assignOpen ? "Close" : `Add team member${(form.assigned_to || []).length ? ` (${form.assigned_to!.length} selected)` : "..."}`}</span>
+              <span className="text-muted-foreground/60">{assignOpen ? "▲" : "▼"}</span>
+            </button>
+            {assignOpen && (
+              <div className="mt-1.5 border border-border rounded-xl bg-card shadow-md overflow-hidden">
+                <div className="p-2 border-b border-border">
+                  <input
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                    placeholder="Search team members..."
+                    value={assignSearch}
+                    onChange={e => setAssignSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-40 overflow-y-auto">
+                  {filteredEmployees.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">No members found</p>
+                  )}
+                  {filteredEmployees.map(e => {
+                    const selected = (form.assigned_to || []).includes(e.name);
+                    return (
+                      <button key={e.name} type="button" onClick={() => toggleAssign(e.name)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors hover:bg-muted ${selected ? "bg-primary/5" : ""}`}>
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${selected ? "bg-primary border-primary" : "border-border"}`}>
+                          {selected && <span className="text-primary-foreground text-[10px] font-bold">✓</span>}
+                        </div>
+                        <div className={`w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0`}>
+                          {e.name.charAt(0)}
+                        </div>
+                        <span className={`flex-1 ${selected ? "font-medium text-foreground" : "text-muted-foreground"}`}>{e.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {(form.assigned_to || []).length > 0 && (
+                  <div className="p-2 border-t border-border">
+                    <button type="button" onClick={() => setForm({ ...form, assigned_to: [] })}
+                      className="w-full text-xs text-muted-foreground hover:text-destructive transition-colors py-1">
+                      Clear all
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due Date</label>
             <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
