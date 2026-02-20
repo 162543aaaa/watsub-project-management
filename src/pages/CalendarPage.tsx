@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { projects, customers, standaloneTasksList } from "@/data/mockData";
+import { useTasks } from "@/hooks/useTasks";
+import { useProjects } from "@/hooks/useProjects";
+import { useCustomers } from "@/hooks/useCustomers";
 
-const allTasks = [
-  ...projects.flatMap(p => p.tasks),
-  ...customers.flatMap(c => c.tasks),
-  ...standaloneTasksList,
-].filter(t => t.dueDate);
+type TaskStatus = "To Do" | "In Progress" | "Done";
+
+interface CalendarTask {
+  id: string;
+  name: string;
+  status: TaskStatus;
+  due_date?: string | null;
+}
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
@@ -17,8 +22,23 @@ function getFirstDayOfMonth(year: number, month: number) {
 }
 
 export default function CalendarPage() {
-  const today = new Date("2026-02-20");
-  const [current, setCurrent] = useState({ year: 2026, month: 1 }); // 0-indexed
+  const today = new Date();
+  const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
+
+  const { tasks: standaloneTasks } = useTasks();
+  const { projects } = useProjects();
+  const { customers } = useCustomers();
+
+  const allTasks = useMemo<CalendarTask[]>(() => {
+    const standalone = standaloneTasks.map(t => ({ id: t.id, name: t.name, status: t.status as TaskStatus, due_date: t.due_date }));
+    const projectTasks = projects.flatMap(p =>
+      p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status as TaskStatus, due_date: t.due_date }))
+    );
+    const customerTasks = customers.flatMap(c =>
+      c.tasks.map(t => ({ id: t.id, name: t.name, status: t.status as TaskStatus, due_date: t.due_date }))
+    );
+    return [...standalone, ...projectTasks, ...customerTasks].filter(t => t.due_date);
+  }, [standaloneTasks, projects, customers]);
 
   const daysInMonth = getDaysInMonth(current.year, current.month);
   const firstDay = getFirstDayOfMonth(current.year, current.month);
@@ -30,7 +50,7 @@ export default function CalendarPage() {
 
   const getTasksForDay = (day: number) => {
     const dateStr = `${current.year}-${String(current.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return allTasks.filter(t => t.dueDate?.startsWith(dateStr));
+    return allTasks.filter(t => t.due_date?.startsWith(dateStr));
   };
 
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -40,7 +60,7 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between mb-6 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Calendar</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Tasks by due date</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{allTasks.length} tasks with due dates</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={goToday} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
@@ -70,20 +90,38 @@ export default function CalendarPage() {
           ))}
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
-            const isToday = current.year === today.getFullYear() && current.month === today.getMonth() && day === today.getDate();
-            const tasks = getTasksForDay(day);
+            const isToday =
+              current.year === today.getFullYear() &&
+              current.month === today.getMonth() &&
+              day === today.getDate();
+            const dayTasks = getTasksForDay(day);
             return (
-              <div key={day} className={`min-h-[100px] border-b border-r border-border/40 p-2 transition-colors ${isToday ? "bg-primary/5" : "hover:bg-muted/30"}`}>
+              <div
+                key={day}
+                className={`min-h-[100px] border-b border-r border-border/40 p-2 transition-colors ${isToday ? "bg-primary/5" : "hover:bg-muted/30"}`}
+              >
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold mb-1 ${isToday ? "bg-primary text-primary-foreground" : "text-foreground"}`}>
                   {day}
                 </div>
                 <div className="space-y-1">
-                  {tasks.slice(0, 3).map(t => (
-                    <div key={t.id} className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${t.status === "Done" ? "bg-green-100 text-green-700" : t.status === "In Progress" ? "bg-cyan-100 text-cyan-700" : "bg-gray-100 text-gray-600"}`}>
+                  {dayTasks.slice(0, 3).map(t => (
+                    <div
+                      key={t.id}
+                      title={t.name}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${
+                        t.status === "Done"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : t.status === "In Progress"
+                          ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
                       {t.name}
                     </div>
                   ))}
-                  {tasks.length > 3 && <div className="text-[10px] text-muted-foreground px-1">+{tasks.length - 3} more</div>}
+                  {dayTasks.length > 3 && (
+                    <div className="text-[10px] text-muted-foreground px-1">+{dayTasks.length - 3} more</div>
+                  )}
                 </div>
               </div>
             );
