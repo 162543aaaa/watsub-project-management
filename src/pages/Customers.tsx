@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2 } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const YEARS = [2025, 2026, 2027];
@@ -29,13 +32,12 @@ export default function Customers() {
   const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", month: 1 });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
-
-  // Task modal state
   const [taskModal, setTaskModal] = useState<{ customerId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
-
-  // Edit customer modal
   const [editModal, setEditModal] = useState<typeof form & { id: string } | null>(null);
+  const [custOrders, setCustOrders] = useState<Record<number, string[]>>({});
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const months = [...new Set(customers.map(c => c.month))].sort();
   const filtered = filterMonth === "all" ? customers : customers.filter(c => c.month === filterMonth);
@@ -86,7 +88,6 @@ export default function Customers() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-6 animate-stagger-2">
-        {/* Year filter */}
         <div className="flex gap-1">
           {YEARS.map(y => (
             <button key={y} onClick={() => setFilterYear(y)}
@@ -96,7 +97,6 @@ export default function Customers() {
           ))}
         </div>
         <div className="w-px h-5 bg-border" />
-        {/* Month filter */}
         <div className="flex flex-wrap gap-1.5">
           <button onClick={() => setFilterMonth("all")}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
@@ -137,106 +137,117 @@ export default function Customers() {
 
       {/* Customer Cards */}
       <div className="space-y-8">
-        {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([month, custs]) => (
-          <div key={month} className="animate-stagger-3">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-success flex items-center justify-center text-white text-xs font-bold">
-                {monthNames[Number(month)]?.slice(0, 3)}
+        {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([month, custs]) => {
+          const monthNum = Number(month);
+          const orderedCusts = (() => {
+            const order = custOrders[monthNum];
+            if (!order?.length) return custs;
+            const map = new Map(custs.map(c => [c.id, c]));
+            const sorted = order.map(id => map.get(id)).filter(Boolean) as typeof custs;
+            const unsorted = custs.filter(c => !order.includes(c.id));
+            return [...sorted, ...unsorted];
+          })();
+          const ids = orderedCusts.map(c => c.id);
+          return (
+            <div key={month} className="animate-stagger-3">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-success flex items-center justify-center text-white text-xs font-bold">
+                  {monthNames[monthNum]?.slice(0, 3)}
+                </div>
+                <h2 className="text-lg font-bold text-foreground">{monthNames[monthNum]} {filterYear}</h2>
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{custs.length} customers</span>
               </div>
-              <h2 className="text-lg font-bold text-foreground">{monthNames[Number(month)]} {filterYear}</h2>
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{custs.length} customers</span>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {custs.map(cust => (
-                <div key={cust.id} className="bg-card rounded-2xl border border-border/60 p-5 card-hover group">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-foreground">{cust.name}</h3>
-                        {cust.payment_fee && (
-                          <span className="flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full"
-                            style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
-                            <DollarSign className="w-2.5 h-2.5" />{cust.payment_fee}
-                          </span>
-                        )}
-                      </div>
-                      {cust.project_title && <p className="text-xs text-muted-foreground mt-0.5">{cust.project_title}</p>}
-                      {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
-                    </div>
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => openAddTask(cust.id)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-colors"
-                        title="Add task"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => deleteCustomer(cust.id)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors"
-                        title="Delete customer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </button>
-                    </div>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-1">{cust.tasks.length} tasks</span>
-                  </div>
-                  {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
-
-                  {/* Expand toggle + add task */}
-                  <div className="flex items-center gap-3 mt-3">
-                    <button onClick={() => setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] }))}
-                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      {expanded[cust.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                      {expanded[cust.id] ? "Hide" : "Show"} tasks
-                    </button>
-                    <button onClick={() => openAddTask(cust.id)}
-                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
-                      <Plus className="w-3.5 h-3.5" /> Add task
-                    </button>
-                  </div>
-
-                  {/* Tasks list */}
-                  {expanded[cust.id] && (
-                    <div className="mt-3 space-y-2">
-                      {cust.tasks.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
-                      ) : cust.tasks.map(task => (
-                        <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 group/task">
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                          <span className="text-xs font-medium text-foreground flex-1 truncate">{task.name}</span>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {task.link && (
-                              <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                            <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
-                              {task.status}
-                            </span>
-                            <button
-                              onClick={() => openEditTask(cust.id, task)}
-                              className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all"
-                            >
-                              <Pencil className="w-3 h-3 text-primary" />
+              <DndContext sensors={sensors} collisionDetection={closestCenter}
+                onDragEnd={(event: DragEndEvent) => {
+                  const { active, over } = event;
+                  if (!over || active.id === over.id) return;
+                  setCustOrders(prev => {
+                    const cur = orderedCusts.map(c => c.id);
+                    return { ...prev, [monthNum]: arrayMove(cur, cur.indexOf(active.id as string), cur.indexOf(over.id as string)) };
+                  });
+                }}>
+                <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {orderedCusts.map(cust => (
+                      <SortableCustCard key={cust.id} id={cust.id}>
+                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group h-full">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-bold text-foreground">{cust.name}</h3>
+                                {cust.payment_fee && (
+                                  <span className="flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full"
+                                    style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
+                                    <DollarSign className="w-2.5 h-2.5" />{cust.payment_fee}
+                                  </span>
+                                )}
+                              </div>
+                              {cust.project_title && <p className="text-xs text-muted-foreground mt-0.5">{cust.project_title}</p>}
+                              {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
+                            </div>
+                            <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => openAddTask(cust.id)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-colors">
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => deleteCustomer(cust.id)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors">
+                                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                              </button>
+                            </div>
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-1">{cust.tasks.length} tasks</span>
+                          </div>
+                          {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
+                          <div className="flex items-center gap-3 mt-3">
+                            <button onClick={() => setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] }))}
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                              {expanded[cust.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                              {expanded[cust.id] ? "Hide" : "Show"} tasks
                             </button>
-                            <button
-                              onClick={() => deleteTask(task.id, cust.id)}
-                              className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all"
-                            >
-                              <Trash2 className="w-3 h-3 text-destructive" />
+                            <button onClick={() => openAddTask(cust.id)}
+                              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                              <Plus className="w-3.5 h-3.5" /> Add task
                             </button>
                           </div>
+                          {expanded[cust.id] && (
+                            <div className="mt-3 space-y-2">
+                              {cust.tasks.length === 0 ? (
+                                <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
+                              ) : cust.tasks.map(task => (
+                                <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 group/task">
+                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                                  <span className="text-xs font-medium text-foreground flex-1 truncate">{task.name}</span>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {task.link && (
+                                      <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                                        <ExternalLink className="w-3 h-3" />
+                                      </a>
+                                    )}
+                                    <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
+                                      {task.status}
+                                    </span>
+                                    <button onClick={() => openEditTask(cust.id, task)}
+                                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all">
+                                      <Pencil className="w-3 h-3 text-primary" />
+                                    </button>
+                                    <button onClick={() => deleteTask(task.id, cust.id)}
+                                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all">
+                                      <Trash2 className="w-3 h-3 text-destructive" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                      </SortableCustCard>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {Object.keys(grouped).length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <Users2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -244,6 +255,20 @@ export default function Customers() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function SortableCustCard({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }} className="relative">
+      <div {...attributes} {...listeners}
+        className="absolute top-3 right-24 z-10 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+        style={{ touchAction: "none" }}>
+        <GripVertical className="w-3.5 h-3.5" />
+      </div>
+      {children}
     </div>
   );
 }
@@ -286,11 +311,8 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames }: {
           ))}
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
-            <select
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-              value={form.month}
-              onChange={e => setForm({ ...form, month: Number(e.target.value) })}
-            >
+            <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+              value={form.month} onChange={e => setForm({ ...form, month: Number(e.target.value) })}>
               {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
             </select>
           </div>
