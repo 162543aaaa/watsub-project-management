@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, X, Save, GripVertical } from "lucide-react";
-import { standaloneTasksList, employees, Task, TaskStatus, TaskPriority } from "@/data/mockData";
+import { Plus, Pencil, Trash2, X, Save } from "lucide-react";
+import { useTasks } from "@/hooks/useTasks";
+import type { Task } from "@/hooks/useProjects";
+import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
 
+type TaskStatus = "To Do" | "In Progress" | "Done";
+type TaskPriority = "Low" | "Medium" | "High";
 const COLUMNS: TaskStatus[] = ["To Do", "In Progress", "Done"];
 
 function getColStyle(col: TaskStatus) {
@@ -20,19 +24,19 @@ function PriorityBadge({ priority }: { priority: string }) {
   );
 }
 
-function TaskModal({ task, onSave, onClose }: {
+function TaskModal({ task, employees, onSave, onClose }: {
   task: Partial<Task> | null;
-  onSave: (t: Task) => void;
+  employees: { name: string }[];
+  onSave: (t: Partial<Task>) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState<Partial<Task>>(task || {
-    name: "", status: "To Do", priority: "Medium", assignedTo: [], dueDate: "", comments: ""
+    name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", comments: ""
   });
-  const [assignInput, setAssignInput] = useState("");
 
   const save = () => {
     if (!form.name?.trim()) { toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" }); return; }
-    onSave({ id: form.id || Date.now().toString(), name: form.name!, status: form.status as TaskStatus, priority: form.priority as TaskPriority, assignedTo: form.assignedTo || [], dueDate: form.dueDate || "", comments: form.comments || "", createdAt: form.createdAt || new Date().toISOString() });
+    onSave(form);
     onClose();
   };
 
@@ -68,15 +72,15 @@ function TaskModal({ task, onSave, onClose }: {
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Assigned To</label>
             <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-              onChange={e => { const v = e.target.value; if (v && !form.assignedTo?.includes(v)) setForm({ ...form, assignedTo: [...(form.assignedTo || []), v] }); }}>
+              onChange={e => { const v = e.target.value; if (v && !form.assigned_to?.includes(v)) setForm({ ...form, assigned_to: [...(form.assigned_to || []), v] }); }}>
               <option value="">Select team member...</option>
-              {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+              {employees.map((e, i) => <option key={i} value={e.name}>{e.name}</option>)}
             </select>
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {form.assignedTo?.map(a => (
+              {form.assigned_to?.map(a => (
                 <span key={a} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                   {a.split(" ")[0]}
-                  <button onClick={() => setForm({ ...form, assignedTo: form.assignedTo!.filter(x => x !== a) })}><X className="w-3 h-3" /></button>
+                  <button onClick={() => setForm({ ...form, assigned_to: form.assigned_to!.filter(x => x !== a) })}><X className="w-3 h-3" /></button>
                 </span>
               ))}
             </div>
@@ -84,7 +88,7 @@ function TaskModal({ task, onSave, onClose }: {
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due Date</label>
             <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-              value={form.dueDate || ""} onChange={e => setForm({ ...form, dueDate: e.target.value })} />
+              value={form.due_date || ""} onChange={e => setForm({ ...form, due_date: e.target.value })} />
           </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
@@ -104,20 +108,21 @@ function TaskModal({ task, onSave, onClose }: {
 }
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>(standaloneTasksList);
+  const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
+  const { employees } = useEmployees();
   const [modal, setModal] = useState<{ open: boolean; task: Partial<Task> | null }>({ open: false, task: null });
 
-  const handleSave = (t: Task) => {
-    setTasks(prev => prev.find(x => x.id === t.id) ? prev.map(x => x.id === t.id ? t : x) : [...prev, t]);
-    toast({ title: t.id ? "Task updated!" : "Task created!" });
-  };
-
-  const handleDelete = (id: string) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
-    toast({ title: "Task deleted" });
+  const handleSave = async (form: Partial<Task>) => {
+    if (form.id) {
+      await updateTask(form.id, { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, comments: form.comments });
+    } else {
+      await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", comments: form.comments || "", task_type: "standalone" });
+    }
   };
 
   const colTasks = (col: TaskStatus) => tasks.filter(t => t.status === col);
+
+  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
     <div className="p-6 page-enter">
@@ -155,11 +160,11 @@ export default function Tasks() {
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <span className="text-sm font-medium text-foreground leading-snug flex-1">{task.name}</span>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setModal({ open: true, task })}
+                        <button onClick={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
                           className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
                           <Pencil className="w-3 h-3 text-muted-foreground" />
                         </button>
-                        <button onClick={() => handleDelete(task.id)}
+                        <button onClick={() => deleteTask(task.id)}
                           className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-red-50 transition-colors">
                           <Trash2 className="w-3 h-3 text-red-400" />
                         </button>
@@ -167,20 +172,20 @@ export default function Tasks() {
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <PriorityBadge priority={task.priority} />
-                      {task.dueDate && (
+                      {task.due_date && (
                         <span className="text-xs text-muted-foreground">
-                          📅 {new Date(task.dueDate).toLocaleDateString("en", { day: "numeric", month: "short" })}
+                          📅 {new Date(task.due_date).toLocaleDateString("en", { day: "numeric", month: "short" })}
                         </span>
                       )}
                     </div>
-                    {task.assignedTo.length > 0 && (
+                    {task.assigned_to && task.assigned_to.length > 0 && (
                       <div className="flex items-center gap-1 mt-2">
-                        {task.assignedTo.slice(0, 3).map((a, i) => (
+                        {task.assigned_to.slice(0, 3).map((a, i) => (
                           <div key={i} className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold -ml-1 first:ml-0 border border-card ${["bg-gradient-to-br from-cyan-400 to-teal-500", "bg-gradient-to-br from-violet-400 to-purple-500", "bg-gradient-to-br from-rose-400 to-pink-500"][i % 3]}`}>
                             {a.charAt(0)}
                           </div>
                         ))}
-                        {task.assignedTo.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assignedTo.length - 3}</span>}
+                        {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
                       </div>
                     )}
                     {task.comments && (
@@ -194,7 +199,14 @@ export default function Tasks() {
         })}
       </div>
 
-      {modal.open && <TaskModal task={modal.task} onSave={handleSave} onClose={() => setModal({ open: false, task: null })} />}
+      {modal.open && (
+        <TaskModal
+          task={modal.task}
+          employees={employees}
+          onSave={handleSave}
+          onClose={() => setModal({ open: false, task: null })}
+        />
+      )}
     </div>
   );
 }

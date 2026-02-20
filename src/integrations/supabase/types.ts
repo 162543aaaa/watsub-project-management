@@ -14,7 +14,270 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          month: number
+          name: string
+          note: string | null
+          payment_fee: string | null
+          project_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          month?: number
+          name: string
+          note?: string | null
+          payment_fee?: string | null
+          project_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          month?: number
+          name?: string
+          note?: string | null
+          payment_fee?: string | null
+          project_title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employees: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          position: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name: string
+          position?: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          position?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          current_value: number
+          deadline: string
+          id: string
+          target_value: number
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          current_value?: number
+          deadline: string
+          id?: string
+          target_value?: number
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          current_value?: number
+          deadline?: string
+          id?: string
+          target_value?: number
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          created_at: string
+          id: string
+          leave_end: string
+          leave_reason: string
+          leave_start: string
+          leave_type: string
+          requested_by: string
+          requested_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leave_end: string
+          leave_reason?: string
+          leave_start: string
+          leave_type?: string
+          requested_by: string
+          requested_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leave_end?: string
+          leave_reason?: string
+          leave_start?: string
+          leave_type?: string
+          requested_by?: string
+          requested_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string
+          id: string
+          month: number
+          name: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month?: number
+          name: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: number
+          name?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          assigned_to: string[]
+          comments: string | null
+          created_at: string
+          customer_id: string | null
+          due_date: string | null
+          id: string
+          link: string | null
+          name: string
+          priority: string
+          project_id: string | null
+          start_date: string | null
+          status: string
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string[]
+          comments?: string | null
+          created_at?: string
+          customer_id?: string | null
+          due_date?: string | null
+          id?: string
+          link?: string | null
+          name: string
+          priority?: string
+          project_id?: string | null
+          start_date?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string[]
+          comments?: string | null
+          created_at?: string
+          customer_id?: string | null
+          due_date?: string | null
+          id?: string
+          link?: string | null
+          name?: string
+          priority?: string
+          project_id?: string | null
+          start_date?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_tasks_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
   Users, Plane, Wallet, BarChart3, Bell, Upload, ChevronLeft, ChevronRight, Zap
 } from "lucide-react";
-import { notifications } from "@/data/mockData";
+import { useNotifications } from "@/hooks/useNotifications";
 import { useState } from "react";
 
 const navItems = [
@@ -24,7 +24,7 @@ const navItems = [
 export default function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const { unreadCount } = useNotifications();
 
   return (
     <aside
