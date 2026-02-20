@@ -9,6 +9,8 @@ export interface Employee {
   email: string;
   role: string;
   avatar?: string;
+  phone?: string;
+  promptpay_qr?: string;
   created_at?: string;
 }
 

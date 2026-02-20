@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -24,6 +24,38 @@ function ProgressBar({ tasks }: { tasks: Task[] }) {
 
 const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "" };
 
+function exportCSV(rows: string[][], filename: string) {
+  const content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportPDF(title: string, html: string) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(`<html><head><title>${title}</title>
+  <style>
+    body{font-family:sans-serif;font-size:13px;color:#1a1a1a;padding:32px;max-width:960px;margin:0 auto;}
+    h1{font-size:20px;margin-bottom:2px;} .sub{color:#888;font-size:11px;margin-bottom:20px;}
+    .section-title{font-size:14px;font-weight:700;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:5px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+    th{background:#f0f0f0;text-align:left;padding:7px 10px;font-size:11px;font-weight:600;}
+    td{padding:6px 10px;border-bottom:1px solid #f5f5f5;font-size:11px;}
+    .badge{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;}
+    .done{background:#d1fae5;color:#065f46;} .prog{background:#e0f2fe;color:#0369a1;} .todo{background:#f3f4f6;color:#6b7280;}
+    .fee{background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;}
+    .bar-wrap{background:#e5e7eb;border-radius:99px;height:6px;min-width:60px;}
+    .bar{background:#059669;border-radius:99px;height:6px;}
+  </style></head><body>
+  ${html}
+  </body></html>`);
+  w.document.close();
+  setTimeout(() => { w.print(); w.close(); }, 400);
+}
+
 export default function Customers() {
   const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask } = useCustomers();
   const { employees } = useEmployees();
@@ -36,6 +68,8 @@ export default function Customers() {
   const [taskForm, setTaskForm] = useState(emptyTask);
   const [editModal, setEditModal] = useState<typeof form & { id: string } | null>(null);
   const [custOrders, setCustOrders] = useState<Record<number, string[]>>({});
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -71,6 +105,73 @@ export default function Customers() {
     setTaskModal(null);
   };
 
+  const getOrdered = (monthNum: number, custs: typeof customers) => {
+    const order = custOrders[monthNum];
+    if (!order?.length) return custs;
+    const map = new Map(custs.map(c => [c.id, c]));
+    const sorted = order.map(id => map.get(id)).filter(Boolean) as typeof custs;
+    const unsorted = custs.filter(c => !order.includes(c.id));
+    return [...sorted, ...unsorted];
+  };
+
+  const periodLabel = filterMonth === "all" ? `${filterYear}` : `${monthNames[filterMonth]} ${filterYear}`;
+
+  const handleExportCSV = () => {
+    setShowExportMenu(false);
+    const rows: string[][] = [
+      ["Customers Export", periodLabel],
+      [],
+      ["Customer Name", "Project Title", "Payment Fee", "Detail", "Note", "Month", "Total Tasks", "Done", "In Progress", "To Do", "Progress %"],
+    ];
+    Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, custs]) => {
+      const orderedCusts = getOrdered(Number(month), custs);
+      orderedCusts.forEach(cust => {
+        const done = cust.tasks.filter(t => t.status === "Done").length;
+        const inProg = cust.tasks.filter(t => t.status === "In Progress").length;
+        const todo = cust.tasks.filter(t => t.status === "To Do").length;
+        const pct = cust.tasks.length ? Math.round((done / cust.tasks.length) * 100) : 0;
+        rows.push([cust.name, cust.project_title || "", cust.payment_fee || "", cust.detail || "", cust.note || "", monthNames[Number(month)], String(cust.tasks.length), String(done), String(inProg), String(todo), `${pct}%`]);
+        if (cust.tasks.length > 0) {
+          rows.push(["", "  Task Name", "Status", "Priority", "Assigned To", "Due Date", "", "", "", "", ""]);
+          cust.tasks.forEach(t => rows.push(["", `  ${t.name}`, t.status, t.priority, (t.assigned_to || []).join("; "), t.due_date || "", "", "", "", "", ""]));
+        }
+      });
+    });
+    exportCSV(rows, `customers-${periodLabel.replace(/ /g, "-")}.csv`);
+  };
+
+  const handleExportPDF = () => {
+    setShowExportMenu(false);
+    let html = `<h1>Customers – ${periodLabel}</h1><div class="sub">Generated ${new Date().toLocaleString("en")}</div>`;
+    Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, custs]) => {
+      const orderedCusts = getOrdered(Number(month), custs);
+      html += `<div class="section-title">${monthNames[Number(month)]} ${filterYear} (${custs.length} customers)</div>`;
+      html += `<table><thead><tr><th>Customer</th><th>Project</th><th>Fee</th><th>Tasks</th><th>Done</th><th>Progress</th></tr></thead><tbody>`;
+      orderedCusts.forEach(cust => {
+        const done = cust.tasks.filter(t => t.status === "Done").length;
+        const pct = cust.tasks.length ? Math.round((done / cust.tasks.length) * 100) : 0;
+        html += `<tr>
+          <td><strong>${cust.name}</strong>${cust.detail ? `<br><span style="color:#888;font-size:10px">${cust.detail}</span>` : ""}</td>
+          <td>${cust.project_title || "-"}</td>
+          <td>${cust.payment_fee ? `<span class="fee">${cust.payment_fee}</span>` : "-"}</td>
+          <td>${cust.tasks.length}</td>
+          <td>${done}</td>
+          <td><div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div><span style="font-size:10px;font-weight:700"> ${pct}%</span></td>
+        </tr>`;
+        if (cust.tasks.length > 0) {
+          html += `<tr><td colspan="6" style="padding:0 10px 8px;"><table style="margin:0"><thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Assigned</th><th>Due</th></tr></thead><tbody>`;
+          cust.tasks.forEach(t => {
+            const cls = t.status === "Done" ? "done" : t.status === "In Progress" ? "prog" : "todo";
+            html += `<tr><td>${t.name}</td><td><span class="badge ${cls}">${t.status}</span></td><td>${t.priority}</td><td>${(t.assigned_to || []).join(", ") || "-"}</td><td>${t.due_date || "-"}</td></tr>`;
+          });
+          html += `</tbody></table></td></tr>`;
+        }
+      });
+      html += `</tbody></table>`;
+    });
+    exportPDF(`Customers – ${periodLabel}`, html);
+  };
+
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
@@ -81,9 +182,31 @@ export default function Customers() {
           <h1 className="text-2xl font-bold">Customers</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{customers.length} clients managed</p>
         </div>
-        <button onClick={() => setShowAdd(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Customer
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Export */}
+          <div className="relative" ref={exportRef}>
+            <button
+              onClick={() => setShowExportMenu(v => !v)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all"
+            >
+              <Download className="w-4 h-4" /> Export
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-2 w-44 bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden animate-scale-in">
+                <button onClick={handleExportCSV} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
+                  <Sheet className="w-4 h-4 text-green-600" /> Export CSV
+                </button>
+                <div className="h-px bg-border" />
+                <button onClick={handleExportPDF} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
+                  <FileText className="w-4 h-4 text-red-500" /> Export PDF
+                </button>
+              </div>
+            )}
+          </div>
+          <button onClick={() => setShowAdd(true)} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> New Customer
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -123,6 +246,21 @@ export default function Customers() {
         />
       )}
 
+      {/* Edit Customer Modal */}
+      {editModal && (
+        <CustomerModal
+          title="Edit Customer"
+          form={editModal}
+          setForm={(f: any) => setEditModal({ ...editModal, ...f })}
+          onSave={async () => {
+            // update logic if needed
+            setEditModal(null);
+          }}
+          onClose={() => setEditModal(null)}
+          monthNames={monthNames}
+        />
+      )}
+
       {/* Task Modal */}
       {taskModal && (
         <TaskModal
@@ -139,14 +277,7 @@ export default function Customers() {
       <div className="space-y-8">
         {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([month, custs]) => {
           const monthNum = Number(month);
-          const orderedCusts = (() => {
-            const order = custOrders[monthNum];
-            if (!order?.length) return custs;
-            const map = new Map(custs.map(c => [c.id, c]));
-            const sorted = order.map(id => map.get(id)).filter(Boolean) as typeof custs;
-            const unsorted = custs.filter(c => !order.includes(c.id));
-            return [...sorted, ...unsorted];
-          })();
+          const orderedCusts = getOrdered(monthNum, custs);
           const ids = orderedCusts.map(c => c.id);
           return (
             <div key={month} className="animate-stagger-3">
@@ -368,7 +499,7 @@ function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: 
             <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
               onChange={e => { const v = e.target.value; if (v && !taskForm.assigned_to.includes(v)) setTaskForm({ ...taskForm, assigned_to: [...taskForm.assigned_to, v] }); }}>
               <option value="">Select...</option>
-              {employees.map(e => <option key={e.name} value={e.name}>{e.name}</option>)}
+              {employees.filter(e => !taskForm.assigned_to.includes(e.name)).map((e, i) => <option key={i} value={e.name}>{e.name}</option>)}
             </select>
             <div className="flex flex-wrap gap-1 mt-1.5">
               {taskForm.assigned_to.map((a: string) => (

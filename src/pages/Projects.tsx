@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -24,11 +24,36 @@ function ProgressBar({ tasks }: { tasks: Task[] }) {
   );
 }
 
-const getStatusBadge = (status: string) => {
-  if (status === "Done") return "badge-done";
-  if (status === "In Progress") return "badge-progress";
-  return "badge-todo";
-};
+function exportCSV(rows: string[][], filename: string) {
+  const content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportPDF(title: string, html: string) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(`<html><head><title>${title}</title>
+  <style>
+    body{font-family:sans-serif;font-size:13px;color:#1a1a1a;padding:32px;max-width:960px;margin:0 auto;}
+    h1{font-size:20px;margin-bottom:2px;} .sub{color:#888;font-size:11px;margin-bottom:20px;}
+    .section-title{font-size:14px;font-weight:700;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:5px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+    th{background:#f0f0f0;text-align:left;padding:7px 10px;font-size:11px;font-weight:600;}
+    td{padding:6px 10px;border-bottom:1px solid #f5f5f5;font-size:11px;}
+    .badge{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;}
+    .done{background:#d1fae5;color:#065f46;} .prog{background:#e0f2fe;color:#0369a1;} .todo{background:#f3f4f6;color:#6b7280;}
+    .bar-wrap{background:#e5e7eb;border-radius:99px;height:6px;min-width:60px;}
+    .bar{background:#0891b2;border-radius:99px;height:6px;}
+  </style></head><body>
+  ${html}
+  </body></html>`);
+  w.document.close();
+  setTimeout(() => { w.print(); w.close(); }, 400);
+}
 
 export default function Projects() {
   const { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask } = useProjects();
@@ -41,6 +66,8 @@ export default function Projects() {
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
   const [projOrders, setProjOrders] = useState<Record<number, string[]>>({});
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -76,6 +103,65 @@ export default function Projects() {
     setTaskModal(null);
   };
 
+  const periodLabel = filterMonth === "all" ? `${filterYear}` : `${monthNames[filterMonth]} ${filterYear}`;
+
+  const handleExportCSV = () => {
+    setShowExportMenu(false);
+    const rows: string[][] = [
+      ["Projects Export", periodLabel],
+      [],
+      ["Project Name", "Month", "Note", "Total Tasks", "Done", "In Progress", "To Do", "Progress %"],
+    ];
+    Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, projs]) => {
+      const orderedProjs = getOrdered(Number(month), projs);
+      orderedProjs.forEach(proj => {
+        const done = proj.tasks.filter(t => t.status === "Done").length;
+        const inProg = proj.tasks.filter(t => t.status === "In Progress").length;
+        const todo = proj.tasks.filter(t => t.status === "To Do").length;
+        const pct = proj.tasks.length ? Math.round((done / proj.tasks.length) * 100) : 0;
+        rows.push([proj.name, monthNames[Number(month)], proj.note || "", String(proj.tasks.length), String(done), String(inProg), String(todo), `${pct}%`]);
+        if (proj.tasks.length > 0) {
+          rows.push(["", "  Task Name", "Status", "Priority", "Assigned To", "Due Date", "", ""]);
+          proj.tasks.forEach(t => rows.push(["", `  ${t.name}`, t.status, t.priority, (t.assigned_to || []).join("; "), t.due_date || "", "", ""]));
+        }
+      });
+    });
+    exportCSV(rows, `projects-${periodLabel.replace(/ /g, "-")}.csv`);
+  };
+
+  const handleExportPDF = () => {
+    setShowExportMenu(false);
+    let html = `<h1>Projects – ${periodLabel}</h1><div class="sub">Generated ${new Date().toLocaleString("en")}</div>`;
+    Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, projs]) => {
+      const orderedProjs = getOrdered(Number(month), projs);
+      html += `<div class="section-title">${monthNames[Number(month)]} ${filterYear} (${projs.length} projects)</div>`;
+      orderedProjs.forEach(proj => {
+        const done = proj.tasks.filter(t => t.status === "Done").length;
+        const pct = proj.tasks.length ? Math.round((done / proj.tasks.length) * 100) : 0;
+        html += `<p style="font-weight:600;margin:10px 0 4px">${proj.name}${proj.note ? ` — <span style="font-weight:400;color:#888">${proj.note}</span>` : ""}</p>`;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div class="bar-wrap" style="flex:1"><div class="bar" style="width:${pct}%"></div></div><span style="font-size:11px;font-weight:700">${pct}%</span><span style="font-size:10px;color:#888">${done}/${proj.tasks.length} done</span></div>`;
+        if (proj.tasks.length > 0) {
+          html += `<table><thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Assigned</th><th>Due</th></tr></thead><tbody>`;
+          proj.tasks.forEach(t => {
+            const cls = t.status === "Done" ? "done" : t.status === "In Progress" ? "prog" : "todo";
+            html += `<tr><td>${t.name}</td><td><span class="badge ${cls}">${t.status}</span></td><td>${t.priority}</td><td>${(t.assigned_to || []).join(", ") || "-"}</td><td>${t.due_date || "-"}</td></tr>`;
+          });
+          html += `</tbody></table>`;
+        }
+      });
+    });
+    exportPDF(`Projects – ${periodLabel}`, html);
+  };
+
+  const getOrdered = (monthNum: number, projs: typeof projects) => {
+    const order = projOrders[monthNum];
+    if (!order?.length) return projs;
+    const map = new Map(projs.map(p => [p.id, p]));
+    const sorted = order.map(id => map.get(id)).filter(Boolean) as typeof projs;
+    const unsorted = projs.filter(p => !order.includes(p.id));
+    return [...sorted, ...unsorted];
+  };
+
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
@@ -86,14 +172,35 @@ export default function Projects() {
           <h1 className="text-2xl font-bold">Projects</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{projects.length} projects across {months.length} months</p>
         </div>
-        <button onClick={() => setShowAddProject(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Project
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Export */}
+          <div className="relative" ref={exportRef}>
+            <button
+              onClick={() => setShowExportMenu(v => !v)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all"
+            >
+              <Download className="w-4 h-4" /> Export
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-2 w-44 bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden animate-scale-in">
+                <button onClick={handleExportCSV} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
+                  <Sheet className="w-4 h-4 text-green-600" /> Export CSV
+                </button>
+                <div className="h-px bg-border" />
+                <button onClick={handleExportPDF} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
+                  <FileText className="w-4 h-4 text-red-500" /> Export PDF
+                </button>
+              </div>
+            )}
+          </div>
+          <button onClick={() => setShowAddProject(true)} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> New Project
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-6 animate-stagger-2">
-        {/* Year filter */}
         <div className="flex gap-1">
           {YEARS.map(y => (
             <button key={y} onClick={() => setFilterYear(y)}
@@ -103,7 +210,6 @@ export default function Projects() {
           ))}
         </div>
         <div className="w-px h-5 bg-border" />
-        {/* Month filter */}
         <div className="flex flex-wrap gap-1.5">
           <button onClick={() => setFilterMonth("all")}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
@@ -188,7 +294,7 @@ export default function Projects() {
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
                   onChange={e => { const v = e.target.value; if (v && !taskForm.assigned_to.includes(v)) setTaskForm({ ...taskForm, assigned_to: [...taskForm.assigned_to, v] }); }}>
                   <option value="">Select...</option>
-                  {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+                  {employees.filter(e => !taskForm.assigned_to.includes(e.name)).map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
                 </select>
                 <div className="flex flex-wrap gap-1 mt-1.5">
                   {taskForm.assigned_to.map(a => (
@@ -234,14 +340,7 @@ export default function Projects() {
       <div className="space-y-8">
         {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([month, projs]) => {
           const monthNum = Number(month);
-          const orderedProjs = (() => {
-            const order = projOrders[monthNum];
-            if (!order?.length) return projs;
-            const map = new Map(projs.map(p => [p.id, p]));
-            const sorted = order.map(id => map.get(id)).filter(Boolean) as typeof projs;
-            const unsorted = projs.filter(p => !order.includes(p.id));
-            return [...sorted, ...unsorted];
-          })();
+          const orderedProjs = getOrdered(monthNum, projs);
           const ids = orderedProjs.map(p => p.id);
           return (
             <div key={month} className="animate-stagger-3">
@@ -366,7 +465,3 @@ function SortableProjCard({ id, children }: { id: string; children: React.ReactN
     </div>
   );
 }
-
-import { FolderOpen } from "lucide-react";
-
-
