@@ -229,89 +229,119 @@ export default function Projects() {
         {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([month, projs]) => (
           <div key={month} className="animate-stagger-3">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center text-white text-xs font-bold">
+              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                 {monthNames[Number(month)]?.slice(0, 3)}
               </div>
               <h2 className="text-lg font-bold text-foreground">{monthNames[Number(month)]} {filterYear}</h2>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{projs.length} projects</span>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {projs.map(proj => (
-                <div key={proj.id} className="bg-card rounded-2xl border border-border/60 p-5 card-hover group">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-foreground">{proj.name}</h3>
-                      {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+              {projs.map(proj => {
+                const donePct = proj.tasks.length ? Math.round(proj.tasks.filter(t => t.status === "Done").length / proj.tasks.length * 100) : 0;
+                const isExpanded = !!expanded[proj.id];
+                return (
+                  <div key={proj.id} className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col">
+                    {/* Header */}
+                    <div className="flex items-start gap-2 mb-3">
+                      <div
+                        className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
+                        style={{
+                          background: donePct === 100
+                            ? "hsl(142 71% 45%)"
+                            : donePct > 0
+                            ? "hsl(191 91% 37%)"
+                            : "hsl(215 14% 75%)"
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-foreground leading-tight">{proj.name}</h3>
+                        {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                        <button onClick={() => openAddTask(proj.id)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95" title="Add task">
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deleteProject(proj.id)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95" title="Delete">
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+
+                    {/* Stats row */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{proj.tasks.length} tasks</span>
+                      {donePct === 100 && proj.tasks.length > 0 && (
+                        <span className="badge-done text-xs">✓ Complete</span>
+                      )}
+                    </div>
+
+                    {/* Progress bar */}
+                    {proj.tasks.length > 0 && (
+                      <div className="mb-4">
+                        <ProgressBar tasks={proj.tasks} />
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-3 mt-auto pt-1">
+                      <button onClick={() => setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        {isExpanded ? "Hide" : "Show"} tasks
+                      </button>
                       <button onClick={() => openAddTask(proj.id)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-colors" title="Add task">
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => deleteProject(proj.id)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors" title="Delete project">
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-semibold transition-colors">
+                        <Plus className="w-3.5 h-3.5" /> Add task
                       </button>
                     </div>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-1">{proj.tasks.length} tasks</span>
-                  </div>
-                  {proj.tasks.length > 0 && (
-                    <div className="mb-3">
-                      <ProgressBar tasks={proj.tasks} />
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 mt-2">
-                    <button onClick={() => setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
-                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      {expanded[proj.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                      {expanded[proj.id] ? "Hide" : "Show"} tasks
-                    </button>
-                    <button onClick={() => openAddTask(proj.id)}
-                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
-                      <Plus className="w-3.5 h-3.5" /> Add task
-                    </button>
-                  </div>
-                  {expanded[proj.id] && (
-                    <div className="mt-3 space-y-2">
-                      {proj.tasks.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-2">No tasks yet</p>
-                      ) : proj.tasks.map(task => (
-                        <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 group/task">
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                          <span className="text-xs font-medium text-foreground flex-1 truncate">{task.name}</span>
-                          <div className="flex items-center gap-1.5">
-                            {task.link && (
-                              <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                            <span className={getStatusBadge(task.status)}>{task.status}</span>
-                            <button
-                              onClick={() => openEditTask(proj.id, task)}
-                              className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all"
-                            >
-                              <Pencil className="w-3 h-3 text-primary" />
-                            </button>
-                            <button
-                              onClick={() => deleteTask(task.id, proj.id)}
-                              className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all"
-                            >
-                              <Trash2 className="w-3 h-3 text-destructive" />
-                            </button>
+
+                    {/* Task list */}
+                    {isExpanded && (
+                      <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
+                        {proj.tasks.length === 0 ? (
+                          <div className="text-center py-4">
+                            <p className="text-xs text-muted-foreground">No tasks yet</p>
+                            <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                        ) : proj.tasks.map(task => (
+                          <div key={task.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-colors">
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                            <span className="text-xs font-medium text-foreground flex-1 truncate">{task.name}</span>
+                            <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
+                              {task.link && (
+                                <a href={task.link} target="_blank" rel="noopener noreferrer"
+                                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
+                                  <ExternalLink className="w-3 h-3 text-primary" />
+                                </a>
+                              )}
+                              <button onClick={() => openEditTask(proj.id, task)}
+                                className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
+                                <Pencil className="w-3 h-3 text-primary" />
+                              </button>
+                              <button onClick={() => deleteTask(task.id, proj.id)}
+                                className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
+                                <Trash2 className="w-3 h-3 text-destructive" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
         {Object.keys(grouped).length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <FolderOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No projects found</p>
+          <div className="text-center py-16">
+            <FolderOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground font-medium">No projects found</p>
+            <button onClick={() => setShowAddProject(true)} className="mt-3 text-xs text-primary font-semibold hover:underline">
+              Create your first project →
+            </button>
           </div>
         )}
       </div>
@@ -319,5 +349,5 @@ export default function Projects() {
   );
 }
 
-// needed for empty state icon
 import { FolderOpen } from "lucide-react";
+
