@@ -95,14 +95,18 @@
 @layer components {
   /* Card with hover lift */
   .card-hover {
-    @apply transition-all duration-300 ease-out;
+    @apply transition-all duration-200 ease-out;
     box-shadow: var(--shadow-sm);
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
   
   .card-hover:hover {
     box-shadow: var(--shadow-hover);
-    transform: translateY(-2px);
+    transform: translateY(-3px) scale(1.005);
+  }
+
+  .card-hover:active {
+    transform: translateY(-1px) scale(0.998);
   }
 
   /* Stat cards with gradient */
@@ -114,7 +118,11 @@
 
   .stat-card:hover {
     box-shadow: var(--shadow-hover);
-    transform: translateY(-3px);
+    transform: translateY(-4px);
+  }
+
+  .stat-card:active {
+    transform: translateY(-1px);
   }
 
   /* Kanban column */
@@ -217,19 +225,34 @@
 
   /* Action button */
   .btn-primary {
-    @apply px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200;
+    @apply px-4 py-2 rounded-xl text-sm font-semibold;
     background: var(--gradient-primary);
     color: hsl(var(--primary-foreground));
     box-shadow: var(--shadow-primary);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .btn-primary:hover {
-    box-shadow: 0 6px 24px hsl(var(--primary) / 0.40);
-    transform: translateY(-1px);
+    box-shadow: 0 8px 28px hsl(var(--primary) / 0.45);
+    transform: translateY(-2px) scale(1.02);
   }
 
   .btn-primary:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.98);
+    box-shadow: var(--shadow-primary);
+  }
+
+  /* Interactive icon buttons */
+  .icon-btn {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150;
+  }
+
+  .icon-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .icon-btn:active {
+    transform: scale(0.95);
   }
 }
 
