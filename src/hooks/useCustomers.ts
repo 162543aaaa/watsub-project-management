@@ -52,6 +52,13 @@ export function useCustomers() {
     return data;
   };
 
+  const updateCustomer = async (id: string, updates: Partial<Omit<Customer, "id" | "created_at" | "tasks">>) => {
+    const { data, error } = await supabase.from("customers").update(updates).eq("id", id).select().single();
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
+    toast({ title: "อัปเดตลูกค้าสำเร็จ!" });
+  };
+
   const deleteCustomer = async (id: string) => {
     const { error } = await supabase.from("customers").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
@@ -110,5 +117,5 @@ export function useCustomers() {
     );
   };
 
-  return { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, refetch: fetchCustomers, reorderCustomers };
+  return { customers, loading, addCustomer, updateCustomer, deleteCustomer, addTask, updateTask, deleteTask, refetch: fetchCustomers, reorderCustomers };
 }

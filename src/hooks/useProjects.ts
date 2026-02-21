@@ -65,6 +65,13 @@ export function useProjects() {
     return data;
   };
 
+  const updateProject = async (id: string, updates: Partial<Omit<Project, "id" | "created_at" | "tasks">>) => {
+    const { data, error } = await supabase.from("projects").update(updates).eq("id", id).select().single();
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data } : p));
+    toast({ title: "อัปเดตโปรเจกต์สำเร็จ!" });
+  };
+
   const deleteProject = async (id: string) => {
     const { error } = await supabase.from("projects").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
@@ -128,5 +135,5 @@ export function useProjects() {
     );
   };
 
-  return { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask, refetch: fetchProjects, reorderProjects };
+  return { projects, loading, addProject, updateProject, deleteProject, addTask, updateTask, deleteTask, refetch: fetchProjects, reorderProjects };
 }

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -22,6 +22,40 @@ function ProgressBar({ tasks }: { tasks: Task[] }) {
       <span className="text-xs font-semibold text-primary w-8 text-right">{pct}%</span>
     </div>
   );
+}
+
+function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate?: string; status: string }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const badges: React.ReactNode[] = [];
+
+  if (startDate) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff >= 0) {
+      badges.push(
+        <span key="start" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium" style={{ background: "hsl(191 91% 37% / 0.1)", color: "hsl(191 91% 30%)" }}>
+          <Clock className="w-2.5 h-2.5" /> {diff} วัน
+        </span>
+      );
+    }
+  }
+
+  if (dueDate && status !== "Done") {
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff > 0) {
+      badges.push(
+        <span key="overdue" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold animate-pulse" style={{ background: "hsl(0 84% 60% / 0.1)", color: "hsl(0 84% 50%)" }}>
+          <AlertTriangle className="w-2.5 h-2.5" /> เลย {diff} วัน
+        </span>
+      );
+    }
+  }
+
+  return badges.length > 0 ? <div className="flex items-center gap-1 flex-wrap">{badges}</div> : null;
 }
 
 function exportCSV(rows: string[][], filename: string) {
@@ -56,7 +90,7 @@ function exportPDF(title: string, html: string) {
 }
 
 export default function Projects() {
-  const { projects, loading, addProject, deleteProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects();
+  const { projects, loading, addProject, updateProject, deleteProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects();
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAddProject, setShowAddProject] = useState(false);
@@ -65,6 +99,7 @@ export default function Projects() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +115,16 @@ export default function Projects() {
     await addProject(newProject);
     setNewProject({ name: "", month: 1, note: "" });
     setShowAddProject(false);
+  };
+
+  const openEditProject = (proj: typeof projects[0]) => {
+    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "" });
+  };
+
+  const handleEditProject = async () => {
+    if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
+    await updateProject(editModal.id, { name: editModal.name, month: editModal.month, note: editModal.note });
+    setEditModal(null);
   };
 
   const openAddTask = (projectId: string) => {
@@ -112,8 +157,7 @@ export default function Projects() {
       ["Project Name", "Month", "Note", "Total Tasks", "Done", "In Progress", "To Do", "Progress %"],
     ];
     Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, projs]) => {
-      const orderedProjs = getOrdered(Number(month), projs);
-      orderedProjs.forEach(proj => {
+      projs.forEach(proj => {
         const done = proj.tasks.filter(t => t.status === "Done").length;
         const inProg = proj.tasks.filter(t => t.status === "In Progress").length;
         const todo = proj.tasks.filter(t => t.status === "To Do").length;
@@ -132,9 +176,8 @@ export default function Projects() {
     setShowExportMenu(false);
     let html = `<h1>Projects – ${periodLabel}</h1><div class="sub">Generated ${new Date().toLocaleString("en")}</div>`;
     Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, projs]) => {
-      const orderedProjs = getOrdered(Number(month), projs);
       html += `<div class="section-title">${monthNames[Number(month)]} ${filterYear} (${projs.length} projects)</div>`;
-      orderedProjs.forEach(proj => {
+      projs.forEach(proj => {
         const done = proj.tasks.filter(t => t.status === "Done").length;
         const pct = proj.tasks.length ? Math.round((done / proj.tasks.length) * 100) : 0;
         html += `<p style="font-weight:600;margin:10px 0 4px">${proj.name}${proj.note ? ` — <span style="font-weight:400;color:#888">${proj.note}</span>` : ""}</p>`;
@@ -152,9 +195,6 @@ export default function Projects() {
     exportPDF(`Projects – ${periodLabel}`, html);
   };
 
-  // Projects are already sorted by sort_order from DB; just return them as-is for display
-  const getOrdered = (_monthNum: number, projs: typeof projects) => projs;
-
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
@@ -163,14 +203,14 @@ export default function Projects() {
       <div className="flex items-center justify-between mb-6 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{projects.length} projects across {months.length} months</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{filtered.length} projects across {months.length} months</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Export */}
           <div className="relative" ref={exportRef}>
             <button
               onClick={() => setShowExportMenu(v => !v)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all hover:scale-105 active:scale-95"
             >
               <Download className="w-4 h-4" /> Export
             </button>
@@ -197,7 +237,7 @@ export default function Projects() {
         <div className="flex gap-1">
           {YEARS.map(y => (
             <button key={y} onClick={() => setFilterYear(y)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${filterYear === y ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterYear === y ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
               {y}
             </button>
           ))}
@@ -205,12 +245,12 @@ export default function Projects() {
         <div className="w-px h-5 bg-border" />
         <div className="flex flex-wrap gap-1.5">
           <button onClick={() => setFilterMonth("all")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${filterMonth === "all" ? "bg-primary text-primary-foreground scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
             All
           </button>
           {months.map(m => (
             <button key={m} onClick={() => setFilterMonth(m)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${filterMonth === m ? "bg-primary text-primary-foreground scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
               {monthNames[m]}
             </button>
           ))}
@@ -223,12 +263,12 @@ export default function Projects() {
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold">New Project</h3>
-              <button onClick={() => setShowAddProject(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
+              <button onClick={() => setShowAddProject(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Project Name</label>
-                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
                   value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })} placeholder="Project name..." autoFocus />
               </div>
               <div>
@@ -245,8 +285,43 @@ export default function Projects() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowAddProject(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+              <button onClick={() => setShowAddProject(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
               <button onClick={handleAddProject} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {editModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold">Edit Project</h3>
+              <button onClick={() => setEditModal(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Project Name</label>
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                  value={editModal.name} onChange={e => setEditModal({ ...editModal, name: e.target.value })} autoFocus />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={editModal.month} onChange={e => setEditModal({ ...editModal, month: Number(e.target.value) })}>
+                  {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Note</label>
+                <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
+                  value={editModal.note} onChange={e => setEditModal({ ...editModal, note: e.target.value })} />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setEditModal(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
+              <button onClick={handleEditProject} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
             </div>
           </div>
         </div>
@@ -258,12 +333,12 @@ export default function Projects() {
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold">{taskModal.task ? "Edit Task" : "Add Task"}</h3>
-              <button onClick={() => setTaskModal(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
+              <button onClick={() => setTaskModal(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
             </div>
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Task Name</label>
-                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
                   value={taskForm.name} onChange={e => setTaskForm({ ...taskForm, name: e.target.value })} placeholder="Task name..." autoFocus />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -322,7 +397,7 @@ export default function Projects() {
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setTaskModal(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
+              <button onClick={() => setTaskModal(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
               <button onClick={handleSaveTask} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {taskModal.task ? "Save" : "Add Task"}</button>
             </div>
           </div>
@@ -333,8 +408,7 @@ export default function Projects() {
       <div className="space-y-8">
         {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([month, projs]) => {
           const monthNum = Number(month);
-          const orderedProjs = getOrdered(monthNum, projs);
-          const ids = orderedProjs.map(p => p.id);
+          const ids = projs.map(p => p.id);
           return (
             <div key={month} className="animate-stagger-3">
               <div className="flex items-center gap-3 mb-4">
@@ -348,14 +422,14 @@ export default function Projects() {
                 onDragEnd={async (event: DragEndEvent) => {
                   const { active, over } = event;
                   if (!over || active.id === over.id) return;
-                  const cur = orderedProjs.map(p => p.id);
+                  const cur = projs.map(p => p.id);
                   const newOrder = arrayMove(cur, cur.indexOf(active.id as string), cur.indexOf(over.id as string));
-                  const reordered = newOrder.map(id => orderedProjs.find(p => p.id === id)!);
+                  const reordered = newOrder.map(id => projs.find(p => p.id === id)!);
                   await reorderProjects(reordered);
                 }}>
                 <SortableContext items={ids} strategy={verticalListSortingStrategy}>
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
-                    {orderedProjs.map(proj => {
+                    {projs.map(proj => {
                       const donePct = proj.tasks.length ? Math.round(proj.tasks.filter(t => t.status === "Done").length / proj.tasks.length * 100) : 0;
                       const isExpanded = !!expanded[proj.id];
                       return <SortableProjCard key={proj.id} id={proj.id}>
@@ -368,6 +442,10 @@ export default function Projects() {
                               {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                              <button onClick={() => openEditProject(proj)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
                               <button onClick={() => openAddTask(proj.id)}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Plus className="w-3.5 h-3.5" />
@@ -385,12 +463,12 @@ export default function Projects() {
                           {proj.tasks.length > 0 && <div className="mb-4"><ProgressBar tasks={proj.tasks} /></div>}
                           <div className="flex items-center gap-3 mt-auto pt-1">
                             <button onClick={() => setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all hover:scale-105">
                               {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                               {isExpanded ? "Hide" : "Show"} tasks
                             </button>
                             <button onClick={() => openAddTask(proj.id)}
-                              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-semibold transition-colors">
+                              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-semibold transition-all hover:scale-105">
                               <Plus className="w-3.5 h-3.5" /> Add task
                             </button>
                           </div>
@@ -402,19 +480,22 @@ export default function Projects() {
                                   <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
                                 </div>
                               ) : proj.tasks.map(task => (
-                                <div key={task.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-colors">
+                                <div key={task.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all">
                                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                                  <span className="text-xs font-medium text-foreground flex-1 truncate">{task.name}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
+                                    <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+                                  </div>
                                   <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
                                     {task.link && (
-                                      <a href={task.link} target="_blank" rel="noopener noreferrer" className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all">
+                                      <a href={task.link} target="_blank" rel="noopener noreferrer" className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
                                         <ExternalLink className="w-3 h-3 text-primary" />
                                       </a>
                                     )}
-                                    <button onClick={() => openEditTask(proj.id, task)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all">
+                                    <button onClick={() => openEditTask(proj.id, task)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
                                       <Pencil className="w-3 h-3 text-primary" />
                                     </button>
-                                    <button onClick={() => deleteTask(task.id, proj.id)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all">
+                                    <button onClick={() => deleteTask(task.id, proj.id)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
                                       <Trash2 className="w-3 h-3 text-destructive" />
                                     </button>
                                   </div>

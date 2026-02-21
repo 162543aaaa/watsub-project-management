@@ -8,7 +8,7 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useNotifications } from "@/hooks/useNotifications";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
-const today = new Date("2026-02-20");
+const today = new Date();
 
 const avatarGradients = [
   "from-cyan-400 to-teal-500",

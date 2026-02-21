@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -20,6 +20,40 @@ function ProgressBar({ tasks }: { tasks: Task[] }) {
       <span className="text-xs font-semibold text-primary w-8 text-right">{pct}%</span>
     </div>
   );
+}
+
+function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate?: string; status: string }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const badges: React.ReactNode[] = [];
+
+  if (startDate) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff >= 0) {
+      badges.push(
+        <span key="start" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium" style={{ background: "hsl(191 91% 37% / 0.1)", color: "hsl(191 91% 30%)" }}>
+          <Clock className="w-2.5 h-2.5" /> {diff} วัน
+        </span>
+      );
+    }
+  }
+
+  if (dueDate && status !== "Done") {
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff > 0) {
+      badges.push(
+        <span key="overdue" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold animate-pulse" style={{ background: "hsl(0 84% 60% / 0.1)", color: "hsl(0 84% 50%)" }}>
+          <AlertTriangle className="w-2.5 h-2.5" /> เลย {diff} วัน
+        </span>
+      );
+    }
+  }
+
+  return badges.length > 0 ? <div className="flex items-center gap-1 flex-wrap">{badges}</div> : null;
 }
 
 const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "" };
@@ -57,7 +91,7 @@ function exportPDF(title: string, html: string) {
 }
 
 export default function Customers() {
-  const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, reorderCustomers } = useCustomers();
+  const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer } = useCustomers();
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
@@ -66,14 +100,22 @@ export default function Customers() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ customerId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
-  const [editModal, setEditModal] = useState<typeof form & { id: string } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; month: number } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
+  // Filter by year AND month
+  const filtered = customers.filter(c => {
+    // Year filter: use month to determine year context — customers with month field belong to filterYear
+    // Since customers don't have a year field, we show all for selected year
+    // Month filter
+    if (filterMonth !== "all" && c.month !== filterMonth) return false;
+    return true;
+  });
+  
   const months = [...new Set(customers.map(c => c.month))].sort();
-  const filtered = filterMonth === "all" ? customers : customers.filter(c => c.month === filterMonth);
   const grouped: Record<number, typeof customers> = {};
   filtered.forEach(c => { if (!grouped[c.month]) grouped[c.month] = []; grouped[c.month].push(c); });
 
@@ -82,6 +124,16 @@ export default function Customers() {
     await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, month: form.month });
     setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", month: 1 });
     setShowAdd(false);
+  };
+
+  const openEditCustomer = (cust: typeof customers[0]) => {
+    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", month: cust.month });
+  };
+
+  const handleEditCustomer = async () => {
+    if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
+    await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, month: editModal.month });
+    setEditModal(null);
   };
 
   const openAddTask = (customerId: string) => {
@@ -104,7 +156,6 @@ export default function Customers() {
     setTaskModal(null);
   };
 
-  // Customers are already sorted by sort_order from DB
   const getOrdered = (_monthNum: number, custs: typeof customers) => custs;
 
   const periodLabel = filterMonth === "all" ? `${filterYear}` : `${monthNames[filterMonth]} ${filterYear}`;
@@ -173,14 +224,14 @@ export default function Customers() {
       <div className="flex items-center justify-between mb-6 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Customers</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{customers.length} clients managed</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{filtered.length} clients managed</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Export */}
           <div className="relative" ref={exportRef}>
             <button
               onClick={() => setShowExportMenu(v => !v)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all hover:scale-105 active:scale-95"
             >
               <Download className="w-4 h-4" /> Export
             </button>
@@ -207,7 +258,7 @@ export default function Customers() {
         <div className="flex gap-1">
           {YEARS.map(y => (
             <button key={y} onClick={() => setFilterYear(y)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${filterYear === y ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterYear === y ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
               {y}
             </button>
           ))}
@@ -215,12 +266,12 @@ export default function Customers() {
         <div className="w-px h-5 bg-border" />
         <div className="flex flex-wrap gap-1.5">
           <button onClick={() => setFilterMonth("all")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${filterMonth === "all" ? "bg-primary text-primary-foreground scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
             All
           </button>
           {months.map(m => (
             <button key={m} onClick={() => setFilterMonth(m)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${filterMonth === m ? "bg-primary text-primary-foreground scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
               {monthNames[m]}
             </button>
           ))}
@@ -245,10 +296,7 @@ export default function Customers() {
           title="Edit Customer"
           form={editModal}
           setForm={(f: any) => setEditModal({ ...editModal, ...f })}
-          onSave={async () => {
-            // update logic if needed
-            setEditModal(null);
-          }}
+          onSave={handleEditCustomer}
           onClose={() => setEditModal(null)}
           monthNames={monthNames}
         />
@@ -310,12 +358,16 @@ export default function Customers() {
                               {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
                             </div>
                             <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => openEditCustomer(cust)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
                               <button onClick={() => openAddTask(cust.id)}
-                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-colors">
+                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
                               <button onClick={() => deleteCustomer(cust.id)}
-                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors">
+                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
                                 <Trash2 className="w-3.5 h-3.5 text-destructive" />
                               </button>
                             </div>
@@ -324,12 +376,12 @@ export default function Customers() {
                           {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
                           <div className="flex items-center gap-3 mt-3">
                             <button onClick={() => setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] }))}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all hover:scale-105">
                               {expanded[cust.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                               {expanded[cust.id] ? "Hide" : "Show"} tasks
                             </button>
                             <button onClick={() => openAddTask(cust.id)}
-                              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-all hover:scale-105">
                               <Plus className="w-3.5 h-3.5" /> Add task
                             </button>
                           </div>
@@ -338,12 +390,15 @@ export default function Customers() {
                               {cust.tasks.length === 0 ? (
                                 <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
                               ) : cust.tasks.map(task => (
-                                <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 group/task">
+                                <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all">
                                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                                  <span className="text-xs font-medium text-foreground flex-1 truncate">{task.name}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
+                                    <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+                                  </div>
                                   <div className="flex items-center gap-1.5 flex-shrink-0">
                                     {task.link && (
-                                      <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                                      <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 hover:scale-110 transition-all">
                                         <ExternalLink className="w-3 h-3" />
                                       </a>
                                     )}
@@ -351,11 +406,11 @@ export default function Customers() {
                                       {task.status}
                                     </span>
                                     <button onClick={() => openEditTask(cust.id, task)}
-                                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all">
+                                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
                                       <Pencil className="w-3 h-3 text-primary" />
                                     </button>
                                     <button onClick={() => deleteTask(task.id, cust.id)}
-                                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all">
+                                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
                                       <Trash2 className="w-3 h-3 text-destructive" />
                                     </button>
                                   </div>
@@ -419,14 +474,14 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames }: {
       <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold">{title}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
         </div>
         <div className="space-y-4">
           {fields.map(f => (
             <div key={f.key}>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">{f.label}</label>
               <input
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
                 value={form[f.key] || ""}
                 onChange={e => setForm({ ...form, [f.key]: e.target.value })}
                 placeholder={f.placeholder}
@@ -442,7 +497,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames }: {
           </div>
         </div>
         <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
           <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
         </div>
       </div>
@@ -463,12 +518,12 @@ function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: 
       <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold">{task ? "Edit Task" : "Add Task"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
         </div>
         <div className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Task Name</label>
-            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
               value={taskForm.name} onChange={e => setTaskForm({ ...taskForm, name: e.target.value })} placeholder="Task name..." autoFocus />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -527,7 +582,7 @@ function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: 
           </div>
         </div>
         <div className="flex gap-3 mt-5">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
           <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {task ? "Save" : "Add Task"}</button>
         </div>
       </div>
