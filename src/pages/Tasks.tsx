@@ -1,5 +1,5 @@
 import { useState, useMemo, forwardRef } from "react";
-import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, GripVertical, Clock, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
@@ -43,6 +43,25 @@ const PriorityBadge = forwardRef<HTMLSpanElement, { priority?: string }>(({ prio
   );
 });
 PriorityBadge.displayName = "PriorityBadge";
+
+function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate?: string; status: string }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const badges: React.ReactNode[] = [];
+  if (startDate) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff >= 0) badges.push(<span key="s" className="inline-flex items-center gap-0.5 text-[9px] font-medium" style={{ color: "hsl(191 91% 30%)" }}><Clock className="w-2.5 h-2.5" />{diff}d</span>);
+  }
+  if (dueDate && status !== "Done") {
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff > 0) badges.push(<span key="o" className="inline-flex items-center gap-0.5 text-[9px] font-semibold animate-pulse" style={{ color: "hsl(0 84% 50%)" }}><AlertTriangle className="w-2.5 h-2.5" />เลย {diff}d</span>);
+  }
+  return badges.length > 0 ? <div className="flex items-center gap-1.5 mt-0.5">{badges}</div> : null;
+}
 
 function TaskModal({ task, employees, onSave, onClose }: {
   task: Partial<Task> | null;
@@ -170,10 +189,17 @@ function TaskModal({ task, employees, onSave, onClose }: {
             )}
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due Date</label>
-            <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-              value={form.due_date || ""} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start Date</label>
+              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.start_date || ""} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due Date</label>
+              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.due_date || ""} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
@@ -279,14 +305,15 @@ export default function Tasks() {
   };
 
   const handleSave = async (form: Partial<AllTask>) => {
+    const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments };
     if (form.id && form._source === "project" && form.project_id) {
-      await updateProjectTask(form.id, { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, comments: form.comments });
+      await updateProjectTask(form.id, updates);
     } else if (form.id && form._source === "customer" && form.customer_id) {
-      await updateCustomerTask(form.id, { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, comments: form.comments });
+      await updateCustomerTask(form.id, updates);
     } else if (form.id) {
-      await updateTask(form.id, { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, comments: form.comments });
+      await updateTask(form.id, updates);
     } else {
-      await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", comments: form.comments || "", task_type: "standalone" });
+      await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", task_type: "standalone" });
     }
   };
 
@@ -445,6 +472,7 @@ export default function Tasks() {
                                 </span>
                               )}
                             </div>
+                            <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
                             {task.assigned_to && task.assigned_to.length > 0 && (
                               <div className="flex items-center gap-1 mt-2">
                                 {task.assigned_to.slice(0, 3).map((a, i) => (
