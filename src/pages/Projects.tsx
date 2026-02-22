@@ -480,27 +480,36 @@ export default function Projects() {
                                   <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
                                 </div>
                               ) : proj.tasks.map(task => (
-                                <div key={task.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all">
-                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                                  <div className="flex-1 min-w-0">
-                                    <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
-                                    <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
-                                  </div>
-                                  <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
-                                    {task.link && (
-                                      <a href={task.link} target="_blank" rel="noopener noreferrer" className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
-                                        <ExternalLink className="w-3 h-3 text-primary" />
-                                      </a>
-                                    )}
+                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all">
+                                   <div className="flex items-center gap-2">
+                                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                                     <div className="flex-1 min-w-0">
+                                       <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
+                                       <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+                                     </div>
+                                     <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
+                                       {task.link && (
+                                         <a href={task.link} target="_blank" rel="noopener noreferrer" className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
+                                           <ExternalLink className="w-3 h-3 text-primary" />
+                                         </a>
+                                       )}
                                     <button onClick={() => openEditTask(proj.id, task)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
                                       <Pencil className="w-3 h-3 text-primary" />
                                     </button>
                                     <button onClick={() => deleteTask(task.id, proj.id)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
                                       <Trash2 className="w-3 h-3 text-destructive" />
                                     </button>
-                                  </div>
-                                </div>
-                              ))}
+                                     </div>
+                                   </div>
+                                   {task.link && (
+                                     <a href={task.link} target="_blank" rel="noopener noreferrer"
+                                       className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-4 truncate transition-colors">
+                                       <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                                       <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
+                                     </a>
+                                   )}
+                                 </div>
+                               ))}
                             </div>
                           )}
                         </div>
