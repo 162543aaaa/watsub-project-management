@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from "react";
 import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useTasks } from "@/hooks/useTasks";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -271,19 +272,15 @@ export default function Team() {
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-start justify-center overflow-y-auto pt-16 pb-8 px-0 sm:px-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={() => { setShowAdd(false); setEditing(null); }}>
-          <div className="bg-card rounded-t-2xl sm:rounded-2xl border border-border p-5 sm:p-6 w-full sm:max-w-lg animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
-            {/* Drag handle for mobile */}
-            <div className="sm:hidden w-10 h-1 rounded-full bg-muted mx-auto mb-4" />
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold">{editing ? "Edit Employee" : "Add Employee"}</h3>
-              <button onClick={() => { setShowAdd(false); setEditing(null); }} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
-            </div>
+      <Dialog open={showAdd} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); } }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Employee" : "Add Employee"}</DialogTitle>
+            <DialogDescription className="sr-only">กรอกข้อมูลพนักงาน</DialogDescription>
+          </DialogHeader>
 
             {/* Avatar Upload */}
-            <div className="flex items-center gap-4 mb-5 p-3 sm:p-4 rounded-xl bg-muted/40 border border-border/50">
+            <div className="flex items-center gap-4 p-3 sm:p-4 rounded-xl bg-muted/40 border border-border/50">
               <div className="relative flex-shrink-0">
                 {form.avatar ? (
                   <img src={getPublicUrl(form.avatar)} alt="Avatar" className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-2 border-border" />
@@ -345,13 +342,12 @@ export default function Team() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-2">
               <button onClick={() => { setShowAdd(false); setEditing(null); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
               <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {editing ? "Update" : "Add"}</button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Employee Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
