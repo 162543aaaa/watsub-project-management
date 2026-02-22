@@ -10,6 +10,7 @@ export interface Customer {
   payment_fee?: string;
   project_title?: string;
   note?: string;
+  link?: string;
   month: number;
   created_at?: string;
   sort_order?: number;

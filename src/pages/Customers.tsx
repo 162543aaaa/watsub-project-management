@@ -95,12 +95,12 @@ export default function Customers() {
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", month: 1 });
+  const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1 });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ customerId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
-  const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; month: number } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; link: string; month: number } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -121,18 +121,18 @@ export default function Customers() {
 
   const handleAddCustomer = async () => {
     if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, month: form.month });
-    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", month: 1 });
+    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month });
+    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1 });
     setShowAdd(false);
   };
 
   const openEditCustomer = (cust: typeof customers[0]) => {
-    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", month: cust.month });
+    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: (cust as any).link || "", month: cust.month });
   };
 
   const handleEditCustomer = async () => {
     if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, month: editModal.month });
+    await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, link: editModal.link, month: editModal.month });
     setEditModal(null);
   };
 
@@ -476,6 +476,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames }: {
     { label: "Project Title", key: "project_title", placeholder: "Project title..." },
     { label: "Payment Fee", key: "payment_fee", placeholder: "e.g. 25000" },
     { label: "Detail", key: "detail", placeholder: "Project details..." },
+    { label: "Link", key: "link", placeholder: "https://..." },
     { label: "Note", key: "note", placeholder: "Notes..." },
   ];
   return (
