@@ -114,8 +114,8 @@ export default function Goals() {
 
       {/* Add/Edit Modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in my-auto" style={{ boxShadow: "var(--shadow-lg)" }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={() => { setShowAdd(false); setEditingGoal(null); }}>
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in max-h-[90vh] overflow-y-auto" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold">{editingGoal ? "Edit Goal" : "New Goal"}</h3>
               <button onClick={() => { setShowAdd(false); setEditingGoal(null); }} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
