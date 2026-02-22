@@ -1,0 +1,180 @@
+import { useState, useEffect } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Shield, Check, X, ChevronDown, UserCog } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import type { Profile, UserRole } from "@/hooks/useAuth";
+
+const ALL_PAGES = [
+  { path: "/", label: "Dashboard" },
+  { path: "/tasks", label: "Tasks" },
+  { path: "/projects", label: "Projects" },
+  { path: "/customers", label: "Customers" },
+  { path: "/calendar", label: "Calendar" },
+  { path: "/goals", label: "Goals" },
+  { path: "/team", label: "Team" },
+  { path: "/leave", label: "Leave" },
+  { path: "/budget", label: "Budget" },
+  { path: "/reports", label: "Reports" },
+  { path: "/notifications", label: "Notifications" },
+  { path: "/import", label: "Import" },
+];
+
+interface UserInfo {
+  profile: Profile;
+  roles: UserRole[];
+  email: string;
+}
+
+async function callAdmin(action: string, body: Record<string, any>) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await supabase.functions.invoke("admin-users", {
+    body: { action, ...body },
+  });
+  return res;
+}
+
+export default function AdminPanel() {
+  const { isAdmin, loading: authLoading } = useAuthContext();
+  const [users, setUsers] = useState<UserInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+
+  const fetchUsers = async () => {
+    const { data, error } = await callAdmin("list-users", {});
+    if (error) { console.error(error); setLoading(false); return; }
+    setUsers(data as UserInfo[]);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  if (authLoading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (!isAdmin) return <Navigate to="/" replace />;
+
+  const handleApprove = async (userId: string, approve: boolean) => {
+    const { error } = await callAdmin("approve-user", { user_id: userId, is_approved: approve });
+    if (error) { toast({ title: "Error", description: String(error), variant: "destructive" }); return; }
+    toast({ title: approve ? "อนุมัติสำเร็จ!" : "ระงับสำเร็จ" });
+    fetchUsers();
+  };
+
+  const handleToggleAdmin = async (userId: string, currentlyAdmin: boolean) => {
+    await callAdmin("set-role", { user_id: userId, role: currentlyAdmin ? "member" : "admin" });
+    toast({ title: currentlyAdmin ? "ถอดสิทธิ์ Admin แล้ว" : "เพิ่มสิทธิ์ Admin แล้ว" });
+    fetchUsers();
+  };
+
+  const handleTogglePage = async (userId: string, currentPages: string[], pagePath: string) => {
+    const newPages = currentPages.includes(pagePath)
+      ? currentPages.filter(p => p !== pagePath)
+      : [...currentPages, pagePath];
+    await callAdmin("set-pages", { user_id: userId, allowed_pages: newPages });
+    fetchUsers();
+  };
+
+  const handleSetAllPages = async (userId: string) => {
+    await callAdmin("set-pages", { user_id: userId, allowed_pages: [] });
+    toast({ title: "เปิดทุกหน้าแล้ว" });
+    fetchUsers();
+  };
+
+  const pendingUsers = users.filter(u => !u.profile.is_approved);
+  const approvedUsers = users.filter(u => u.profile.is_approved);
+
+  return (
+    <div className="p-4 md:p-6 page-enter">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Shield className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold">Admin Panel</h1>
+          <p className="text-sm text-muted-foreground">จัดการผู้ใช้และสิทธิ์การเข้าถึง</p>
+        </div>
+      </div>
+
+      {/* Pending Users */}
+      {pendingUsers.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />
+            รอการอนุมัติ ({pendingUsers.length})
+          </h2>
+          <div className="space-y-2">
+            {pendingUsers.map(u => (
+              <div key={u.profile.user_id} className="bg-card rounded-xl border border-border/60 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{u.profile.display_name}</p>
+                  <p className="text-xs text-muted-foreground">{u.email} · {new Date(u.profile.created_at).toLocaleDateString("th")}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => handleApprove(u.profile.user_id, true)} className="gap-1"><Check className="w-3.5 h-3.5" /> อนุมัติ</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleApprove(u.profile.user_id, false)} className="gap-1"><X className="w-3.5 h-3.5" /> ปฏิเสธ</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Approved Users */}
+      <h2 className="text-base font-semibold mb-3">สมาชิกทั้งหมด ({approvedUsers.length})</h2>
+      {loading ? (
+        <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
+      ) : (
+        <div className="space-y-2">
+          {approvedUsers.map(u => {
+            const userIsAdmin = u.roles.some((r: any) => r.role === "admin");
+            const expanded = expandedUser === u.profile.user_id;
+            const pages = u.profile.allowed_pages || [];
+            return (
+              <div key={u.profile.user_id} className="bg-card rounded-xl border border-border/60 overflow-hidden">
+                <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm truncate">{u.profile.display_name}</p>
+                      {userIsAdmin && <span className="text-[10px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-md">ADMIN</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{u.email} · {pages.length === 0 ? "เข้าถึงทุกหน้า" : `${pages.length} หน้า`}</p>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button size="sm" variant={userIsAdmin ? "destructive" : "secondary"} onClick={() => handleToggleAdmin(u.profile.user_id, userIsAdmin)} className="gap-1 text-xs">
+                      <UserCog className="w-3.5 h-3.5" /> {userIsAdmin ? "ถอด Admin" : "ตั้ง Admin"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setExpandedUser(expanded ? null : u.profile.user_id)} className="gap-1 text-xs">
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} /> สิทธิ์หน้า
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleApprove(u.profile.user_id, false)} className="text-xs text-destructive">ระงับ</Button>
+                  </div>
+                </div>
+                {expanded && (
+                  <div className="border-t border-border/40 p-4 bg-muted/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-medium text-muted-foreground">หน้าที่เข้าถึงได้ (ว่าง = ทุกหน้า)</p>
+                      <Button size="sm" variant="ghost" className="text-xs" onClick={() => handleSetAllPages(u.profile.user_id)}>เปิดทุกหน้า</Button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {ALL_PAGES.map(page => {
+                        const active = pages.length === 0 || pages.includes(page.path);
+                        return (
+                          <button key={page.path}
+                            onClick={() => handleTogglePage(u.profile.user_id, pages, page.path)}
+                            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all border ${active ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/50 border-border/40 text-muted-foreground"}`}>
+                            {page.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
