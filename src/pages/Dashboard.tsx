@@ -103,11 +103,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 page-enter">
+    <div className="p-4 sm:p-6 page-enter">
       {/* Header */}
-      <div className="flex items-center justify-between mb-7 animate-stagger-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-7 animate-stagger-1">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Good morning! 👋</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Good morning! 👋</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Here's what's happening with your team today.</p>
         </div>
         <div className="flex gap-2">
@@ -127,7 +127,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7 animate-stagger-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-7 animate-stagger-2">
         <StatCard
           label="Completion Rate"
           value={`${stats.rate}%`}

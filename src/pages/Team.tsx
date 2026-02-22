@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera } from "lucide-react";
+import { useState, useRef, useMemo } from "react";
+import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter } from "lucide-react";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useTasks } from "@/hooks/useTasks";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -15,6 +15,9 @@ const gradients = [
 ];
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+const currentYear = new Date().getFullYear();
+const currentMonth = new Date().getMonth() + 1;
 
 function getPublicUrl(path: string) {
   return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
@@ -33,16 +36,34 @@ export default function Team() {
   const avatarRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLInputElement>(null);
 
-  const allTasks = [
+  // Filters
+  const [filterYear, setFilterYear] = useState(currentYear);
+  const [filterMonth, setFilterMonth] = useState(0); // 0 = all months
+
+  const allTasks = useMemo(() => [
     ...standaloneTasks,
     ...projects.flatMap(p => p.tasks),
     ...customers.flatMap(c => c.tasks),
-  ];
+  ], [standaloneTasks, projects, customers]);
 
-  const getStats = (name: string) => {
-    const myTasks = allTasks.filter(t => t.assigned_to?.includes(name));
+  // Filter tasks by year/month based on due_date or created_at
+  const filteredTasks = useMemo(() => {
+    return allTasks.filter(t => {
+      const d = t.due_date || t.created_at;
+      if (!d) return false;
+      const date = new Date(d);
+      if (date.getFullYear() !== filterYear) return false;
+      if (filterMonth > 0 && date.getMonth() + 1 !== filterMonth) return false;
+      return true;
+    });
+  }, [allTasks, filterYear, filterMonth]);
+
+  const getStats = (name: string, tasks = allTasks) => {
+    const myTasks = tasks.filter(t => t.assigned_to?.includes(name));
     const done = myTasks.filter(t => t.status === "Done").length;
-    return { total: myTasks.length, done, pct: myTasks.length ? Math.round((done / myTasks.length) * 100) : 0 };
+    const inProgress = myTasks.filter(t => t.status === "In Progress").length;
+    const todo = myTasks.filter(t => t.status === "To Do").length;
+    return { total: myTasks.length, done, inProgress, todo, pct: myTasks.length ? Math.round((done / myTasks.length) * 100) : 0 };
   };
 
   const uploadFile = async (file: File, type: "avatar" | "qr", empId?: string) => {
@@ -88,41 +109,71 @@ export default function Team() {
     setShowAdd(true);
   };
 
+  // Filter controls component
+  const FilterBar = () => (
+    <div className="flex flex-wrap items-center gap-2">
+      <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      <select
+        value={filterYear}
+        onChange={e => setFilterYear(Number(e.target.value))}
+        className="px-2.5 py-1.5 rounded-lg border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+      >
+        {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+      <select
+        value={filterMonth}
+        onChange={e => setFilterMonth(Number(e.target.value))}
+        className="px-2.5 py-1.5 rounded-lg border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+      >
+        <option value={0}>ทุกเดือน</option>
+        {monthNames.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+      </select>
+    </div>
+  );
+
   // ── Detail View ──────────────────────────────────────────────────────────────
   if (detail) {
     const stats = getStats(detail.name);
-    const myTasks = allTasks.filter(t => t.assigned_to?.includes(detail.name));
+    const monthlyStats = getStats(detail.name, filteredTasks);
+    const myTasks = filteredTasks.filter(t => t.assigned_to?.includes(detail.name));
     const grad = gradients[employees.findIndex(e => e.id === detail.id) % gradients.length];
     return (
-      <div className="p-6 page-enter">
-        <button onClick={() => setDetail(null)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+      <div className="p-4 sm:p-6 page-enter">
+        <button onClick={() => setDetail(null)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 sm:mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to Team
         </button>
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
           {/* Profile Card */}
-          <div className="bg-card rounded-2xl border border-border p-6" style={{ boxShadow: "var(--shadow-md)" }}>
-            <div className="flex items-start gap-5">
-              <div className="flex-shrink-0">
-                {detail.avatar ? (
-                  <img src={getPublicUrl(detail.avatar)} alt={detail.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-border" />
-                ) : (
-                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center text-white text-3xl font-bold`}>
-                    {detail.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+          <div className="bg-card rounded-2xl border border-border p-4 sm:p-6" style={{ boxShadow: "var(--shadow-md)" }}>
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div className="flex-shrink-0">
+                  {detail.avatar ? (
+                    <img src={getPublicUrl(detail.avatar)} alt={detail.name} className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-border" />
+                  ) : (
+                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center text-white text-2xl sm:text-3xl font-bold`}>
+                      {detail.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 sm:hidden">
+                  <h1 className="text-lg font-bold text-foreground truncate">{detail.name}</h1>
+                  <p className="text-sm text-muted-foreground mt-0.5">{detail.position}</p>
+                  <span className="inline-block mt-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{detail.role}</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="hidden sm:block flex-1 min-w-0">
                 <h1 className="text-xl font-bold text-foreground">{detail.name}</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">{detail.position}</p>
                 <span className="inline-block mt-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{detail.role}</span>
               </div>
-              <button onClick={() => startEdit(detail)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted transition-colors">
+              <button onClick={() => startEdit(detail)} className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted transition-colors flex-shrink-0">
                 <Pencil className="w-3.5 h-3.5" /> Edit
               </button>
             </div>
-            <div className="mt-5 space-y-3 border-t border-border/50 pt-4">
+            <div className="mt-4 sm:mt-5 space-y-3 border-t border-border/50 pt-4">
               <a href={`mailto:${detail.email}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary transition-colors">
-                <Mail className="w-4 h-4 flex-shrink-0" /> {detail.email}
+                <Mail className="w-4 h-4 flex-shrink-0" /> <span className="truncate">{detail.email}</span>
               </a>
               {detail.phone && (
                 <a href={`tel:${detail.phone}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary transition-colors">
@@ -130,49 +181,67 @@ export default function Team() {
                 </a>
               )}
             </div>
+            <button onClick={() => startEdit(detail)} className="sm:hidden mt-4 w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-muted transition-colors">
+              <Pencil className="w-3.5 h-3.5" /> Edit Profile
+            </button>
           </div>
 
           {/* PromptPay QR */}
           {detail.promptpay_qr && (
-            <div className="bg-card rounded-2xl border border-border p-6 text-center" style={{ boxShadow: "var(--shadow-sm)" }}>
+            <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 text-center" style={{ boxShadow: "var(--shadow-sm)" }}>
               <div className="flex items-center justify-center gap-2 mb-4">
                 <QrCode className="w-5 h-5 text-primary" />
                 <h2 className="font-bold text-foreground">PromptPay QR</h2>
               </div>
-              <img src={getPublicUrl(detail.promptpay_qr)} alt="PromptPay QR" className="w-56 h-56 object-contain mx-auto rounded-xl border border-border bg-white p-2" />
+              <img src={getPublicUrl(detail.promptpay_qr)} alt="PromptPay QR" className="w-44 h-44 sm:w-56 sm:h-56 object-contain mx-auto rounded-xl border border-border bg-white p-2" />
               <p className="text-xs text-muted-foreground mt-3">สแกนเพื่อโอนเงิน</p>
             </div>
           )}
 
-          {/* Task Stats */}
-          <div className="bg-card rounded-2xl border border-border p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <h2 className="font-bold text-foreground mb-4">Task Summary</h2>
-            <div className="grid grid-cols-3 gap-3 mb-4">
+          {/* Monthly Task Stats with filter */}
+          <div className="bg-card rounded-2xl border border-border p-4 sm:p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <h2 className="font-bold text-foreground">สถิติงาน</h2>
+              <FilterBar />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
               {[
-                { label: "Total", value: stats.total, color: "text-foreground" },
-                { label: "Done", value: stats.done, color: "text-green-600" },
-                { label: "Remaining", value: stats.total - stats.done, color: "text-primary" },
+                { label: "ทั้งหมด", value: monthlyStats.total, color: "text-foreground" },
+                { label: "เสร็จแล้ว", value: monthlyStats.done, color: "text-green-600" },
+                { label: "กำลังทำ", value: monthlyStats.inProgress, color: "text-primary" },
+                { label: "ค้างอยู่", value: monthlyStats.todo, color: "text-amber-500" },
               ].map(s => (
                 <div key={s.label} className="text-center p-3 rounded-xl bg-muted">
-                  <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+                  <div className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
-            <div className="progress-bar mb-1"><div className="progress-fill" style={{ width: `${stats.pct}%` }} /></div>
-            <div className="text-right text-xs font-bold text-primary">{stats.pct}% complete</div>
+            <div className="progress-bar mb-1"><div className="progress-fill" style={{ width: `${monthlyStats.pct}%` }} /></div>
+            <div className="text-right text-xs font-bold text-primary">{monthlyStats.pct}% complete</div>
+
+            {/* Overall stats */}
+            <div className="mt-4 pt-3 border-t border-border/40">
+              <p className="text-xs text-muted-foreground mb-2">ภาพรวมทั้งหมด (ทุกปี)</p>
+              <div className="flex gap-4 text-xs">
+                <span className="text-foreground font-semibold">{stats.total} งาน</span>
+                <span className="text-green-600">{stats.done} เสร็จ</span>
+                <span className="text-amber-500">{stats.todo} ค้าง</span>
+                <span className="text-primary font-bold">{stats.pct}%</span>
+              </div>
+            </div>
           </div>
 
           {/* Tasks List */}
           {myTasks.length > 0 && (
-            <div className="bg-card rounded-2xl border border-border p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-              <h2 className="font-bold text-foreground mb-4">Tasks ({myTasks.length})</h2>
+            <div className="bg-card rounded-2xl border border-border p-4 sm:p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
+              <h2 className="font-bold text-foreground mb-4">งาน ({myTasks.length})</h2>
               <div className="space-y-2">
                 {myTasks.map(task => (
                   <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                     <span className="text-sm font-medium text-foreground flex-1 truncate">{task.name}</span>
-                    <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
+                    <span className={`flex-shrink-0 ${task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}`}>
                       {task.status}
                     </span>
                   </div>
@@ -188,37 +257,43 @@ export default function Team() {
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
-    <div className="p-6 page-enter">
-      <div className="flex items-center justify-between mb-6 animate-stagger-1">
+    <div className="p-4 sm:p-6 page-enter">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 animate-stagger-1">
         <div>
-          <h1 className="text-2xl font-bold">Team</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Team</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{employees.length} team members</p>
         </div>
-        <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "" }); }}
-          className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Employee</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterBar />
+          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "" }); }}
+            className="btn-primary flex items-center gap-2 text-sm"><Plus className="w-4 h-4" /> Add</button>
+        </div>
       </div>
 
       {/* Add/Edit Modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl border border-border p-5 sm:p-6 w-full sm:max-w-lg animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
+            {/* Drag handle for mobile */}
+            <div className="sm:hidden w-10 h-1 rounded-full bg-muted mx-auto mb-4" />
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold">{editing ? "Edit Employee" : "Add Employee"}</h3>
               <button onClick={() => { setShowAdd(false); setEditing(null); }} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
             </div>
 
             {/* Avatar Upload */}
-            <div className="flex items-center gap-4 mb-5 p-4 rounded-xl bg-muted/40 border border-border/50">
+            <div className="flex items-center gap-4 mb-5 p-3 sm:p-4 rounded-xl bg-muted/40 border border-border/50">
               <div className="relative flex-shrink-0">
                 {form.avatar ? (
-                  <img src={getPublicUrl(form.avatar)} alt="Avatar" className="w-16 h-16 rounded-xl object-cover border-2 border-border" />
+                  <img src={getPublicUrl(form.avatar)} alt="Avatar" className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-2 border-border" />
                 ) : (
-                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center text-white text-2xl font-bold">
-                    {form.name ? form.name.charAt(0).toUpperCase() : <Camera className="w-6 h-6" />}
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
+                    {form.name ? form.name.charAt(0).toUpperCase() : <Camera className="w-5 h-5 sm:w-6 sm:h-6" />}
                   </div>
                 )}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-foreground mb-1">Profile Photo</p>
                 <button onClick={() => avatarRef.current?.click()}
                   disabled={uploading.avatar}
@@ -250,10 +325,10 @@ export default function Team() {
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">PromptPay QR Code</label>
                 <div className="flex items-center gap-3">
                   {form.promptpay_qr ? (
-                    <img src={getPublicUrl(form.promptpay_qr)} alt="QR" className="w-16 h-16 rounded-lg object-contain border border-border bg-white p-1" />
+                    <img src={getPublicUrl(form.promptpay_qr)} alt="QR" className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-contain border border-border bg-white p-1" />
                   ) : (
-                    <div className="w-16 h-16 rounded-lg border-2 border-dashed border-border flex items-center justify-center">
-                      <QrCode className="w-6 h-6 text-muted-foreground/40" />
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg border-2 border-dashed border-border flex items-center justify-center">
+                      <QrCode className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground/40" />
                     </div>
                   )}
                   <div>
@@ -279,19 +354,20 @@ export default function Team() {
       )}
 
       {/* Employee Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
         {employees.map((emp, i) => {
-          const stats = getStats(emp.name);
+          const stats = getStats(emp.name, filteredTasks);
+          const overallStats = getStats(emp.name);
           const grad = gradients[i % gradients.length];
           return (
-            <div key={emp.id} className={`bg-card rounded-2xl border border-border/60 p-5 card-hover animate-stagger-${Math.min(i + 1, 5)} group`}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
+            <div key={emp.id} className={`bg-card rounded-2xl border border-border/60 p-4 sm:p-5 card-hover animate-stagger-${Math.min(i + 1, 5)} group`}>
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
                     {emp.avatar ? (
-                      <img src={getPublicUrl(emp.avatar)} alt={emp.name} className="w-12 h-12 rounded-xl object-cover avatar-hover" />
+                      <img src={getPublicUrl(emp.avatar)} alt={emp.name} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover avatar-hover" />
                     ) : (
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white text-lg font-bold avatar-hover`}>
+                      <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white text-base sm:text-lg font-bold avatar-hover`}>
                         {emp.name.charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -301,14 +377,14 @@ export default function Team() {
                       </div>
                     )}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-foreground text-sm leading-tight">{emp.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{emp.position}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-foreground text-sm leading-tight truncate">{emp.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{emp.position}</p>
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-0.5 flex-shrink-0">
                   <button onClick={() => setDetail(emp)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors opacity-0 group-hover:opacity-100">
+                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors sm:opacity-0 sm:group-hover:opacity-100">
                     <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                   <button onClick={() => startEdit(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
@@ -319,30 +395,50 @@ export default function Team() {
                   </button>
                 </div>
               </div>
-              <div className="space-y-2 mb-3">
-                <a href={`mailto:${emp.email}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                  <Mail className="w-3.5 h-3.5" /> {emp.email}
+
+              {/* Contact */}
+              <div className="space-y-1.5 mb-3">
+                <a href={`mailto:${emp.email}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors truncate">
+                  <Mail className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{emp.email}</span>
                 </a>
                 {emp.phone && (
                   <a href={`tel:${emp.phone}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                    <Phone className="w-3.5 h-3.5" /> {emp.phone}
+                    <Phone className="w-3.5 h-3.5 flex-shrink-0" /> {emp.phone}
                   </a>
                 )}
               </div>
-              <div className="space-y-2">
+
+              {/* Monthly stats */}
+              <div className="grid grid-cols-4 gap-1.5 mb-3 p-2.5 rounded-xl bg-muted/50">
+                {[
+                  { label: "ทั้งหมด", value: stats.total, color: "text-foreground" },
+                  { label: "เสร็จ", value: stats.done, color: "text-green-600" },
+                  { label: "ทำอยู่", value: stats.inProgress, color: "text-primary" },
+                  { label: "ค้าง", value: stats.todo, color: "text-amber-500" },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <div className={`text-sm font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-[9px] text-muted-foreground">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress bar */}
+              <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Task progress</span>
+                  <span className="text-muted-foreground">ความคืบหน้า</span>
                   <span className="font-semibold text-foreground">{stats.done}/{stats.total}</span>
                 </div>
                 <div className="progress-bar"><div className="progress-fill" style={{ width: `${stats.pct}%` }} /></div>
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{stats.total} total tasks</span>
+                  <span>รวมทุกปี: {overallStats.total} งาน</span>
                   <span className="font-bold text-primary">{stats.pct}%</span>
                 </div>
               </div>
+
               {/* View detail link */}
               <button onClick={() => setDetail(emp)}
-                className="mt-3 w-full text-xs text-center text-muted-foreground hover:text-primary transition-colors py-1">
+                className="mt-3 w-full text-xs text-center text-muted-foreground hover:text-primary transition-colors py-1.5 rounded-lg hover:bg-muted/50">
                 View details →
               </button>
             </div>
