@@ -71,14 +71,23 @@ export default function AdminPanel() {
     const newPages = currentPages.includes(pagePath)
       ? currentPages.filter(p => p !== pagePath)
       : [...currentPages, pagePath];
+    // Optimistic update
+    setUsers(prev => prev.map(u => 
+      u.profile.user_id === userId 
+        ? { ...u, profile: { ...u.profile, allowed_pages: newPages } } 
+        : u
+    ));
     await callAdmin("set-pages", { user_id: userId, allowed_pages: newPages });
-    fetchUsers();
   };
 
   const handleSetAllPages = async (userId: string) => {
+    setUsers(prev => prev.map(u => 
+      u.profile.user_id === userId 
+        ? { ...u, profile: { ...u.profile, allowed_pages: [] } } 
+        : u
+    ));
     await callAdmin("set-pages", { user_id: userId, allowed_pages: [] });
     toast({ title: "เปิดทุกหน้าแล้ว" });
-    fetchUsers();
   };
 
   const pendingUsers = users.filter(u => !u.profile.is_approved);
@@ -162,7 +171,7 @@ export default function AdminPanel() {
                         return (
                           <button key={page.path}
                             onClick={() => handleTogglePage(u.profile.user_id, pages, page.path)}
-                            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all border ${active ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/50 border-border/40 text-muted-foreground"}`}>
+                            className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ease-out active:scale-95 ${active ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "bg-muted/50 border-border/40 text-muted-foreground hover:bg-muted"}`}>
                             {page.label}
                           </button>
                         );
