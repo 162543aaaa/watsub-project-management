@@ -1,10 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { X, ChevronDown, ChevronUp, Search, CheckCircle2 } from "lucide-react";
 
+interface Employee {
+  name: string;
+  avatar?: string;
+}
+
 interface MultiSelectAssigneeProps {
   selected: string[];
   onChange: (selected: string[]) => void;
-  employees: { name: string }[];
+  employees: Employee[];
 }
 
 function getInitial(name: string) {
@@ -44,14 +49,24 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
       {/* Selected tags */}
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
-          {selected.map(name => (
-            <span key={name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary">
-              {name}
-              <button onClick={() => onChange(selected.filter(s => s !== name))} className="hover:text-destructive transition-colors">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
+          {selected.map(name => {
+            const emp = employees.find(e => e.name === name);
+            return (
+              <span key={name} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary">
+                {emp?.avatar ? (
+                  <img src={emp.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+                ) : (
+                  <span className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold">
+                    {getInitial(name)}
+                  </span>
+                )}
+                {name}
+                <button onClick={() => onChange(selected.filter(s => s !== name))} className="hover:text-destructive transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -103,10 +118,14 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
                     ) : (
                       <div className="w-5 h-5 rounded-full border-2 border-border flex-shrink-0" />
                     )}
-                    {/* Avatar initial */}
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0">
-                      {getInitial(emp.name)}
-                    </div>
+                    {/* Avatar */}
+                    {emp.avatar ? (
+                      <img src={emp.avatar} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0">
+                        {getInitial(emp.name)}
+                      </div>
+                    )}
                     {/* Name */}
                     <span className={`font-medium ${isSelected ? "text-foreground" : "text-foreground/80"}`}>
                       {emp.name}
