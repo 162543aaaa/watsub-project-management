@@ -448,7 +448,16 @@ export default function Projects() {
                             <div className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
                               style={{ background: donePct === 100 ? "hsl(142 71% 45%)" : donePct > 0 ? "hsl(191 91% 37%)" : "hsl(215 14% 75%)" }} />
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-foreground leading-tight">{proj.name}</h3>
+                              <div className="flex items-center gap-1.5">
+                                <h3 className="font-bold text-foreground leading-tight">{proj.name}</h3>
+                                {(proj as any).link && (
+                                  <a href={(proj as any).link} target="_blank" rel="noopener noreferrer"
+                                    className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
+                                    title={(proj as any).link}>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                              </div>
                               {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
