@@ -1,0 +1,93 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    const { action, email, password, display_name, user_id, role, is_approved, allowed_pages } = await req.json();
+
+    if (action === 'setup-admin') {
+      // Create admin user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { display_name: display_name || 'ADMIN' },
+      });
+      if (authError) return new Response(JSON.stringify({ error: authError.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+      const userId = authData.user.id;
+
+      // Approve profile
+      await supabase.from('profiles').update({ is_approved: true, display_name: display_name || 'ADMIN' }).eq('user_id', userId);
+
+      // Assign admin role
+      await supabase.from('user_roles').upsert({ user_id: userId, role: 'admin' });
+
+      return new Response(JSON.stringify({ success: true, user_id: userId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Verify caller is admin
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getUser(token);
+    if (claimsError || !claimsData.user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    const callerId = claimsData.user.id;
+    const { data: callerRole } = await supabase.from('user_roles').select('role').eq('user_id', callerId).eq('role', 'admin').single();
+    if (!callerRole) return new Response(JSON.stringify({ error: 'Admin only' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    if (action === 'approve-user') {
+      await supabase.from('profiles').update({ is_approved }).eq('user_id', user_id);
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    if (action === 'set-role') {
+      if (role === 'admin') {
+        await supabase.from('user_roles').upsert({ user_id, role: 'admin' });
+      } else {
+        await supabase.from('user_roles').delete().eq('user_id', user_id).eq('role', 'admin');
+      }
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    if (action === 'set-pages') {
+      await supabase.from('profiles').update({ allowed_pages }).eq('user_id', user_id);
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    if (action === 'list-users') {
+      const { data: profiles } = await supabase.from('profiles').select('*').order('created_at');
+      const { data: roles } = await supabase.from('user_roles').select('*');
+      // Get emails from auth
+      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers();
+      const emailMap: Record<string, string> = {};
+      authUsers?.forEach((u: any) => { emailMap[u.id] = u.email || ''; });
+
+      const result = (profiles || []).map((p: any) => ({
+        profile: p,
+        roles: (roles || []).filter((r: any) => r.user_id === p.user_id),
+        email: emailMap[p.user_id] || p.display_name,
+      }));
+      return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+});
