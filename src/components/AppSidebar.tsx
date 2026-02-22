@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, ChevronLeft, ChevronRight, Zap
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useState } from "react";
@@ -19,6 +19,7 @@ const navItems = [
   { label: "Reports", icon: BarChart3, path: "/reports" },
   { label: "Notifications", icon: Bell, path: "/notifications" },
   { label: "Import", icon: Upload, path: "/import" },
+  { label: "Export", icon: Download, path: "/export" },
 ];
 
 export default function AppSidebar() {

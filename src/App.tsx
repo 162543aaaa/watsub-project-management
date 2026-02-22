@@ -18,6 +18,7 @@ import Budget from "./pages/Budget";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Import from "./pages/Import";
+import Export from "./pages/Export";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import WaitingApproval from "./pages/WaitingApproval";
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/import" element={<Import />} />
+                <Route path="/export" element={<Export />} />
                 <Route path="/admin" element={<AdminPanel />} />
               </Route>
             </Route>
