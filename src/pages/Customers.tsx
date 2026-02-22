@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -569,19 +570,11 @@ function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: 
           </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Assigned To</label>
-            <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-              onChange={e => { const v = e.target.value; if (v && !taskForm.assigned_to.includes(v)) setTaskForm({ ...taskForm, assigned_to: [...taskForm.assigned_to, v] }); }}>
-              <option value="">Select...</option>
-              {employees.filter(e => !taskForm.assigned_to.includes(e.name)).map((e, i) => <option key={i} value={e.name}>{e.name}</option>)}
-            </select>
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {taskForm.assigned_to.map((a: string) => (
-                <span key={a} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
-                  {a.split(" ")[0]}
-                  <button onClick={() => setTaskForm({ ...taskForm, assigned_to: taskForm.assigned_to.filter((x: string) => x !== a) })}><X className="w-3 h-3" /></button>
-                </span>
-              ))}
-            </div>
+            <MultiSelectAssignee
+              selected={taskForm.assigned_to}
+              onChange={val => setTaskForm({ ...taskForm, assigned_to: val })}
+              employees={employees}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
