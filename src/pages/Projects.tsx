@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle } from "lucide-react";
+import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -369,19 +370,11 @@ export default function Projects() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Assigned To</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  onChange={e => { const v = e.target.value; if (v && !taskForm.assigned_to.includes(v)) setTaskForm({ ...taskForm, assigned_to: [...taskForm.assigned_to, v] }); }}>
-                  <option value="">Select...</option>
-                  {employees.filter(e => !taskForm.assigned_to.includes(e.name)).map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
-                </select>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {taskForm.assigned_to.map(a => (
-                    <span key={a} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
-                      {a.split(" ")[0]}
-                      <button onClick={() => setTaskForm({ ...taskForm, assigned_to: taskForm.assigned_to.filter(x => x !== a) })}><X className="w-3 h-3" /></button>
-                    </span>
-                  ))}
-                </div>
+                <MultiSelectAssignee
+                  selected={taskForm.assigned_to}
+                  onChange={val => setTaskForm({ ...taskForm, assigned_to: val })}
+                  employees={employees}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
