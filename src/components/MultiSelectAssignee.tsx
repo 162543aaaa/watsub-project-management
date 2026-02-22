@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { X, ChevronDown, ChevronUp, Search, CheckCircle2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Employee {
   name: string;
@@ -13,8 +14,29 @@ interface MultiSelectAssigneeProps {
 }
 
 function getInitial(name: string) {
-  const parts = name.trim().split(/\s+/);
-  return (parts[0]?.[0] || "").toUpperCase();
+  return (name.trim().split(/\s+/)[0]?.[0] || "").toUpperCase();
+}
+
+function getAvatarUrl(avatar?: string): string | null {
+  if (!avatar) return null;
+  if (avatar.startsWith("http")) return avatar;
+  const { data } = supabase.storage.from("employee-assets").getPublicUrl(avatar);
+  return data?.publicUrl || null;
+}
+
+function Avatar({ avatar, name, size = "sm" }: { avatar?: string; name: string; size?: "sm" | "md" }) {
+  const url = getAvatarUrl(avatar);
+  const cls = size === "sm" ? "w-4 h-4" : "w-8 h-8";
+  const textCls = size === "sm" ? "text-[8px]" : "text-xs";
+
+  if (url) {
+    return <img src={url} alt="" className={`${cls} rounded-full object-cover flex-shrink-0`} />;
+  }
+  return (
+    <div className={`${cls} rounded-full bg-muted flex items-center justify-center ${textCls} font-bold text-muted-foreground flex-shrink-0`}>
+      {getInitial(name)}
+    </div>
+  );
 }
 
 export default function MultiSelectAssignee({ selected, onChange, employees }: MultiSelectAssigneeProps) {
@@ -53,13 +75,7 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
             const emp = employees.find(e => e.name === name);
             return (
               <span key={name} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary">
-                {emp?.avatar ? (
-                  <img src={emp.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
-                ) : (
-                  <span className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold">
-                    {getInitial(name)}
-                  </span>
-                )}
+                <Avatar avatar={emp?.avatar} name={name} size="sm" />
                 {name}
                 <button onClick={() => onChange(selected.filter(s => s !== name))} className="hover:text-destructive transition-colors">
                   <X className="w-3 h-3" />
@@ -83,7 +99,6 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
       {/* Dropdown */}
       {open && (
         <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-card border-2 border-primary/30 rounded-xl shadow-lg overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
-          {/* Search */}
           <div className="p-2 border-b border-border">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -98,7 +113,6 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
             </div>
           </div>
 
-          {/* Member list */}
           <div className="max-h-48 overflow-y-auto py-1">
             {filtered.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">No members found</p>
@@ -112,21 +126,12 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
                     onClick={() => toggle(emp.name)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-muted/80 transition-colors text-left ${isSelected ? "bg-primary/5" : ""}`}
                   >
-                    {/* Check / circle */}
                     {isSelected ? (
                       <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
                     ) : (
                       <div className="w-5 h-5 rounded-full border-2 border-border flex-shrink-0" />
                     )}
-                    {/* Avatar */}
-                    {emp.avatar ? (
-                      <img src={emp.avatar} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0">
-                        {getInitial(emp.name)}
-                      </div>
-                    )}
-                    {/* Name */}
+                    <Avatar avatar={emp.avatar} name={emp.name} size="md" />
                     <span className={`font-medium ${isSelected ? "text-foreground" : "text-foreground/80"}`}>
                       {emp.name}
                     </span>
@@ -136,7 +141,6 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
             )}
           </div>
 
-          {/* Clear all */}
           {selected.length > 0 && (
             <div className="border-t border-border p-2">
               <button
