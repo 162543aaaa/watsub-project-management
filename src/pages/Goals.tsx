@@ -1,30 +1,12 @@
 import { useState } from "react";
-import { Plus, Target, Users, User, Save, Trash2, Pencil, X } from "lucide-react";
+import { Plus, Target, Users, User, Save, Trash2, Pencil, X, CheckCircle2 } from "lucide-react";
 import { useGoals, Goal } from "@/hooks/useGoals";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 
 type GoalType = "individual" | "team";
-
-function ProgressCircle({ pct, size = 80 }: { pct: number; size?: number }) {
-  const r = (size - 10) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  return (
-    <svg width={size} height={size} className="rotate-[-90deg]">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={6} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--primary))" strokeWidth={6}
-        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 0.7s cubic-bezier(0.25,0.46,0.45,0.94)" }} />
-      <text x={size / 2} y={size / 2} textAnchor="middle" dominantBaseline="middle"
-        fill="hsl(var(--primary))" fontSize={size > 70 ? 14 : 11} fontWeight="700"
-        style={{ transform: `rotate(90deg) translateX(${size / 2}px) translateY(-${size / 2}px)` }}>
-        {pct}%
-      </text>
-    </svg>
-  );
-}
 
 const emptyForm = { title: "", type: "individual" as GoalType, target_value: 100, current_value: 0, deadline: "", assigned_to: "" };
 
@@ -197,51 +179,69 @@ export default function Goals() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((goal, i) => {
           const pct = goal.target_value ? Math.round((goal.current_value / goal.target_value) * 100) : 0;
+          const clampedPct = Math.min(pct, 100);
+          const isComplete = clampedPct >= 100;
           return (
-            <div key={goal.id} className={`bg-card rounded-2xl border border-border/60 p-5 card-hover group animate-stagger-${Math.min(i + 1, 5)}`}>
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0">
-                  <ProgressCircle pct={Math.min(pct, 100)} />
+            <div key={goal.id} className={`bg-card rounded-2xl border border-border/60 p-5 card-hover group animate-stagger-${Math.min(i + 1, 5)} relative`}>
+              {/* Header row: badge + actions */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {goal.type === "team" ? (
+                    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                      <Users className="w-3 h-3" /> Team
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                      <User className="w-3 h-3" /> Individual
+                    </span>
+                  )}
+                  {isComplete && (
+                    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                      style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
+                      <CheckCircle2 className="w-3 h-3" /> Complete
+                    </span>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    {goal.type === "team" ? (
-                      <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-                        <Users className="w-3 h-3" /> Team
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                        <User className="w-3 h-3" /> Individual
-                      </span>
-                    )}
-                    {/* Edit & Delete buttons */}
-                    <div className="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEdit(goal)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Edit">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => setConfirmDelete(goal.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground leading-snug mb-1">{goal.title}</h3>
-                  {goal.assigned_to && <p className="text-xs text-muted-foreground">{goal.assigned_to}</p>}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {goal.current_value} / {goal.target_value} · Due {new Date(goal.deadline).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => openEdit(goal)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Edit">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => setConfirmDelete(goal.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-              <div className="mt-4">
+
+              {/* Title & info */}
+              <h3 className="text-sm font-semibold text-foreground leading-snug mb-1">{goal.title}</h3>
+              {goal.assigned_to && <p className="text-xs text-muted-foreground mb-2">{goal.assigned_to}</p>}
+
+              {/* Progress bar */}
+              <div className="mt-3 mb-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-muted-foreground">{goal.current_value} / {goal.target_value}</span>
+                  <span className={`text-xs font-bold ${isComplete ? "text-emerald-600" : "text-primary"}`}>{clampedPct}%</span>
+                </div>
+                <Progress value={clampedPct} className="h-2" />
+              </div>
+
+              {/* Deadline */}
+              <p className="text-xs text-muted-foreground mt-2">
+                Due {new Date(goal.deadline).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}
+              </p>
+
+              {/* Update progress */}
+              <div className="mt-3 pt-3 border-t border-border/40">
                 {updating === goal.id ? (
                   <div className="flex gap-2">
                     <input type="number" className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                      value={updateVal} onChange={e => setUpdateVal(e.target.value)} placeholder="New current value" autoFocus
+                      value={updateVal} onChange={e => setUpdateVal(e.target.value)} placeholder="New value" autoFocus
                       onKeyDown={e => { if (e.key === "Enter") updateProgress(goal.id); if (e.key === "Escape") setUpdating(null); }} />
                     <button onClick={() => updateProgress(goal.id)} className="btn-primary px-3 py-1.5 text-sm">Save</button>
-                    <button onClick={() => setUpdating(null)} className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted"><X className="w-4 h-4" /></button>
+                    <button onClick={() => setUpdating(null)} className="px-2 py-1.5 rounded-lg border border-border text-sm hover:bg-muted"><X className="w-4 h-4" /></button>
                   </div>
                 ) : (
                   <button onClick={() => { setUpdating(goal.id); setUpdateVal(String(goal.current_value)); }}
