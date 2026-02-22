@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           detail: string | null
           id: string
+          link: string | null
           month: number
           name: string
           note: string | null
@@ -31,6 +32,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           id?: string
+          link?: string | null
           month?: number
           name: string
           note?: string | null
@@ -43,6 +45,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           id?: string
+          link?: string | null
           month?: number
           name?: string
           note?: string | null
@@ -228,6 +231,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          link: string | null
           month: number
           name: string
           note: string | null
@@ -237,6 +241,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          link?: string | null
           month?: number
           name: string
           note?: string | null
@@ -246,6 +251,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          link?: string | null
           month?: number
           name?: string
           note?: string | null

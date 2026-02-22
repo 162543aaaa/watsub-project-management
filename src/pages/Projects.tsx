@@ -94,12 +94,12 @@ export default function Projects() {
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", month: 1, note: "" });
+  const [newProject, setNewProject] = useState({ name: "", month: 1, note: "", link: "" });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
-  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string; link: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -112,18 +112,18 @@ export default function Projects() {
 
   const handleAddProject = async () => {
     if (!newProject.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    await addProject(newProject);
-    setNewProject({ name: "", month: 1, note: "" });
+    await addProject({ name: newProject.name, month: newProject.month, note: newProject.note, link: newProject.link });
+    setNewProject({ name: "", month: 1, note: "", link: "" });
     setShowAddProject(false);
   };
 
   const openEditProject = (proj: typeof projects[0]) => {
-    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "" });
+    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "", link: (proj as any).link || "" });
   };
 
   const handleEditProject = async () => {
     if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    await updateProject(editModal.id, { name: editModal.name, month: editModal.month, note: editModal.note });
+    await updateProject(editModal.id, { name: editModal.name, month: editModal.month, note: editModal.note, link: editModal.link });
     setEditModal(null);
   };
 
@@ -279,6 +279,11 @@ export default function Projects() {
                 </select>
               </div>
               <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none transition-all"
+                  value={newProject.link} onChange={e => setNewProject({ ...newProject, link: e.target.value })} placeholder="https://..." />
+              </div>
+              <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Note</label>
                 <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
                   value={newProject.note} onChange={e => setNewProject({ ...newProject, note: e.target.value })} placeholder="Optional note..." />
@@ -312,6 +317,11 @@ export default function Projects() {
                   value={editModal.month} onChange={e => setEditModal({ ...editModal, month: Number(e.target.value) })}>
                   {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none transition-all"
+                  value={editModal.link} onChange={e => setEditModal({ ...editModal, link: e.target.value })} placeholder="https://..." />
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Note</label>
