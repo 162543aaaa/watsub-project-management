@@ -37,14 +37,11 @@ export default function AppSidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b" style={{ borderColor: "hsl(222 47% 15%)" }}>
-        <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center animate-float"
-          style={{ background: "linear-gradient(135deg, hsl(191 91% 37%), hsl(200 91% 47%))" }}>
-          <Zap className="w-5 h-5 text-white" />
-        </div>
+        <img src="/logo_watsub.png" alt="WatSUB" className="w-9 h-9 object-contain flex-shrink-0" />
         {!collapsed && (
           <div className="overflow-hidden">
-            <div className="text-sm font-bold text-white leading-tight">Project Hub</div>
-            <div className="text-xs" style={{ color: "hsl(215 20% 55%)" }}>Management System</div>
+            <div className="text-sm font-bold text-white leading-tight">WatSUB</div>
+            <div className="text-xs" style={{ color: "hsl(215 20% 55%)" }}>Project Management</div>
           </div>
         )}
       </div>

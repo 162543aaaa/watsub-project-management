@@ -30,10 +30,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/20 to-background p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-7 h-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Project Hub</h1>
+          <img src="/logo_watsub.png" alt="WatSUB" className="w-20 h-20 object-contain mx-auto mb-2" />
+          <h1 className="text-2xl font-bold text-foreground">WatSUB-Project Management</h1>
           <p className="text-sm text-muted-foreground mt-1">เข้าสู่ระบบ</p>
         </div>
 
