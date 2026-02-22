@@ -1,4 +1,4 @@
-import { useState, useMemo, forwardRef } from "react";
+import { useState, useMemo, forwardRef, useCallback, useRef } from "react";
 import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, GripVertical, Clock, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
@@ -8,7 +8,8 @@ import type { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
 import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, useDroppable,
+  rectIntersection,
 } from "@dnd-kit/core";
 import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
@@ -127,7 +128,6 @@ function TaskModal({ task, employees, onSave, onClose }: {
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
               Assigned To
             </label>
-            {/* Selected pills */}
             {(form.assigned_to || []).length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {form.assigned_to!.map(a => (
@@ -140,7 +140,6 @@ function TaskModal({ task, employees, onSave, onClose }: {
                 ))}
               </div>
             )}
-            {/* Toggle dropdown */}
             <button type="button" onClick={() => setAssignOpen(o => !o)}
               className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-muted-foreground hover:border-primary/40 transition-all outline-none">
               <span>{assignOpen ? "Close" : `Add team member${(form.assigned_to || []).length ? ` (${form.assigned_to!.length} selected)` : "..."}`}</span>
@@ -202,6 +201,11 @@ function TaskModal({ task, employees, onSave, onClose }: {
             </div>
           </div>
           <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
+            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              value={form.link || ""} onChange={e => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
+          </div>
+          <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
             <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
               value={form.comments || ""} onChange={e => setForm({ ...form, comments: e.target.value })} placeholder="Additional notes..." />
@@ -224,7 +228,7 @@ function SortableCard({ id, children }: { id: string; children: React.ReactNode 
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
       className="relative"
     >
       <div {...attributes} {...listeners}
@@ -232,6 +236,24 @@ function SortableCard({ id, children }: { id: string; children: React.ReactNode 
         style={{ touchAction: "none" }}>
         <GripVertical className="w-3 h-3" />
       </div>
+      {children}
+    </div>
+  );
+}
+
+// Droppable column wrapper
+function DroppableColumn({ id, children, style }: { id: string; children: React.ReactNode; style: { bg: string; border: string } }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className="kanban-col transition-all duration-200"
+      style={{
+        background: style.bg,
+        borderColor: isOver ? "hsl(var(--primary))" : style.border,
+        boxShadow: isOver ? "0 0 0 2px hsl(var(--primary) / 0.2)" : "none",
+      }}
+    >
       {children}
     </div>
   );
@@ -248,6 +270,7 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<"all" | "High" | "Medium" | "Low">("all");
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -286,18 +309,96 @@ export default function Tasks() {
 
   const loading = loadingTasks || loadingProjects || loadingCustomers;
 
-  const getColTasks = (col: TaskStatus) => filtered.filter(t => t.status === col);
+  const getColTasks = useCallback((col: TaskStatus) => filtered.filter(t => t.status === col), [filtered]);
 
-  const handleDragEnd = (col: TaskStatus, colIndex: number) => async (event: DragEndEvent) => {
+  const getCardId = (t: AllTask) => `${t._source}-${t.id}`;
+
+  const findTaskByCardId = useCallback((cardId: string): AllTask | undefined => {
+    return filtered.find(t => getCardId(t) === cardId);
+  }, [filtered]);
+
+  // Find which column a card belongs to
+  const findColumnOfCard = useCallback((cardId: string): TaskStatus | null => {
+    const task = findTaskByCardId(cardId);
+    return task ? (task.status as TaskStatus) : null;
+  }, [findTaskByCardId]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const colT = getColTasks(col);
-    const ids = colT.map(t => `${t._source}-${t.id}`);
-    const oldIdx = ids.indexOf(active.id as string);
-    const newIdx = ids.indexOf(over.id as string);
+    if (!over) return;
+
+    const activeCardId = active.id as string;
+    const overId = over.id as string;
+
+    // Determine target column
+    let targetCol: TaskStatus | null = null;
+
+    // Check if dropping over a column directly
+    if (COLUMNS.includes(overId as TaskStatus)) {
+      targetCol = overId as TaskStatus;
+    } else {
+      // Dropping over another card — find that card's column
+      targetCol = findColumnOfCard(overId);
+    }
+
+    if (!targetCol) return;
+
+    const activeTask = findTaskByCardId(activeCardId);
+    if (!activeTask || activeTask.status === targetCol) return;
+
+    // Optimistically update the status so the card appears in the new column
+    // We do this by updating the underlying data through the appropriate hook
+    // But for smooth UX, we handle this in onDragEnd instead
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const activeCardId = active.id as string;
+    const overId = over.id as string;
+    const activeTask = findTaskByCardId(activeCardId);
+    if (!activeTask) return;
+
+    // Determine target column
+    let targetCol: TaskStatus | null = null;
+    if (COLUMNS.includes(overId as TaskStatus)) {
+      targetCol = overId as TaskStatus;
+    } else {
+      targetCol = findColumnOfCard(overId);
+    }
+
+    if (!targetCol) return;
+
+    // Cross-column move: update status
+    if (activeTask.status !== targetCol) {
+      const updates = { status: targetCol };
+      if (activeTask._source === "project") {
+        await updateProjectTask(activeTask.id, updates);
+      } else if (activeTask._source === "customer") {
+        await updateCustomerTask(activeTask.id, updates);
+      } else {
+        await updateTask(activeTask.id, updates);
+      }
+      toast({ title: `ย้ายงานไป ${targetCol} สำเร็จ!` });
+      return;
+    }
+
+    // Same-column reorder
+    if (activeCardId === overId) return;
+    const colT = getColTasks(targetCol);
+    const ids = colT.map(t => getCardId(t));
+    const oldIdx = ids.indexOf(activeCardId);
+    const newIdx = ids.indexOf(overId);
     if (oldIdx === -1 || newIdx === -1) return;
     const reordered = arrayMove(colT, oldIdx, newIdx);
-    // Only persist standalone tasks; project/customer tasks are ordered in their own pages
+    const colIndex = COLUMNS.indexOf(targetCol);
     const standaloneReordered = reordered.filter(t => t._source === "standalone") as Task[];
     if (standaloneReordered.length > 0) {
       await reorderTasks(standaloneReordered, colIndex);
@@ -305,7 +406,7 @@ export default function Tasks() {
   };
 
   const handleSave = async (form: Partial<AllTask>) => {
-    const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments };
+    const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments, link: form.link };
     if (form.id && form._source === "project" && form.project_id) {
       await updateProjectTask(form.id, updates);
     } else if (form.id && form._source === "customer" && form.customer_id) {
@@ -313,7 +414,7 @@ export default function Tasks() {
     } else if (form.id) {
       await updateTask(form.id, updates);
     } else {
-      await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", task_type: "standalone" });
+      await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", link: form.link || "", task_type: "standalone" });
     }
   };
 
@@ -339,6 +440,8 @@ export default function Tasks() {
     if (task._source === "project") navigate("/projects");
     else if (task._source === "customer") navigate("/customers");
   };
+
+  const activeTask = activeId ? findTaskByCardId(activeId) : null;
 
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
@@ -395,98 +498,48 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* Kanban */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-stagger-3">
-        {COLUMNS.map((col, colIndex) => {
-          const style = getColStyle(col);
-          const colT = getColTasks(col);
-          const ids = colT.map(t => `${t._source}-${t.id}`);
-          return (
-            <div key={col} className="kanban-col" style={{ background: style.bg, borderColor: style.border }}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-green-500" : col === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                  <span className="text-sm font-semibold text-foreground">{col}</span>
-                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{colT.length}</span>
+      {/* Kanban — Single DndContext for cross-column drag */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={rectIntersection}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-stagger-3">
+          {COLUMNS.map((col) => {
+            const style = getColStyle(col);
+            const colT = getColTasks(col);
+            const ids = colT.map(t => getCardId(t));
+            return (
+              <DroppableColumn key={col} id={col} style={style}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-green-500" : col === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                    <span className="text-sm font-semibold text-foreground">{col}</span>
+                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{colT.length}</span>
+                  </div>
+                  {col === "To Do" && (
+                    <button onClick={() => setModal({ open: true, task: { status: col } })}
+                      className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-background transition-colors text-muted-foreground hover:text-foreground">
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-                {col === "To Do" && (
-                  <button onClick={() => setModal({ open: true, task: { status: col } })}
-                    className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-background transition-colors text-muted-foreground hover:text-foreground">
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd(col, colIndex)}>
                 <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-3">
+                  <div className="space-y-3 min-h-[60px]">
                     {colT.map(task => {
-                      const cardId = `${task._source}-${task.id}`;
+                      const cardId = getCardId(task);
                       return (
                         <SortableCard key={cardId} id={cardId}>
-                          <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover">
-                            {/* Source label + navigate */}
-                            {task._source !== "standalone" && (
-                              <div className="mb-1.5 flex items-center justify-between">
-                                <span className="text-[10px] font-semibold text-muted-foreground">
-                                  {task._source === "project" ? "🚀" : "💼"} {task._sourceName}
-                                  {task._month && <span className="ml-1 opacity-60">· {monthNames[task._month]?.slice(0, 3)}</span>}
-                                </span>
-                                <button
-                                  onClick={() => navigateToSource(task)}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[10px] text-primary font-medium hover:underline"
-                                  title={`Go to ${task._source === "project" ? "Projects" : "Customers"}`}
-                                >
-                                  View <ArrowUpRight className="w-2.5 h-2.5" />
-                                </button>
-                              </div>
-                            )}
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <span className="text-sm font-medium text-foreground leading-snug flex-1">{task.name}</span>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {task.link && (
-                                  <a href={task.link} target="_blank" rel="noopener noreferrer"
-                                    className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-                                    <ExternalLink className="w-3 h-3 text-primary" />
-                                  </a>
-                                )}
-                                {/* All tasks are now editable */}
-                                <button onClick={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
-                                  className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-                                  <Pencil className="w-3 h-3 text-muted-foreground" />
-                                </button>
-                                <button onClick={() => handleDeleteTask(task)}
-                                  className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-destructive/10 transition-colors">
-                                  <Trash2 className="w-3 h-3 text-destructive" />
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <button onClick={() => handleStatusToggle(task)}
-                                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
-                                {task.status}
-                              </button>
-                              <PriorityBadge priority={task.priority} />
-                              {task.due_date && (
-                                <span className="text-xs text-muted-foreground">
-                                  📅 {new Date(task.due_date).toLocaleDateString("th", { day: "numeric", month: "short" })}
-                                </span>
-                              )}
-                            </div>
-                            <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
-                            {task.assigned_to && task.assigned_to.length > 0 && (
-                              <div className="flex items-center gap-1 mt-2">
-                                {task.assigned_to.slice(0, 3).map((a, i) => (
-                                  <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center text-primary-foreground text-[9px] font-bold -ml-1 first:ml-0 border border-card ${i === 0 ? "bg-primary" : i === 1 ? "bg-accent-foreground" : "bg-muted-foreground"}`}>
-                                    {a.charAt(0)}
-                                  </div>
-                                ))}
-                                {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
-                              </div>
-                            )}
-                            {task.comments && (
-                              <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-2">{task.comments}</p>
-                            )}
-                          </div>
+                          <TaskCard
+                            task={task}
+                            col={col}
+                            onEdit={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
+                            onDelete={() => handleDeleteTask(task)}
+                            onStatusToggle={() => handleStatusToggle(task)}
+                            onNavigate={() => navigateToSource(task)}
+                          />
                         </SortableCard>
                       );
                     })}
@@ -495,11 +548,27 @@ export default function Tasks() {
                     )}
                   </div>
                 </SortableContext>
-              </DndContext>
+              </DroppableColumn>
+            );
+          })}
+        </div>
+
+        {/* Drag Overlay */}
+        <DragOverlay>
+          {activeTask ? (
+            <div className="opacity-90 rotate-2 scale-105">
+              <TaskCard
+                task={activeTask}
+                col={activeTask.status as TaskStatus}
+                onEdit={() => {}}
+                onDelete={() => {}}
+                onStatusToggle={() => {}}
+                onNavigate={() => {}}
+              />
             </div>
-          );
-        })}
-      </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {modal.open && (
         <TaskModal
@@ -508,6 +577,90 @@ export default function Tasks() {
           onSave={handleSave}
           onClose={() => setModal({ open: false, task: null })}
         />
+      )}
+    </div>
+  );
+}
+
+// Extracted TaskCard for reuse with DragOverlay
+function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate }: {
+  task: AllTask;
+  col: TaskStatus;
+  onEdit: () => void;
+  onDelete: () => void;
+  onStatusToggle: () => void;
+  onNavigate: () => void;
+}) {
+  return (
+    <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover">
+      {/* Source label + navigate */}
+      {task._source !== "standalone" && (
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[10px] font-semibold text-muted-foreground">
+            {task._source === "project" ? "🚀" : "💼"} {task._sourceName}
+            {task._month && <span className="ml-1 opacity-60">· {monthNames[task._month]?.slice(0, 3)}</span>}
+          </span>
+          <button
+            onClick={onNavigate}
+            className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[10px] text-primary font-medium hover:underline"
+            title={`Go to ${task._source === "project" ? "Projects" : "Customers"}`}
+          >
+            View <ArrowUpRight className="w-2.5 h-2.5" />
+          </button>
+        </div>
+      )}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <span className="text-sm font-medium text-foreground leading-snug flex-1">{task.name}</span>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {task.link && (
+            <a href={task.link} target="_blank" rel="noopener noreferrer"
+              className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+              <ExternalLink className="w-3 h-3 text-primary" />
+            </a>
+          )}
+          <button onClick={onEdit}
+            className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+            <Pencil className="w-3 h-3 text-muted-foreground" />
+          </button>
+          <button onClick={onDelete}
+            className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-destructive/10 transition-colors">
+            <Trash2 className="w-3 h-3 text-destructive" />
+          </button>
+        </div>
+      </div>
+      {/* Link preview */}
+      {task.link && (
+        <a href={task.link} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary mb-1.5 truncate max-w-full transition-colors">
+          <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+          <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
+        </a>
+      )}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <button onClick={onStatusToggle}
+          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
+          {task.status}
+        </button>
+        <PriorityBadge priority={task.priority} />
+        {task.due_date && (
+          <span className="text-xs text-muted-foreground">
+            📅 {new Date(task.due_date).toLocaleDateString("th", { day: "numeric", month: "short" })}
+          </span>
+        )}
+      </div>
+      <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+      {task.assigned_to && task.assigned_to.length > 0 && (
+        <div className="flex items-center gap-1 mt-2">
+          {task.assigned_to.slice(0, 3).map((a, i) => (
+            <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center text-primary-foreground text-[9px] font-bold -ml-1 first:ml-0 border border-card ${i === 0 ? "bg-primary" : i === 1 ? "bg-accent-foreground" : "bg-muted-foreground"}`}>
+              {a.charAt(0)}
+            </div>
+          ))}
+          {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
+        </div>
+      )}
+      {task.comments && (
+        <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-2">{task.comments}</p>
       )}
     </div>
   );

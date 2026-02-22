@@ -390,31 +390,40 @@ export default function Customers() {
                               {cust.tasks.length === 0 ? (
                                 <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
                               ) : cust.tasks.map(task => (
-                                <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all">
-                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                                  <div className="flex-1 min-w-0">
-                                    <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
-                                    <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
-                                  </div>
-                                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                                    {task.link && (
-                                      <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 hover:scale-110 transition-all">
-                                        <ExternalLink className="w-3 h-3" />
-                                      </a>
-                                    )}
-                                    <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
-                                      {task.status}
-                                    </span>
-                                    <button onClick={() => openEditTask(cust.id, task)}
-                                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
-                                      <Pencil className="w-3 h-3 text-primary" />
-                                    </button>
-                                    <button onClick={() => deleteTask(task.id, cust.id)}
-                                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
-                                      <Trash2 className="w-3 h-3 text-destructive" />
-                                    </button>
-                                  </div>
-                                </div>
+                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all">
+                                   <div className="flex items-center gap-3">
+                                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                                     <div className="flex-1 min-w-0">
+                                       <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
+                                       <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+                                     </div>
+                                     <div className="flex items-center gap-1.5 flex-shrink-0">
+                                       {task.link && (
+                                         <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 hover:scale-110 transition-all">
+                                           <ExternalLink className="w-3 h-3" />
+                                         </a>
+                                       )}
+                                       <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
+                                         {task.status}
+                                       </span>
+                                       <button onClick={() => openEditTask(cust.id, task)}
+                                         className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
+                                         <Pencil className="w-3 h-3 text-primary" />
+                                       </button>
+                                       <button onClick={() => deleteTask(task.id, cust.id)}
+                                         className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
+                                         <Trash2 className="w-3 h-3 text-destructive" />
+                                       </button>
+                                     </div>
+                                   </div>
+                                   {task.link && (
+                                     <a href={task.link} target="_blank" rel="noopener noreferrer"
+                                       className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-5 truncate transition-colors">
+                                       <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                                       <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
+                                     </a>
+                                   )}
+                                 </div>
                               ))}
                             </div>
                           )}
