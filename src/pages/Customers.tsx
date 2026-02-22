@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import EmployeeAvatar from "@/components/EmployeeAvatar";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -414,6 +415,19 @@ export default function Customers() {
                                        <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
                                        <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
                                      </div>
+                                     {task.assigned_to && task.assigned_to.length > 0 && (
+                                       <div className="flex -space-x-1.5 flex-shrink-0">
+                                         {task.assigned_to.slice(0, 3).map((name, idx) => {
+                                           const emp = employees.find(e => e.name === name);
+                                           return <EmployeeAvatar key={name} name={name} avatar={emp?.avatar} size="xs" index={employees.indexOf(emp!)} />;
+                                         })}
+                                         {task.assigned_to.length > 3 && (
+                                           <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground flex-shrink-0 border border-background">
+                                             +{task.assigned_to.length - 3}
+                                           </div>
+                                         )}
+                                       </div>
+                                     )}
                                      <div className="flex items-center gap-1.5 flex-shrink-0">
                                        {task.link && (
                                          <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 hover:scale-110 transition-all">

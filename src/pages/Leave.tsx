@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Check, X, Save, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { useLeave, LeaveRequest } from "@/hooks/useLeave";
 import { useEmployees } from "@/hooks/useEmployees";
+import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { toast } from "@/hooks/use-toast";
 
 type LeaveStatus = "Pending" | "Approved" | "Rejected";
@@ -136,7 +137,15 @@ export default function Leave() {
             <tbody className="divide-y divide-border/40">
               {filtered.map(leave => (
                 <tr key={leave.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-foreground">{leave.requested_by}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const emp = employees.find(e => e.name === leave.requested_by);
+                        return <EmployeeAvatar name={leave.requested_by} avatar={emp?.avatar} size="sm" index={employees.indexOf(emp!)} />;
+                      })()}
+                      <span className="text-sm font-medium text-foreground">{leave.requested_by}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">{leave.leave_type}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
                     {leave.leave_start && new Date(leave.leave_start).toLocaleDateString("en", { day: "numeric", month: "short" })}

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle } from "lucide-react";
+import EmployeeAvatar from "@/components/EmployeeAvatar";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
@@ -499,6 +500,19 @@ export default function Projects() {
                                        <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
                                        <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
                                      </div>
+                                     {task.assigned_to && task.assigned_to.length > 0 && (
+                                       <div className="flex -space-x-1.5 flex-shrink-0">
+                                         {task.assigned_to.slice(0, 3).map((name, idx) => {
+                                           const emp = employees.find(e => e.name === name);
+                                           return <EmployeeAvatar key={name} name={name} avatar={emp?.avatar} size="xs" index={employees.indexOf(emp!)} />;
+                                         })}
+                                         {task.assigned_to.length > 3 && (
+                                           <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground flex-shrink-0 border border-background">
+                                             +{task.assigned_to.length - 3}
+                                           </div>
+                                         )}
+                                       </div>
+                                     )}
                                      <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
                                        {task.link && (
                                          <a href={task.link} target="_blank" rel="noopener noreferrer" className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
