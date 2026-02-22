@@ -7,6 +7,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useNotifications } from "@/hooks/useNotifications";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import EmployeeAvatar from "@/components/EmployeeAvatar";
 
 const today = new Date();
 
@@ -284,9 +285,7 @@ export default function Dashboard() {
                 {employeeStats.slice(0, 4).map((emp, idx) => (
                   <div key={emp.id}>
                     <div className="flex items-center gap-2.5 mb-1.5">
-                      <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${avatarGradients[idx % avatarGradients.length]} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>
-                        {emp.name.charAt(0).toUpperCase()}
-                      </div>
+                      <EmployeeAvatar name={emp.name} avatar={emp.avatar} size="sm" index={idx} />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-semibold text-foreground truncate">{emp.name}</div>
                         <div className="text-[10px] text-muted-foreground">{emp.done}/{emp.total} tasks</div>

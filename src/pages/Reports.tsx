@@ -5,6 +5,7 @@ import {
   Trophy, TrendingUp, Download, FileText, Sheet, ChevronDown, ChevronUp,
   ExternalLink
 } from "lucide-react";
+import EmployeeAvatar from "@/components/EmployeeAvatar";
 
 type Task = {
   id: string; name: string; status: string; priority: string;
@@ -14,7 +15,7 @@ type Task = {
 };
 type Project = { id: string; name: string; month: number };
 type Customer = { id: string; name: string; month: number };
-type Employee = { id: string; name: string };
+type Employee = { id: string; name: string; avatar?: string | null };
 type LeaveRequest = { id: string; status: string; requested_by: string; leave_type: string; leave_start: string; leave_end: string };
 
 const YEARS = [2025, 2026, 2027];
@@ -52,7 +53,7 @@ export default function Reports() {
         supabase.from("tasks").select("*"),
         supabase.from("projects").select("id, name, month"),
         supabase.from("customers").select("id, name, month"),
-        supabase.from("employees").select("id, name"),
+        supabase.from("employees").select("id, name, avatar"),
         supabase.from("leave_requests").select("*"),
       ]);
       setTasks((tasksRes.data || []) as Task[]);
@@ -308,9 +309,7 @@ export default function Reports() {
                 <div key={emp.id}>
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-xs font-bold text-muted-foreground w-4">#{i + 1}</span>
-                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradients[i % gradients.length]} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-                      {emp.name.charAt(0)}
-                    </div>
+                    <EmployeeAvatar name={emp.name} avatar={emp.avatar} size="md" index={i} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-foreground truncate">{emp.name}</div>
                       <div className="text-xs text-muted-foreground">{emp.done}/{emp.total} tasks done</div>

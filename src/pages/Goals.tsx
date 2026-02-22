@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Target, Users, User, Save, Trash2, Pencil, X, CheckCircle2 } from "lucide-react";
 import { useGoals, Goal } from "@/hooks/useGoals";
 import { useEmployees } from "@/hooks/useEmployees";
+import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
@@ -217,7 +218,15 @@ export default function Goals() {
 
               {/* Title & info */}
               <h3 className="text-sm font-semibold text-foreground leading-snug mb-1">{goal.title}</h3>
-              {goal.assigned_to && <p className="text-xs text-muted-foreground mb-2">{goal.assigned_to}</p>}
+              {goal.assigned_to && (() => {
+                const emp = employees.find(e => e.name === goal.assigned_to);
+                return (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <EmployeeAvatar name={goal.assigned_to} avatar={emp?.avatar} size="xs" index={employees.indexOf(emp!)} />
+                    <p className="text-xs text-muted-foreground">{goal.assigned_to}</p>
+                  </div>
+                );
+              })()}
 
               {/* Progress bar */}
               <div className="mt-3 mb-2">
