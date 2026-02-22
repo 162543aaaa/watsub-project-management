@@ -273,8 +273,8 @@ export default function Team() {
 
       {/* Add/Edit Modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={() => { setShowAdd(false); setEditing(null); }}>
-          <div className="bg-card rounded-t-2xl sm:rounded-2xl border border-border p-5 sm:p-6 w-full sm:max-w-lg animate-scale-in overflow-y-auto max-h-[85vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-start justify-center overflow-y-auto pt-16 pb-8 px-0 sm:px-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={() => { setShowAdd(false); setEditing(null); }}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl border border-border p-5 sm:p-6 w-full sm:max-w-lg animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
             {/* Drag handle for mobile */}
             <div className="sm:hidden w-10 h-1 rounded-full bg-muted mx-auto mb-4" />
             <div className="flex items-center justify-between mb-5">

@@ -114,16 +114,16 @@ export default function Goals() {
 
       {/* Add/Edit Modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={() => { setShowAdd(false); setEditingGoal(null); }}>
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in max-h-[90vh] overflow-y-auto" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto pt-8 pb-8 px-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={() => { setShowAdd(false); setEditingGoal(null); }}>
+          <div className="bg-card rounded-2xl border border-border p-5 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold">{editingGoal ? "Edit Goal" : "New Goal"}</h3>
               <button onClick={() => { setShowAdd(false); setEditingGoal(null); }} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Goal Title</label>
-                <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
+                <input className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                   value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Describe the goal..." />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -164,7 +164,7 @@ export default function Goals() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-4">
               <button onClick={() => { setShowAdd(false); setEditingGoal(null); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
               <button onClick={handleSave} className="flex-1 btn-primary flex items-center justify-center gap-2">
                 <Save className="w-4 h-4" /> {editingGoal ? "Update" : "Create"}
