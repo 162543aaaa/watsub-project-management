@@ -61,13 +61,8 @@ export default function TopNav() {
       >
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 mr-3">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, hsl(191 91% 37%), hsl(200 91% 47%))" }}
-          >
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <span className="hidden sm:block text-sm font-bold text-white leading-tight">Project Hub</span>
+          <img src="/logo_watsub.png" alt="WatSUB" className="w-8 h-8 object-contain" />
+          <span className="hidden sm:block text-sm font-bold text-white leading-tight">WatSUB-Project Management</span>
         </Link>
 
         {/* Desktop primary nav */}
