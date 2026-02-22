@@ -347,6 +347,13 @@ export default function Customers() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-bold text-foreground">{cust.name}</h3>
+                                {(cust as any).link && (
+                                  <a href={(cust as any).link} target="_blank" rel="noopener noreferrer"
+                                    className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
+                                    title={(cust as any).link}>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
                                 {cust.payment_fee && (
                                   <span className="flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full"
                                     style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
