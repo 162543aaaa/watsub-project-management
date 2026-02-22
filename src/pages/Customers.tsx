@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -535,17 +536,17 @@ function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: 
   task?: Task;
   taskForm: any;
   setTaskForm: (f: any) => void;
-  employees: { name: string }[];
+  employees: { name: string; avatar?: string }[];
   onSave: () => void;
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-bold">{task ? "Edit Task" : "Add Task"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
-        </div>
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{task ? "Edit Task" : "Add Task"}</DialogTitle>
+          <DialogDescription className="sr-only">กรอกข้อมูลงาน</DialogDescription>
+        </DialogHeader>
         <div className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Task Name</label>
@@ -599,11 +600,11 @@ function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: 
               value={taskForm.comments} onChange={e => setTaskForm({ ...taskForm, comments: e.target.value })} placeholder="Optional note..." />
           </div>
         </div>
-        <div className="flex gap-3 mt-5">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
+        <div className="flex gap-3 mt-2">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all">Cancel</button>
           <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {task ? "Save" : "Add Task"}</button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
