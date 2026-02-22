@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -378,7 +378,15 @@ export default function Customers() {
                                 <Trash2 className="w-3.5 h-3.5 text-destructive" />
                               </button>
                             </div>
-                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-1">{cust.tasks.length} tasks</span>
+                            <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+                              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{cust.tasks.length} tasks</span>
+                              {cust.tasks.length > 0 && cust.tasks.every(t => t.status === "Done") && (
+                                <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                                  style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
+                                  <CheckCircle2 className="w-3 h-3" /> Complete
+                                </span>
+                              )}
+                            </div>
                           </div>
                           {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
                           <div className="flex items-center gap-3 mt-3">
