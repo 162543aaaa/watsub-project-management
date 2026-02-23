@@ -170,6 +170,45 @@ export type Database = {
         }
         Relationships: []
       }
+      meetings: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          id: string
+          location: string | null
+          meeting_date: string
+          note: string | null
+          participants: string[]
+          start_time: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          meeting_date: string
+          note?: string | null
+          participants?: string[]
+          start_time?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          meeting_date?: string
+          note?: string | null
+          participants?: string[]
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -194,6 +233,39 @@ export type Database = {
           message?: string
           title?: string
           type?: string
+        }
+        Relationships: []
+      }
+      onsite_work: {
+        Row: {
+          created_at: string
+          id: string
+          location: string | null
+          note: string | null
+          participants: string[]
+          title: string
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location?: string | null
+          note?: string | null
+          participants?: string[]
+          title: string
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location?: string | null
+          note?: string | null
+          participants?: string[]
+          title?: string
+          updated_at?: string
+          work_date?: string
         }
         Relationships: []
       }

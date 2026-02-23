@@ -1,10 +1,12 @@
 import { useState, useRef, useMemo } from "react";
-import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter, Users, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useTasks } from "@/hooks/useTasks";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProjects } from "@/hooks/useProjects";
+import { useMeetings } from "@/hooks/useMeetings";
+import { useOnsiteWork } from "@/hooks/useOnsiteWork";
 import { supabase } from "@/integrations/supabase/client";
 
 const gradients = [
@@ -29,6 +31,8 @@ export default function Team() {
   const { tasks: standaloneTasks } = useTasks();
   const { customers } = useCustomers();
   const { projects } = useProjects();
+  const { meetings } = useMeetings();
+  const { onsiteWork } = useOnsiteWork();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "" });
@@ -58,6 +62,32 @@ export default function Team() {
       return true;
     });
   }, [allTasks, filterYear, filterMonth]);
+
+  const filteredMeetings = useMemo(() => {
+    return meetings.filter(m => {
+      const date = new Date(m.meeting_date);
+      if (date.getFullYear() !== filterYear) return false;
+      if (filterMonth > 0 && date.getMonth() + 1 !== filterMonth) return false;
+      return true;
+    });
+  }, [meetings, filterYear, filterMonth]);
+
+  const filteredOnsite = useMemo(() => {
+    return onsiteWork.filter(w => {
+      const date = new Date(w.work_date);
+      if (date.getFullYear() !== filterYear) return false;
+      if (filterMonth > 0 && date.getMonth() + 1 !== filterMonth) return false;
+      return true;
+    });
+  }, [onsiteWork, filterYear, filterMonth]);
+
+  const getExtraStats = (name: string) => {
+    const myMeetings = filteredMeetings.filter(m => m.participants?.includes(name));
+    const myOnsite = filteredOnsite.filter(w => w.participants?.includes(name));
+    const allMyMeetings = meetings.filter(m => m.participants?.includes(name));
+    const allMyOnsite = onsiteWork.filter(w => w.participants?.includes(name));
+    return { meetingCount: myMeetings.length, onsiteCount: myOnsite.length, allMeetings: allMyMeetings.length, allOnsite: allMyOnsite.length };
+  };
 
   const getStats = (name: string, tasks = allTasks) => {
     const myTasks = tasks.filter(t => t.assigned_to?.includes(name));
@@ -136,6 +166,7 @@ export default function Team() {
   if (detail) {
     const stats = getStats(detail.name);
     const monthlyStats = getStats(detail.name, filteredTasks);
+    const extra = getExtraStats(detail.name);
     const myTasks = filteredTasks.filter(t => t.assigned_to?.includes(detail.name));
     const grad = gradients[employees.findIndex(e => e.id === detail.id) % gradients.length];
     return (
@@ -205,12 +236,14 @@ export default function Team() {
               <h2 className="font-bold text-foreground">สถิติงาน</h2>
               <FilterBar />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
               {[
                 { label: "ทั้งหมด", value: monthlyStats.total, color: "text-foreground" },
                 { label: "เสร็จแล้ว", value: monthlyStats.done, color: "text-green-600" },
                 { label: "กำลังทำ", value: monthlyStats.inProgress, color: "text-primary" },
                 { label: "ค้างอยู่", value: monthlyStats.todo, color: "text-amber-500" },
+                { label: "ประชุม", value: extra.meetingCount, color: "text-violet-500" },
+                { label: "ออกกอง", value: extra.onsiteCount, color: "text-rose-500" },
               ].map(s => (
                 <div key={s.label} className="text-center p-3 rounded-xl bg-muted">
                   <div className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</div>
@@ -224,10 +257,12 @@ export default function Team() {
             {/* Overall stats */}
             <div className="mt-4 pt-3 border-t border-border/40">
               <p className="text-xs text-muted-foreground mb-2">ภาพรวมทั้งหมด (ทุกปี)</p>
-              <div className="flex gap-4 text-xs">
+              <div className="flex flex-wrap gap-3 text-xs">
                 <span className="text-foreground font-semibold">{stats.total} งาน</span>
                 <span className="text-green-600">{stats.done} เสร็จ</span>
                 <span className="text-amber-500">{stats.todo} ค้าง</span>
+                <span className="text-violet-500">{extra.allMeetings} ประชุม</span>
+                <span className="text-rose-500">{extra.allOnsite} ออกกอง</span>
                 <span className="text-primary font-bold">{stats.pct}%</span>
               </div>
             </div>
@@ -354,6 +389,7 @@ export default function Team() {
         {employees.map((emp, i) => {
           const stats = getStats(emp.name, filteredTasks);
           const overallStats = getStats(emp.name);
+          const extra = getExtraStats(emp.name);
           const grad = gradients[i % gradients.length];
           return (
             <div key={emp.id} className={`bg-card rounded-2xl border border-border/60 p-4 sm:p-5 card-hover animate-stagger-${Math.min(i + 1, 5)} group`}>
@@ -405,11 +441,10 @@ export default function Team() {
               </div>
 
               {/* Monthly stats */}
-              <div className="grid grid-cols-4 gap-1.5 mb-3 p-2.5 rounded-xl bg-muted/50">
+              <div className="grid grid-cols-3 gap-1.5 mb-2 p-2.5 rounded-xl bg-muted/50">
                 {[
                   { label: "ทั้งหมด", value: stats.total, color: "text-foreground" },
                   { label: "เสร็จ", value: stats.done, color: "text-green-600" },
-                  { label: "ทำอยู่", value: stats.inProgress, color: "text-primary" },
                   { label: "ค้าง", value: stats.todo, color: "text-amber-500" },
                 ].map(s => (
                   <div key={s.label} className="text-center">
@@ -417,6 +452,14 @@ export default function Team() {
                     <div className="text-[9px] text-muted-foreground">{s.label}</div>
                   </div>
                 ))}
+              </div>
+              <div className="flex gap-2 mb-3">
+                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-500/10 text-[10px] font-medium text-violet-500">
+                  <Users className="w-3 h-3" /> ประชุม {extra.meetingCount}
+                </div>
+                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-500/10 text-[10px] font-medium text-rose-500">
+                  <MapPin className="w-3 h-3" /> ออกกอง {extra.onsiteCount}
+                </div>
               </div>
 
               {/* Progress bar */}
