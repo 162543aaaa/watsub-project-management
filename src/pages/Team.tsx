@@ -84,9 +84,18 @@ export default function Team() {
   const getExtraStats = (name: string) => {
     const myMeetings = filteredMeetings.filter(m => m.participants?.includes(name));
     const myOnsite = filteredOnsite.filter(w => w.participants?.includes(name));
+    const myMeetingTasks = filteredTasks.filter(t => t.category === "meeting" && t.assigned_to?.includes(name));
+    const myOnsiteTasks = filteredTasks.filter(t => t.category === "onsite" && t.assigned_to?.includes(name));
     const allMyMeetings = meetings.filter(m => m.participants?.includes(name));
     const allMyOnsite = onsiteWork.filter(w => w.participants?.includes(name));
-    return { meetingCount: myMeetings.length, onsiteCount: myOnsite.length, allMeetings: allMyMeetings.length, allOnsite: allMyOnsite.length };
+    const allMyMeetingTasks = allTasks.filter(t => t.category === "meeting" && t.assigned_to?.includes(name));
+    const allMyOnsiteTasks = allTasks.filter(t => t.category === "onsite" && t.assigned_to?.includes(name));
+    return {
+      meetingCount: myMeetings.length + myMeetingTasks.length,
+      onsiteCount: myOnsite.length + myOnsiteTasks.length,
+      allMeetings: allMyMeetings.length + allMyMeetingTasks.length,
+      allOnsite: allMyOnsite.length + allMyOnsiteTasks.length,
+    };
   };
 
   const getStats = (name: string, tasks = allTasks) => {

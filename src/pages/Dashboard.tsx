@@ -168,7 +168,7 @@ export default function Dashboard() {
         />
         <StatCard
           label="Meetings"
-          value={meetings.length}
+          value={meetings.length + allTasks.filter(t => t.category === "meeting").length}
           sub="การประชุมทั้งหมด"
           icon={Video}
           gradient="bg-gradient-to-br from-violet-500 to-purple-600"
@@ -176,7 +176,7 @@ export default function Dashboard() {
         />
         <StatCard
           label="On-site Work"
-          value={onsiteWork.length}
+          value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length}
           sub="งานออกกองทั้งหมด"
           icon={MapPin}
           gradient="bg-gradient-to-br from-rose-500 to-pink-600"
