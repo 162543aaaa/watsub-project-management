@@ -1,4 +1,5 @@
 import { useState, useMemo, forwardRef, useCallback, useRef } from "react";
+import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, GripVertical, Clock, AlertTriangle } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { useNavigate } from "react-router-dom";
@@ -483,6 +484,7 @@ export default function Tasks() {
                             onDelete={() => handleDeleteTask(task)}
                             onStatusToggle={() => handleStatusToggle(task)}
                             onNavigate={() => navigateToSource(task)}
+                            employees={employees}
                           />
                         </SortableCard>
                       );
@@ -508,6 +510,7 @@ export default function Tasks() {
                 onDelete={() => {}}
                 onStatusToggle={() => {}}
                 onNavigate={() => {}}
+                employees={employees}
               />
             </div>
           ) : null}
@@ -527,13 +530,14 @@ export default function Tasks() {
 }
 
 // Extracted TaskCard for reuse with DragOverlay
-function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate }: {
+function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, employees }: {
   task: AllTask;
   col: TaskStatus;
   onEdit: () => void;
   onDelete: () => void;
   onStatusToggle: () => void;
   onNavigate: () => void;
+  employees?: { name: string; avatar?: string | null }[];
 }) {
   return (
     <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover">
@@ -599,12 +603,15 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate }: {
       </div>
       <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
       {task.assigned_to && task.assigned_to.length > 0 && (
-        <div className="flex items-center gap-1 mt-2">
-          {task.assigned_to.slice(0, 3).map((a, i) => (
-            <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center text-primary-foreground text-[9px] font-bold -ml-1 first:ml-0 border border-card ${i === 0 ? "bg-primary" : i === 1 ? "bg-accent-foreground" : "bg-muted-foreground"}`}>
-              {a.charAt(0)}
-            </div>
-          ))}
+        <div className="flex items-center mt-2">
+          {task.assigned_to.slice(0, 3).map((a, i) => {
+            const emp = employees?.find(e => e.name === a);
+            return (
+              <div key={i} className="-ml-1 first:ml-0">
+                <EmployeeAvatar name={a} avatar={emp?.avatar} size="xs" index={i} className="border-2 border-card" />
+              </div>
+            );
+          })}
           {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
         </div>
       )}
