@@ -59,7 +59,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
   return badges.length > 0 ? <div className="flex items-center gap-1 flex-wrap">{badges}</div> : null;
 }
 
-const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "" };
+const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "", category: "none" };
 
 function exportCSV(rows: string[][], filename: string) {
   const content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -145,7 +145,7 @@ export default function Customers() {
   };
 
   const openEditTask = (customerId: string, task: Task) => {
-    setTaskForm({ name: task.name, status: task.status, priority: task.priority, assigned_to: task.assigned_to || [], due_date: task.due_date || "", start_date: task.start_date || "", link: task.link || "", comments: task.comments || "" });
+    setTaskForm({ name: task.name, status: task.status, priority: task.priority, assigned_to: task.assigned_to || [], due_date: task.due_date || "", start_date: task.start_date || "", link: task.link || "", comments: task.comments || "", category: task.category || "none" });
     setTaskModal({ customerId, task });
   };
 
@@ -412,8 +412,15 @@ export default function Customers() {
                                    <div className="flex items-center gap-3">
                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                                      <div className="flex-1 min-w-0">
-                                       <span className="text-xs font-medium text-foreground truncate block">{task.name}</span>
-                                       <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs font-medium text-foreground truncate">{task.name}</span>
+                                          {task.category && task.category !== "none" && (
+                                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${task.category === "meeting" ? "bg-violet-100 text-violet-700" : "bg-rose-100 text-rose-700"}`}>
+                                              {task.category === "meeting" ? "🗓" : "📍"}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
                                      </div>
                                      {task.assigned_to && task.assigned_to.length > 0 && (
                                        <div className="flex -space-x-1.5 flex-shrink-0">
@@ -582,9 +589,18 @@ function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: 
                 <option>High</option><option>Medium</option><option>Low</option>
               </select>
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Assigned To</label>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Category</label>
+              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={taskForm.category || "none"} onChange={e => setTaskForm({ ...taskForm, category: e.target.value })}>
+                <option value="none">— ไม่ระบุ —</option>
+                <option value="meeting">🗓 Meetings</option>
+                <option value="onsite">📍 On-site Work</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Assigned To</label>
             <MultiSelectAssignee
               selected={taskForm.assigned_to}
               onChange={val => setTaskForm({ ...taskForm, assigned_to: val })}

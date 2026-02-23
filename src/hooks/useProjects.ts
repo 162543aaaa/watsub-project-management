@@ -17,6 +17,7 @@ export interface Task {
   customer_id?: string;
   created_at?: string;
   sort_order?: number;
+  category?: string;
 }
 
 export interface Project {
