@@ -14,6 +14,7 @@ interface CalendarItem {
   name: string;
   type: CalendarItemType;
   status?: TaskStatus;
+  category?: string;
   date: string;
 }
 
@@ -36,12 +37,12 @@ export default function CalendarPage() {
   const { onsiteWork } = useOnsiteWork();
 
   const allItems = useMemo<CalendarItem[]>(() => {
-    const standalone = standaloneTasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, date: t.due_date! }));
+    const standalone = standaloneTasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, category: t.category, date: t.due_date! }));
     const projectTasks = projects.flatMap(p =>
-      p.tasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, date: t.due_date! }))
+      p.tasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, category: t.category, date: t.due_date! }))
     );
     const customerTasks = customers.flatMap(c =>
-      c.tasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, date: t.due_date! }))
+      c.tasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, category: t.category, date: t.due_date! }))
     );
     const meetingItems = meetings.map(m => ({ id: m.id, name: m.title, type: "meeting" as const, date: m.meeting_date }));
     const onsiteItems = onsiteWork.map(o => ({ id: o.id, name: o.title, type: "onsite" as const, date: o.work_date }));
@@ -64,6 +65,8 @@ export default function CalendarPage() {
   const getItemStyle = (item: CalendarItem) => {
     if (item.type === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
     if (item.type === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
+    if (item.category === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
+    if (item.category === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
     if (item.status === "Done") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
     if (item.status === "In Progress") return "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400";
     return "bg-muted text-muted-foreground";
@@ -126,7 +129,7 @@ export default function CalendarPage() {
                       title={item.name}
                       className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${getItemStyle(item)}`}
                     >
-                      {item.type === "meeting" ? "🗓 " : item.type === "onsite" ? "📍 " : ""}{item.name}
+                      {item.type === "meeting" ? "🗓 " : item.type === "onsite" ? "📍 " : item.category === "meeting" ? "🗓 " : item.category === "onsite" ? "📍 " : ""}{item.name}
                     </div>
                   ))}
                   {dayItems.length > 3 && (
