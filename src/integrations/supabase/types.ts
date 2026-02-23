@@ -335,6 +335,7 @@ export type Database = {
       tasks: {
         Row: {
           assigned_to: string[]
+          category: string
           comments: string | null
           created_at: string
           customer_id: string | null
@@ -352,6 +353,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string[]
+          category?: string
           comments?: string | null
           created_at?: string
           customer_id?: string | null
@@ -369,6 +371,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string[]
+          category?: string
           comments?: string | null
           created_at?: string
           customer_id?: string | null

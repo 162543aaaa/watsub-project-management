@@ -72,7 +72,7 @@ function TaskModal({ task, employees, onSave, onClose }: {
   onClose: () => void;
 }) {
   const [form, setForm] = useState<Partial<Task>>(task || {
-    name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", comments: ""
+    name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", comments: "", category: "none"
   });
 
   const save = () => {
@@ -109,6 +109,15 @@ function TaskModal({ task, employees, onSave, onClose }: {
                 <option>High</option><option>Medium</option><option>Low</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
+            <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              value={form.category || "none"} onChange={e => setForm({ ...form, category: e.target.value })}>
+              <option value="none">— ไม่ระบุ —</option>
+              <option value="meeting">🗓 Meetings</option>
+              <option value="onsite">📍 On-site Work</option>
+            </select>
           </div>
 
           {/* Multi-select Assigned To */}
@@ -341,7 +350,7 @@ export default function Tasks() {
   };
 
   const handleSave = async (form: Partial<AllTask>) => {
-    const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments, link: form.link };
+    const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments, link: form.link, category: form.category || "none" };
     if (form.id && form._source === "project" && form.project_id) {
       await updateProjectTask(form.id, updates);
     } else if (form.id && form._source === "customer" && form.customer_id) {
@@ -349,7 +358,7 @@ export default function Tasks() {
     } else if (form.id) {
       await updateTask(form.id, updates);
     } else {
-      await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", link: form.link || "", task_type: "standalone" });
+      await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", link: form.link || "", task_type: "standalone", category: form.category || "none" });
     }
   };
 
@@ -577,6 +586,11 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate }: {
           {task.status}
         </button>
         <PriorityBadge priority={task.priority} />
+        {task.category && task.category !== "none" && (
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${task.category === "meeting" ? "bg-violet-100 text-violet-700" : "bg-rose-100 text-rose-700"}`}>
+            {task.category === "meeting" ? "🗓 Meeting" : "📍 On-site"}
+          </span>
+        )}
         {task.due_date && (
           <span className="text-xs text-muted-foreground">
             📅 {new Date(task.due_date).toLocaleDateString("th", { day: "numeric", month: "short" })}
