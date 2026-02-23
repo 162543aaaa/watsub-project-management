@@ -80,7 +80,7 @@ export default function Dashboard() {
 
   const employeeStats = useMemo(() => {
     return employees.map(emp => {
-      const myTasks = allTasks.filter(t => t.assigned_to?.includes(emp.name));
+      const myTasks = allTasks.filter(t => t.assigned_to?.includes(emp.name) && t.category !== "meeting" && t.category !== "onsite");
       const done = myTasks.filter(t => t.status === "Done").length;
       const progress = myTasks.length ? Math.round((done / myTasks.length) * 100) : 0;
       return { ...emp, total: myTasks.length, done, progress };
