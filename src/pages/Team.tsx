@@ -99,7 +99,7 @@ export default function Team() {
   };
 
   const getStats = (name: string, tasks = allTasks) => {
-    const myTasks = tasks.filter(t => t.assigned_to?.includes(name));
+    const myTasks = tasks.filter(t => t.assigned_to?.includes(name) && t.category !== "meeting" && t.category !== "onsite");
     const done = myTasks.filter(t => t.status === "Done").length;
     const inProgress = myTasks.filter(t => t.status === "In Progress").length;
     const todo = myTasks.filter(t => t.status === "To Do").length;
