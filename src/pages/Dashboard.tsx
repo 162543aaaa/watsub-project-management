@@ -1,11 +1,13 @@
 import { useMemo } from "react";
-import { Plus, TrendingUp, CheckCircle2, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus } from "lucide-react";
+import { Plus, TrendingUp, CheckCircle2, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useMeetings } from "@/hooks/useMeetings";
+import { useOnsiteWork } from "@/hooks/useOnsiteWork";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 
@@ -56,8 +58,10 @@ export default function Dashboard() {
   const { customers, loading: loadingCustomers } = useCustomers();
   const { employees, loading: loadingEmployees } = useEmployees();
   const { unreadCount } = useNotifications();
+  const { meetings, loading: loadingMeetings } = useMeetings();
+  const { onsiteWork, loading: loadingOnsite } = useOnsiteWork();
 
-  const loading = loadingTasks || loadingProjects || loadingCustomers || loadingEmployees;
+  const loading = loadingTasks || loadingProjects || loadingCustomers || loadingEmployees || loadingMeetings || loadingOnsite;
 
   const allTasks = useMemo(() => {
     const projectTasks = projects.flatMap(p => p.tasks);
@@ -128,7 +132,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-7 animate-stagger-2">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-5 sm:mb-7 animate-stagger-2">
         <StatCard
           label="Completion Rate"
           value={`${stats.rate}%`}
@@ -160,6 +164,22 @@ export default function Dashboard() {
           sub={`${projects.length} active projects`}
           icon={Users}
           gradient="bg-gradient-warning"
+          trend="neutral"
+        />
+        <StatCard
+          label="Meetings"
+          value={meetings.length}
+          sub="การประชุมทั้งหมด"
+          icon={Video}
+          gradient="bg-gradient-to-br from-violet-500 to-purple-600"
+          trend="neutral"
+        />
+        <StatCard
+          label="On-site Work"
+          value={onsiteWork.length}
+          sub="งานออกกองทั้งหมด"
+          icon={MapPin}
+          gradient="bg-gradient-to-br from-rose-500 to-pink-600"
           trend="neutral"
         />
       </div>
