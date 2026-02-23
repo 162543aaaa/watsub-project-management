@@ -446,7 +446,7 @@ export default function Projects() {
                       const donePct = proj.tasks.length ? Math.round(proj.tasks.filter(t => t.status === "Done").length / proj.tasks.length * 100) : 0;
                       const isExpanded = !!expanded[proj.id];
                       return <SortableProjCard key={proj.id} id={proj.id}>
-                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full">
+                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer" onClick={() => openEditProject(proj)}>
                           <div className="flex items-start gap-2 mb-3">
                             <div className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
                               style={{ background: donePct === 100 ? "hsl(142 71% 45%)" : donePct > 0 ? "hsl(191 91% 37%)" : "hsl(215 14% 75%)" }} />
@@ -454,7 +454,7 @@ export default function Projects() {
                               <div className="flex items-center gap-1.5">
                                 <h3 className="font-bold text-foreground leading-tight">{proj.name}</h3>
                                 {(proj as any).link && (
-                                  <a href={(proj as any).link} target="_blank" rel="noopener noreferrer"
+                                  <a href={(proj as any).link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                                     className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
                                     title={(proj as any).link}>
                                     <ExternalLink className="w-3.5 h-3.5" />
@@ -464,15 +464,15 @@ export default function Projects() {
                               {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                              <button onClick={() => openEditProject(proj)}
+                              <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => openAddTask(proj.id)}
+                              <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => deleteProject(proj.id)}
+                              <button onClick={(e) => { e.stopPropagation(); deleteProject(proj.id); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
                                 <Trash2 className="w-3.5 h-3.5 text-destructive" />
                               </button>
@@ -484,12 +484,12 @@ export default function Projects() {
                           </div>
                           {proj.tasks.length > 0 && <div className="mb-4"><ProgressBar tasks={proj.tasks} /></div>}
                           <div className="flex items-center gap-3 mt-auto pt-1">
-                            <button onClick={() => setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
+                            <button onClick={(e) => { e.stopPropagation(); setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] })); }}
                               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all hover:scale-105">
                               {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                               {isExpanded ? "Hide" : "Show"} tasks
                             </button>
-                            <button onClick={() => openAddTask(proj.id)}
+                            <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
                               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-semibold transition-all hover:scale-105">
                               <Plus className="w-3.5 h-3.5" /> Add task
                             </button>
@@ -502,7 +502,7 @@ export default function Projects() {
                                   <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
                                 </div>
                               ) : proj.tasks.map(task => (
-                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all">
+                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }}>
                                    <div className="flex items-center gap-2">
                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                                      <div className="flex-1 min-w-0">
@@ -530,22 +530,22 @@ export default function Projects() {
                                        </div>
                                      )}
                                      <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
-                                       {task.link && (
-                                         <a href={task.link} target="_blank" rel="noopener noreferrer" className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
-                                           <ExternalLink className="w-3 h-3 text-primary" />
-                                         </a>
-                                       )}
-                                    <button onClick={() => openEditTask(proj.id, task)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
-                                      <Pencil className="w-3 h-3 text-primary" />
-                                    </button>
-                                    <button onClick={() => deleteTask(task.id, proj.id)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
-                                      <Trash2 className="w-3 h-3 text-destructive" />
+                                        {task.link && (
+                                          <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
+                                            <ExternalLink className="w-3 h-3 text-primary" />
+                                          </a>
+                                        )}
+                                     <button onClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
+                                       <Pencil className="w-3 h-3 text-primary" />
+                                     </button>
+                                     <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id, proj.id); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
+                                       <Trash2 className="w-3 h-3 text-destructive" />
                                     </button>
                                      </div>
                                    </div>
                                    {task.link && (
-                                     <a href={task.link} target="_blank" rel="noopener noreferrer"
-                                       className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-4 truncate transition-colors">
+                                     <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                        className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-4 truncate transition-colors">
                                        <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
                                        <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
                                      </a>

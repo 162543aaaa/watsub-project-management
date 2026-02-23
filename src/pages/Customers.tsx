@@ -345,13 +345,13 @@ export default function Customers() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {orderedCusts.map(cust => (
                       <SortableCustCard key={cust.id} id={cust.id}>
-                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group h-full">
+                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group h-full cursor-pointer" onClick={() => openEditCustomer(cust)}>
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-bold text-foreground">{cust.name}</h3>
                                 {(cust as any).link && (
-                                  <a href={(cust as any).link} target="_blank" rel="noopener noreferrer"
+                                  <a href={(cust as any).link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                                     className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
                                     title={(cust as any).link}>
                                     <ExternalLink className="w-3.5 h-3.5" />
@@ -368,15 +368,15 @@ export default function Customers() {
                               {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
                             </div>
                             <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => openEditCustomer(cust)}
+                              <button onClick={(e) => { e.stopPropagation(); openEditCustomer(cust); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => openAddTask(cust.id)}
+                              <button onClick={(e) => { e.stopPropagation(); openAddTask(cust.id); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => deleteCustomer(cust.id)}
+                              <button onClick={(e) => { e.stopPropagation(); deleteCustomer(cust.id); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
                                 <Trash2 className="w-3.5 h-3.5 text-destructive" />
                               </button>
@@ -393,12 +393,12 @@ export default function Customers() {
                           </div>
                           {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
                           <div className="flex items-center gap-3 mt-3">
-                            <button onClick={() => setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] }))}
+                             <button onClick={(e) => { e.stopPropagation(); setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] })); }}
                               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all hover:scale-105">
                               {expanded[cust.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                               {expanded[cust.id] ? "Hide" : "Show"} tasks
                             </button>
-                            <button onClick={() => openAddTask(cust.id)}
+                            <button onClick={(e) => { e.stopPropagation(); openAddTask(cust.id); }}
                               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-all hover:scale-105">
                               <Plus className="w-3.5 h-3.5" /> Add task
                             </button>
@@ -408,7 +408,7 @@ export default function Customers() {
                               {cust.tasks.length === 0 ? (
                                 <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
                               ) : cust.tasks.map(task => (
-                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all">
+                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={(e) => { e.stopPropagation(); openEditTask(cust.id, task); }}>
                                    <div className="flex items-center gap-3">
                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                                      <div className="flex-1 min-w-0">
@@ -437,26 +437,26 @@ export default function Customers() {
                                      )}
                                      <div className="flex items-center gap-1.5 flex-shrink-0">
                                        {task.link && (
-                                         <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 hover:scale-110 transition-all">
+                                         <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:text-primary/80 hover:scale-110 transition-all">
                                            <ExternalLink className="w-3 h-3" />
                                          </a>
                                        )}
                                        <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
                                          {task.status}
                                        </span>
-                                       <button onClick={() => openEditTask(cust.id, task)}
-                                         className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
-                                         <Pencil className="w-3 h-3 text-primary" />
-                                       </button>
-                                       <button onClick={() => deleteTask(task.id, cust.id)}
-                                         className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
-                                         <Trash2 className="w-3 h-3 text-destructive" />
+                                        <button onClick={(e) => { e.stopPropagation(); openEditTask(cust.id, task); }}
+                                          className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
+                                          <Pencil className="w-3 h-3 text-primary" />
+                                        </button>
+                                        <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id, cust.id); }}
+                                          className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
+                                          <Trash2 className="w-3 h-3 text-destructive" />
                                        </button>
                                      </div>
                                    </div>
                                    {task.link && (
-                                     <a href={task.link} target="_blank" rel="noopener noreferrer"
-                                       className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-5 truncate transition-colors">
+                                      <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                        className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-5 truncate transition-colors">
                                        <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
                                        <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
                                      </a>

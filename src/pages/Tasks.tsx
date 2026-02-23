@@ -540,7 +540,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
   employees?: { name: string; avatar?: string | null }[];
 }) {
   return (
-    <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover">
+    <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover cursor-pointer" onClick={onEdit}>
       {/* Source label + navigate */}
       {task._source !== "standalone" && (
         <div className="mb-1.5 flex items-center justify-between">
@@ -549,7 +549,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
             {task._month && <span className="ml-1 opacity-60">· {monthNames[task._month]?.slice(0, 3)}</span>}
           </span>
           <button
-            onClick={onNavigate}
+            onClick={(e) => { e.stopPropagation(); onNavigate(); }}
             className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[10px] text-primary font-medium hover:underline"
             title={`Go to ${task._source === "project" ? "Projects" : "Customers"}`}
           >
@@ -561,16 +561,16 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
         <span className="text-sm font-medium text-foreground leading-snug flex-1">{task.name}</span>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {task.link && (
-            <a href={task.link} target="_blank" rel="noopener noreferrer"
+            <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
               className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
               <ExternalLink className="w-3 h-3 text-primary" />
             </a>
           )}
-          <button onClick={onEdit}
+          <button onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
             <Pencil className="w-3 h-3 text-muted-foreground" />
           </button>
-          <button onClick={onDelete}
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-destructive/10 transition-colors">
             <Trash2 className="w-3 h-3 text-destructive" />
           </button>
@@ -578,14 +578,14 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
       </div>
       {/* Link preview */}
       {task.link && (
-        <a href={task.link} target="_blank" rel="noopener noreferrer"
+        <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
           className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary mb-1.5 truncate max-w-full transition-colors">
           <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
           <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
         </a>
       )}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <button onClick={onStatusToggle}
+        <button onClick={(e) => { e.stopPropagation(); onStatusToggle(); }}
           className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
           {task.status}
         </button>
