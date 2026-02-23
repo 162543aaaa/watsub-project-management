@@ -3,14 +3,18 @@ import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useMeetings } from "@/hooks/useMeetings";
+import { useOnsiteWork } from "@/hooks/useOnsiteWork";
 
 type TaskStatus = "To Do" | "In Progress" | "Done";
+type CalendarItemType = "task" | "meeting" | "onsite";
 
-interface CalendarTask {
+interface CalendarItem {
   id: string;
   name: string;
-  status: TaskStatus;
-  due_date?: string | null;
+  type: CalendarItemType;
+  status?: TaskStatus;
+  date: string;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -28,17 +32,21 @@ export default function CalendarPage() {
   const { tasks: standaloneTasks } = useTasks();
   const { projects } = useProjects();
   const { customers } = useCustomers();
+  const { meetings } = useMeetings();
+  const { onsiteWork } = useOnsiteWork();
 
-  const allTasks = useMemo<CalendarTask[]>(() => {
-    const standalone = standaloneTasks.map(t => ({ id: t.id, name: t.name, status: t.status as TaskStatus, due_date: t.due_date }));
+  const allItems = useMemo<CalendarItem[]>(() => {
+    const standalone = standaloneTasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, date: t.due_date! }));
     const projectTasks = projects.flatMap(p =>
-      p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status as TaskStatus, due_date: t.due_date }))
+      p.tasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, date: t.due_date! }))
     );
     const customerTasks = customers.flatMap(c =>
-      c.tasks.map(t => ({ id: t.id, name: t.name, status: t.status as TaskStatus, due_date: t.due_date }))
+      c.tasks.filter(t => t.due_date).map(t => ({ id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus, date: t.due_date! }))
     );
-    return [...standalone, ...projectTasks, ...customerTasks].filter(t => t.due_date);
-  }, [standaloneTasks, projects, customers]);
+    const meetingItems = meetings.map(m => ({ id: m.id, name: m.title, type: "meeting" as const, date: m.meeting_date }));
+    const onsiteItems = onsiteWork.map(o => ({ id: o.id, name: o.title, type: "onsite" as const, date: o.work_date }));
+    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems];
+  }, [standaloneTasks, projects, customers, meetings, onsiteWork]);
 
   const daysInMonth = getDaysInMonth(current.year, current.month);
   const firstDay = getFirstDayOfMonth(current.year, current.month);
@@ -48,9 +56,17 @@ export default function CalendarPage() {
   const next = () => setCurrent(c => c.month === 11 ? { year: c.year + 1, month: 0 } : { ...c, month: c.month + 1 });
   const goToday = () => setCurrent({ year: today.getFullYear(), month: today.getMonth() });
 
-  const getTasksForDay = (day: number) => {
+  const getItemsForDay = (day: number) => {
     const dateStr = `${current.year}-${String(current.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return allTasks.filter(t => t.due_date?.startsWith(dateStr));
+    return allItems.filter(t => t.date?.startsWith(dateStr));
+  };
+
+  const getItemStyle = (item: CalendarItem) => {
+    if (item.type === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
+    if (item.type === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
+    if (item.status === "Done") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    if (item.status === "In Progress") return "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400";
+    return "bg-muted text-muted-foreground";
   };
 
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -60,7 +76,7 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between mb-6 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Calendar</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{allTasks.length} tasks with due dates</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{allItems.length} items on calendar</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={goToday} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
@@ -94,7 +110,7 @@ export default function CalendarPage() {
               current.year === today.getFullYear() &&
               current.month === today.getMonth() &&
               day === today.getDate();
-            const dayTasks = getTasksForDay(day);
+            const dayItems = getItemsForDay(day);
             return (
               <div
                 key={day}
@@ -104,23 +120,17 @@ export default function CalendarPage() {
                   {day}
                 </div>
                 <div className="space-y-1">
-                  {dayTasks.slice(0, 3).map(t => (
+                  {dayItems.slice(0, 3).map(item => (
                     <div
-                      key={t.id}
-                      title={t.name}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${
-                        t.status === "Done"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : t.status === "In Progress"
-                          ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}
+                      key={item.id}
+                      title={item.name}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${getItemStyle(item)}`}
                     >
-                      {t.name}
+                      {item.type === "meeting" ? "🗓 " : item.type === "onsite" ? "📍 " : ""}{item.name}
                     </div>
                   ))}
-                  {dayTasks.length > 3 && (
-                    <div className="text-[10px] text-muted-foreground px-1">+{dayTasks.length - 3} more</div>
+                  {dayItems.length > 3 && (
+                    <div className="text-[10px] text-muted-foreground px-1">+{dayItems.length - 3} more</div>
                   )}
                 </div>
               </div>
