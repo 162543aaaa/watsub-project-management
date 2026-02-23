@@ -14,6 +14,8 @@ import CalendarPage from "./pages/CalendarPage";
 import Goals from "./pages/Goals";
 import Team from "./pages/Team";
 import Leave from "./pages/Leave";
+import Meetings from "./pages/Meetings";
+import OnsiteWorkPage from "./pages/OnsiteWork";
 import Budget from "./pages/Budget";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
@@ -51,6 +53,8 @@ const App = () => (
                 <Route path="/goals" element={<Goals />} />
                 <Route path="/team" element={<Team />} />
                 <Route path="/leave" element={<Leave />} />
+                <Route path="/meetings" element={<Meetings />} />
+                <Route path="/onsite-work" element={<OnsiteWorkPage />} />
                 <Route path="/budget" element={<Budget />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/notifications" element={<Notifications />} />
