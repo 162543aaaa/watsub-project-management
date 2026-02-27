@@ -9,6 +9,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { Task } from "@/hooks/useProjects";
 import { toast } from "@/hooks/use-toast";
+import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const YEARS = [2025, 2026, 2027];
@@ -60,36 +61,6 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
   return badges.length > 0 ? <div className="flex items-center gap-1 flex-wrap">{badges}</div> : null;
 }
 
-function exportCSV(rows: string[][], filename: string) {
-  const content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-
-function exportPDF(title: string, html: string) {
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<html><head><title>${title}</title>
-  <style>
-    body{font-family:sans-serif;font-size:13px;color:#1a1a1a;padding:32px;max-width:960px;margin:0 auto;}
-    h1{font-size:20px;margin-bottom:2px;} .sub{color:#888;font-size:11px;margin-bottom:20px;}
-    .section-title{font-size:14px;font-weight:700;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:5px;}
-    table{width:100%;border-collapse:collapse;margin-bottom:16px;}
-    th{background:#f0f0f0;text-align:left;padding:7px 10px;font-size:11px;font-weight:600;}
-    td{padding:6px 10px;border-bottom:1px solid #f5f5f5;font-size:11px;}
-    .badge{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;}
-    .done{background:#d1fae5;color:#065f46;} .prog{background:#e0f2fe;color:#0369a1;} .todo{background:#f3f4f6;color:#6b7280;}
-    .bar-wrap{background:#e5e7eb;border-radius:99px;height:6px;min-width:60px;}
-    .bar{background:#0891b2;border-radius:99px;height:6px;}
-  </style></head><body>
-  ${html}
-  </body></html>`);
-  w.document.close();
-  setTimeout(() => { w.print(); w.close(); }, 400);
-}
 
 export default function Projects() {
   const { projects, loading, addProject, updateProject, deleteProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects();
@@ -120,7 +91,7 @@ export default function Projects() {
   };
 
   const openEditProject = (proj: typeof projects[0]) => {
-    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "", link: (proj as any).link || "" });
+    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "", link: proj.link || "" });
   };
 
   const handleEditProject = async () => {
@@ -176,19 +147,19 @@ export default function Projects() {
 
   const handleExportPDF = () => {
     setShowExportMenu(false);
-    let html = `<h1>Projects – ${periodLabel}</h1><div class="sub">Generated ${new Date().toLocaleString("en")}</div>`;
+    let html = `<h1>Projects – ${escapeHtml(periodLabel)}</h1><div class="sub">Generated ${escapeHtml(new Date().toLocaleString("en"))}</div>`;
     Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, projs]) => {
-      html += `<div class="section-title">${monthNames[Number(month)]} ${filterYear} (${projs.length} projects)</div>`;
+      html += `<div class="section-title">${escapeHtml(monthNames[Number(month)])} ${filterYear} (${projs.length} projects)</div>`;
       projs.forEach(proj => {
         const done = proj.tasks.filter(t => t.status === "Done").length;
         const pct = proj.tasks.length ? Math.round((done / proj.tasks.length) * 100) : 0;
-        html += `<p style="font-weight:600;margin:10px 0 4px">${proj.name}${proj.note ? ` — <span style="font-weight:400;color:#888">${proj.note}</span>` : ""}</p>`;
+        html += `<p style="font-weight:600;margin:10px 0 4px">${escapeHtml(proj.name)}${proj.note ? ` — <span style="font-weight:400;color:#888">${escapeHtml(proj.note)}</span>` : ""}</p>`;
         html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div class="bar-wrap" style="flex:1"><div class="bar" style="width:${pct}%"></div></div><span style="font-size:11px;font-weight:700">${pct}%</span><span style="font-size:10px;color:#888">${done}/${proj.tasks.length} done</span></div>`;
         if (proj.tasks.length > 0) {
           html += `<table><thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Assigned</th><th>Due</th></tr></thead><tbody>`;
           proj.tasks.forEach(t => {
             const cls = t.status === "Done" ? "done" : t.status === "In Progress" ? "prog" : "todo";
-            html += `<tr><td>${t.name}</td><td><span class="badge ${cls}">${t.status}</span></td><td>${t.priority}</td><td>${(t.assigned_to || []).join(", ") || "-"}</td><td>${t.due_date || "-"}</td></tr>`;
+            html += `<tr><td>${escapeHtml(t.name)}</td><td><span class="badge ${cls}">${escapeHtml(t.status)}</span></td><td>${escapeHtml(t.priority)}</td><td>${escapeHtml((t.assigned_to || []).join(", ") || "-")}</td><td>${escapeHtml(t.due_date || "-")}</td></tr>`;
           });
           html += `</tbody></table>`;
         }
@@ -453,10 +424,10 @@ export default function Projects() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <h3 className="font-bold text-foreground leading-tight">{proj.name}</h3>
-                                {(proj as any).link && (
-                                  <a href={(proj as any).link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                {proj.link && (
+                                  <a href={proj.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                                     className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
-                                    title={(proj as any).link}>
+                                    title={proj.link}>
                                     <ExternalLink className="w-3.5 h-3.5" />
                                   </a>
                                 )}

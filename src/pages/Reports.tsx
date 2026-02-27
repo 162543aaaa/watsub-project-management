@@ -6,6 +6,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
+import { exportCSV, escapeHtml } from "@/lib/exportUtils";
 
 type Task = {
   id: string; name: string; status: string; priority: string;
@@ -23,14 +24,6 @@ const monthNames = ["", "January", "February", "March", "April", "May", "June", 
 const today = new Date();
 const gradients = ["from-cyan-400 to-teal-500", "from-violet-400 to-purple-500", "from-rose-400 to-pink-500", "from-amber-400 to-orange-500", "from-blue-400 to-indigo-500"];
 
-function exportCSV(rows: string[][], filename: string) {
-  const content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
 
 export default function Reports() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -180,20 +173,20 @@ export default function Reports() {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    const statsHtml = stats.map(s => `<div class="stat"><div class="stat-val">${s.value}</div><div class="stat-lbl">${s.label}</div></div>`).join("");
+    const statsHtml = stats.map(s => `<div class="stat"><div class="stat-val">${s.value}</div><div class="stat-lbl">${escapeHtml(s.label)}</div></div>`).join("");
     const perfHtml = topPerformers.slice(0, 8).map((e, i) =>
-      `<tr><td>#${i + 1}</td><td>${e.name}</td><td>${e.done}/${e.total}</td><td>${e.pct}%</td>
+      `<tr><td>#${i + 1}</td><td>${escapeHtml(e.name)}</td><td>${e.done}/${e.total}</td><td>${e.pct}%</td>
        <td><div class="bar-wrap"><div class="bar" style="width:${e.pct}%"></div></div></td></tr>`
     ).join("");
     const distHtml = taskDist.map(d =>
-      `<tr><td>${d.label}</td><td>${d.count}</td><td>${allTasks.length ? Math.round((d.count / allTasks.length) * 100) : 0}%</td>
+      `<tr><td>${escapeHtml(d.label)}</td><td>${d.count}</td><td>${allTasks.length ? Math.round((d.count / allTasks.length) * 100) : 0}%</td>
        <td><div class="bar-wrap"><div class="bar" style="width:${allTasks.length ? (d.count / allTasks.length) * 100 : 0}%"></div></div></td></tr>`
     ).join("");
     const overdueHtml = overdueTasks.map(t =>
-      `<tr><td>${t.name}</td><td>${t.due_date ? new Date(t.due_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }) : "-"}</td><td>${t.priority}</td><td>${t.assigned_to.join(", ")}</td></tr>`
+      `<tr><td>${escapeHtml(t.name)}</td><td>${t.due_date ? escapeHtml(new Date(t.due_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })) : "-"}</td><td>${escapeHtml(t.priority)}</td><td>${escapeHtml(t.assigned_to.join(", "))}</td></tr>`
     ).join("");
 
-    printWindow.document.write(`<html><head><title>Reports – ${periodLabel}</title>
+    printWindow.document.write(`<html><head><title>Reports – ${escapeHtml(periodLabel)}</title>
     <style>
       body{font-family:sans-serif;font-size:13px;color:#1a1a1a;padding:32px;max-width:900px;margin:0 auto;}
       h1{font-size:22px;margin-bottom:2px;} .sub{color:#888;font-size:12px;margin-bottom:24px;}
@@ -207,8 +200,8 @@ export default function Reports() {
       .bar-wrap{background:#e5e7eb;border-radius:99px;height:7px;min-width:80px;}
       .bar{background:#6366f1;border-radius:99px;height:7px;}
     </style></head><body>
-    <h1>Reports – ${periodLabel}</h1>
-    <div class="sub">Generated ${new Date().toLocaleString("th-TH")}</div>
+    <h1>Reports – ${escapeHtml(periodLabel)}</h1>
+    <div class="sub">Generated ${escapeHtml(new Date().toLocaleString("th-TH"))}</div>
     <div class="stat-row">${statsHtml}</div>
     <div class="section-title">🏆 Top Performers (All Tasks)</div>
     <table><thead><tr><th>Rank</th><th>Name</th><th>Done/Total</th><th>%</th><th>Progress</th></tr></thead><tbody>${perfHtml || '<tr><td colspan="5" style="color:#aaa;text-align:center;padding:16px">No data</td></tr>'}</tbody></table>

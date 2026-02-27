@@ -7,6 +7,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
+import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -61,37 +62,6 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
 
 const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "", category: "none" };
 
-function exportCSV(rows: string[][], filename: string) {
-  const content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-
-function exportPDF(title: string, html: string) {
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<html><head><title>${title}</title>
-  <style>
-    body{font-family:sans-serif;font-size:13px;color:#1a1a1a;padding:32px;max-width:960px;margin:0 auto;}
-    h1{font-size:20px;margin-bottom:2px;} .sub{color:#888;font-size:11px;margin-bottom:20px;}
-    .section-title{font-size:14px;font-weight:700;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:5px;}
-    table{width:100%;border-collapse:collapse;margin-bottom:16px;}
-    th{background:#f0f0f0;text-align:left;padding:7px 10px;font-size:11px;font-weight:600;}
-    td{padding:6px 10px;border-bottom:1px solid #f5f5f5;font-size:11px;}
-    .badge{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;}
-    .done{background:#d1fae5;color:#065f46;} .prog{background:#e0f2fe;color:#0369a1;} .todo{background:#f3f4f6;color:#6b7280;}
-    .fee{background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;}
-    .bar-wrap{background:#e5e7eb;border-radius:99px;height:6px;min-width:60px;}
-    .bar{background:#059669;border-radius:99px;height:6px;}
-  </style></head><body>
-  ${html}
-  </body></html>`);
-  w.document.close();
-  setTimeout(() => { w.print(); w.close(); }, 400);
-}
 
 export default function Customers() {
   const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer } = useCustomers();
@@ -130,7 +100,7 @@ export default function Customers() {
   };
 
   const openEditCustomer = (cust: typeof customers[0]) => {
-    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: (cust as any).link || "", month: cust.month });
+    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: cust.link || "", month: cust.month });
   };
 
   const handleEditCustomer = async () => {
@@ -189,18 +159,18 @@ export default function Customers() {
 
   const handleExportPDF = () => {
     setShowExportMenu(false);
-    let html = `<h1>Customers – ${periodLabel}</h1><div class="sub">Generated ${new Date().toLocaleString("en")}</div>`;
+    let html = `<h1>Customers – ${escapeHtml(periodLabel)}</h1><div class="sub">Generated ${escapeHtml(new Date().toLocaleString("en"))}</div>`;
     Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, custs]) => {
       const orderedCusts = getOrdered(Number(month), custs);
-      html += `<div class="section-title">${monthNames[Number(month)]} ${filterYear} (${custs.length} customers)</div>`;
+      html += `<div class="section-title">${escapeHtml(monthNames[Number(month)])} ${filterYear} (${custs.length} customers)</div>`;
       html += `<table><thead><tr><th>Customer</th><th>Project</th><th>Fee</th><th>Tasks</th><th>Done</th><th>Progress</th></tr></thead><tbody>`;
       orderedCusts.forEach(cust => {
         const done = cust.tasks.filter(t => t.status === "Done").length;
         const pct = cust.tasks.length ? Math.round((done / cust.tasks.length) * 100) : 0;
         html += `<tr>
-          <td><strong>${cust.name}</strong>${cust.detail ? `<br><span style="color:#888;font-size:10px">${cust.detail}</span>` : ""}</td>
-          <td>${cust.project_title || "-"}</td>
-          <td>${cust.payment_fee ? `<span class="fee">${cust.payment_fee}</span>` : "-"}</td>
+          <td><strong>${escapeHtml(cust.name)}</strong>${cust.detail ? `<br><span style="color:#888;font-size:10px">${escapeHtml(cust.detail)}</span>` : ""}</td>
+          <td>${escapeHtml(cust.project_title || "-")}</td>
+          <td>${cust.payment_fee ? `<span class="fee">${escapeHtml(cust.payment_fee)}</span>` : "-"}</td>
           <td>${cust.tasks.length}</td>
           <td>${done}</td>
           <td><div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div><span style="font-size:10px;font-weight:700"> ${pct}%</span></td>
@@ -209,7 +179,7 @@ export default function Customers() {
           html += `<tr><td colspan="6" style="padding:0 10px 8px;"><table style="margin:0"><thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Assigned</th><th>Due</th></tr></thead><tbody>`;
           cust.tasks.forEach(t => {
             const cls = t.status === "Done" ? "done" : t.status === "In Progress" ? "prog" : "todo";
-            html += `<tr><td>${t.name}</td><td><span class="badge ${cls}">${t.status}</span></td><td>${t.priority}</td><td>${(t.assigned_to || []).join(", ") || "-"}</td><td>${t.due_date || "-"}</td></tr>`;
+            html += `<tr><td>${escapeHtml(t.name)}</td><td><span class="badge ${cls}">${escapeHtml(t.status)}</span></td><td>${escapeHtml(t.priority)}</td><td>${escapeHtml((t.assigned_to || []).join(", ") || "-")}</td><td>${escapeHtml(t.due_date || "-")}</td></tr>`;
           });
           html += `</tbody></table></td></tr>`;
         }
@@ -350,10 +320,10 @@ export default function Customers() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-bold text-foreground">{cust.name}</h3>
-                                {(cust as any).link && (
-                                  <a href={(cust as any).link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                {cust.link && (
+                                  <a href={cust.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                                     className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
-                                    title={(cust as any).link}>
+                                    title={cust.link}>
                                     <ExternalLink className="w-3.5 h-3.5" />
                                   </a>
                                 )}
