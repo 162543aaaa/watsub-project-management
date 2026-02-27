@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, Search, RotateCcw } from "lucide-react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable,
@@ -14,6 +14,8 @@ import { toast } from "@/hooks/use-toast";
 type TaskStatus = "To Do" | "In Progress" | "Done";
 type CalendarItemType = "task" | "meeting" | "onsite";
 
+type TaskSource = "standalone" | "project" | "customer";
+
 interface CalendarItem {
   id: string;
   name: string;
@@ -25,9 +27,10 @@ interface CalendarItem {
   assigned_to?: string[];
   comments?: string;
   link?: string;
-  taskType?: "standalone" | "project" | "customer";
+  taskType?: TaskSource;
   projectId?: string;
   customerId?: string;
+  sourceName?: string;
   startTime?: string | null;
   endTime?: string | null;
   location?: string | null;
@@ -119,7 +122,12 @@ function ItemDetailModal({ item, onClose }: { item: CalendarItem; onClose: () =>
             <X className="w-4 h-4" />
           </button>
         </div>
-        <h3 className="text-lg font-bold mb-3">{item.name}</h3>
+        <h3 className="text-lg font-bold mb-1">{item.name}</h3>
+        {item.sourceName && item.sourceName !== "Standalone" && (
+          <p className="text-xs text-muted-foreground mb-3">
+            {item.taskType === "project" ? "🚀" : "💼"} {item.sourceName}
+          </p>
+        )}
         <div className="space-y-2.5 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             <CalendarDays className="w-4 h-4 flex-shrink-0" />
@@ -199,6 +207,10 @@ export default function CalendarPage() {
   const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [filterType, setFilterType] = useState<"all" | CalendarItemType>("all");
   const [filterStatus, setFilterStatus] = useState<"all" | TaskStatus>("all");
+  const [filterPriority, setFilterPriority] = useState<"all" | string>("all");
+  const [filterSource, setFilterSource] = useState<"all" | TaskSource>("all");
+  const [filterPerson, setFilterPerson] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -217,14 +229,14 @@ export default function CalendarPage() {
       id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
       category: t.category, date: t.due_date!, priority: t.priority,
       assigned_to: t.assigned_to, comments: t.comments, link: t.link,
-      taskType: "standalone" as const,
+      taskType: "standalone" as const, sourceName: "Standalone",
     }));
     const projectTasks = projects.flatMap(p =>
       p.tasks.filter(t => t.due_date).map(t => ({
         id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
         category: t.category, date: t.due_date!, priority: t.priority,
         assigned_to: t.assigned_to, comments: t.comments, link: t.link,
-        taskType: "project" as const, projectId: p.id,
+        taskType: "project" as const, projectId: p.id, sourceName: p.name,
       }))
     );
     const customerTasks = customers.flatMap(c =>
@@ -232,7 +244,7 @@ export default function CalendarPage() {
         id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
         category: t.category, date: t.due_date!, priority: t.priority,
         assigned_to: t.assigned_to, comments: t.comments, link: t.link,
-        taskType: "customer" as const, customerId: c.id,
+        taskType: "customer" as const, customerId: c.id, sourceName: c.name,
       }))
     );
     const meetingItems = meetings.map(m => ({
@@ -247,13 +259,44 @@ export default function CalendarPage() {
     return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems];
   }, [standaloneTasks, projects, customers, meetings, onsiteWork]);
 
+  /* ── Unique people for assigned filter ── */
+  const allPeople = useMemo(() => {
+    const names = new Set<string>();
+    allItems.forEach(i => {
+      (i.assigned_to || []).forEach(n => names.add(n));
+      (i.participants || []).forEach(n => names.add(n));
+    });
+    return [...names].sort();
+  }, [allItems]);
+
   /* ── Filter ── */
+  const hasActiveFilters = filterType !== "all" || filterStatus !== "all" || filterPriority !== "all" || filterSource !== "all" || filterPerson !== "all" || search.trim() !== "";
+
   const filteredItems = useMemo(() => {
     let items = allItems;
     if (filterType !== "all") items = items.filter(i => i.type === filterType);
     if (filterStatus !== "all") items = items.filter(i => i.type !== "task" || i.status === filterStatus);
+    if (filterPriority !== "all") items = items.filter(i => i.type !== "task" || i.priority === filterPriority);
+    if (filterSource !== "all") items = items.filter(i => i.type !== "task" || i.taskType === filterSource);
+    if (filterPerson !== "all") items = items.filter(i =>
+      (i.assigned_to || []).includes(filterPerson) || (i.participants || []).includes(filterPerson)
+    );
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      items = items.filter(i =>
+        i.name.toLowerCase().includes(q) ||
+        i.sourceName?.toLowerCase().includes(q) ||
+        (i.assigned_to || []).some(a => a.toLowerCase().includes(q)) ||
+        (i.participants || []).some(p => p.toLowerCase().includes(q))
+      );
+    }
     return items;
-  }, [allItems, filterType, filterStatus]);
+  }, [allItems, filterType, filterStatus, filterPriority, filterSource, filterPerson, search]);
+
+  const resetFilters = () => {
+    setFilterType("all"); setFilterStatus("all"); setFilterPriority("all");
+    setFilterSource("all"); setFilterPerson("all"); setSearch("");
+  };
 
   /* ── Calendar helpers ── */
   const daysInMonth = getDaysInMonth(current.year, current.month);
@@ -303,18 +346,8 @@ export default function CalendarPage() {
   const activeItem = activeId ? findItemByDndId(activeId) : null;
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const typeFilters: { value: "all" | CalendarItemType; label: string }[] = [
-    { value: "all", label: "All" },
-    { value: "task", label: "Tasks" },
-    { value: "meeting", label: "🗓 Meetings" },
-    { value: "onsite", label: "📍 On-site" },
-  ];
-  const statusFilters: { value: "all" | TaskStatus; label: string }[] = [
-    { value: "all", label: "All" },
-    { value: "To Do", label: "To Do" },
-    { value: "In Progress", label: "In Progress" },
-    { value: "Done", label: "Done" },
-  ];
+  const chipClass = (active: boolean) =>
+    `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`;
 
   return (
     <div className="p-6 page-enter">
@@ -322,7 +355,9 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between mb-4 animate-stagger-1">
         <div>
           <h1 className="text-2xl font-bold">Calendar</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{filteredItems.length} items on calendar</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {filteredItems.length}{filteredItems.length !== allItems.length ? ` / ${allItems.length}` : ""} items
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={goToday} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
@@ -339,22 +374,67 @@ export default function CalendarPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-4 animate-stagger-2">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type:</span>
-        {typeFilters.map(f => (
-          <button key={f.value} onClick={() => setFilterType(f.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterType === f.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-            {f.label}
-          </button>
-        ))}
-        <div className="w-px h-4 bg-border" />
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status:</span>
-        {statusFilters.map(f => (
-          <button key={f.value} onClick={() => setFilterStatus(f.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterStatus === f.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-            {f.label}
-          </button>
-        ))}
+      <div className="space-y-2 mb-4 animate-stagger-2">
+        {/* Row 1: Search + Reset */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
+            />
+          </div>
+          {/* Assigned / Person dropdown */}
+          {allPeople.length > 0 && (
+            <select
+              value={filterPerson} onChange={e => setFilterPerson(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none min-w-[140px]"
+            >
+              <option value="all">All people</option>
+              {allPeople.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          )}
+          {hasActiveFilters && (
+            <button onClick={resetFilters} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+              <RotateCcw className="w-3.5 h-3.5" /> Reset
+            </button>
+          )}
+        </div>
+
+        {/* Row 2: Type + Status */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-12">Type</span>
+          {(["all", "task", "meeting", "onsite"] as const).map(v => (
+            <button key={v} onClick={() => setFilterType(v)} className={chipClass(filterType === v)}>
+              {v === "all" ? "All" : v === "task" ? "Tasks" : v === "meeting" ? "🗓 Meetings" : "📍 On-site"}
+            </button>
+          ))}
+          <div className="w-px h-4 bg-border mx-1" />
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-12">Status</span>
+          {(["all", "To Do", "In Progress", "Done"] as const).map(v => (
+            <button key={v} onClick={() => setFilterStatus(v)} className={chipClass(filterStatus === v)}>
+              {v === "all" ? "All" : v}
+            </button>
+          ))}
+        </div>
+
+        {/* Row 3: Priority + Source */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-12">Priority</span>
+          {(["all", "High", "Medium", "Low"] as const).map(v => (
+            <button key={v} onClick={() => setFilterPriority(v)} className={chipClass(filterPriority === v)}>
+              {v === "all" ? "All" : v}
+            </button>
+          ))}
+          <div className="w-px h-4 bg-border mx-1" />
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-12">Source</span>
+          {(["all", "standalone", "project", "customer"] as const).map(v => (
+            <button key={v} onClick={() => setFilterSource(v)} className={chipClass(filterSource === v)}>
+              {v === "all" ? "All" : v === "standalone" ? "Standalone" : v === "project" ? "🚀 Project" : "💼 Customer"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Calendar grid with DnD */}
