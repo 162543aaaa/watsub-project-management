@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
-import { UserPlus, Eye, EyeOff, Zap } from "lucide-react";
+import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -70,7 +70,7 @@ export default function Signup() {
             <label className="text-sm font-medium text-foreground mb-1.5 block">รหัสผ่าน</label>
             <div className="relative">
               <Input type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="อย่างน้อย 6 ตัวอักษร" required autoComplete="new-password" className="pr-10" />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>

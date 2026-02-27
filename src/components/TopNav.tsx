@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Zap, Menu, X, ChevronDown, Shield, LogOut
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Menu, X, ChevronDown, Shield, LogOut
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -30,7 +30,7 @@ const allNav = [...primaryNav, ...secondaryNav];
 export default function TopNav() {
   const location = useLocation();
   const { unreadCount } = useNotifications();
-  const { isAdmin, signOut, profile } = useAuthContext();
+  const { isAdmin, signOut } = useAuthContext();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -66,7 +66,7 @@ export default function TopNav() {
         </Link>
 
         {/* Desktop primary nav */}
-        <nav className="hidden lg:flex items-center gap-0.5 flex-1">
+        <nav className="hidden lg:flex items-center gap-0.5 flex-1" aria-label="Main navigation">
           {primaryNav.map((item) => {
             const active = location.pathname === item.path;
             return (
@@ -148,7 +148,7 @@ export default function TopNav() {
         </nav>
 
         {/* Tablet compact nav */}
-        <nav className="hidden md:flex lg:hidden items-center gap-0.5 flex-1 overflow-x-auto no-scrollbar">
+        <nav className="hidden md:flex lg:hidden items-center gap-0.5 flex-1 overflow-x-auto no-scrollbar" aria-label="Main navigation">
           {allNav.map((item) => {
             const active = location.pathname === item.path;
             const isNotif = item.path === "/notifications";
@@ -181,7 +181,8 @@ export default function TopNav() {
             <Link to="/admin">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
                 style={location.pathname === "/admin" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}
-                title="Admin Panel">
+                title="Admin Panel"
+                aria-label="Admin Panel">
                 <Shield className="w-4 h-4" />
               </div>
             </Link>
@@ -189,7 +190,8 @@ export default function TopNav() {
           <button onClick={signOut}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
             style={{ color: "hsl(215 20% 60%)" }}
-            title="ออกจากระบบ">
+            title="ออกจากระบบ"
+            aria-label="ออกจากระบบ">
             <LogOut className="w-4 h-4" />
           </button>
         </div>
@@ -199,6 +201,7 @@ export default function TopNav() {
           onClick={() => setMobileOpen(!mobileOpen)}
           className="md:hidden ml-auto w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
           style={{ color: "hsl(215 20% 70%)" }}
+          aria-label={mobileOpen ? "ปิดเมนู" : "เปิดเมนู"}
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -214,7 +217,7 @@ export default function TopNav() {
           }}
           onClick={() => setMobileOpen(false)}
         >
-          <nav className="grid grid-cols-4 gap-1 p-3">
+          <nav className="grid grid-cols-4 gap-1 p-3" aria-label="Mobile navigation">
             {allNav.map((item) => {
               const active = location.pathname === item.path;
               const isNotif = item.path === "/notifications";
