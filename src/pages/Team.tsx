@@ -150,10 +150,11 @@ export default function Team() {
 
   const save = async () => {
     if (!form.name.trim() || !form.position.trim() || !form.email.trim()) return;
+    const payload = { ...form, start_date: form.start_date || undefined };
     if (editing) {
-      await updateEmployee(editing.id, form);
+      await updateEmployee(editing.id, payload);
     } else {
-      await addEmployee(form);
+      await addEmployee(payload);
     }
     setShowAdd(false);
     setEditing(null);
@@ -449,11 +450,6 @@ export default function Team() {
                   <div className="min-w-0">
                     <h3 className="font-bold text-foreground text-sm leading-tight truncate">{emp.name}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{emp.position}</p>
-                    {getWorkTenure(emp.start_date) && (
-                      <p className="text-[10px] text-primary mt-0.5 flex items-center gap-1">
-                        <Briefcase className="w-3 h-3" /> {getWorkTenure(emp.start_date)}
-                      </p>
-                    )}
                   </div>
                 </div>
                 <div className="flex gap-0.5 flex-shrink-0">
@@ -470,7 +466,7 @@ export default function Team() {
                 </div>
               </div>
 
-              {/* Contact */}
+              {/* Contact & Tenure */}
               <div className="space-y-1.5 mb-3">
                 <a href={`mailto:${emp.email}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors truncate">
                   <Mail className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{emp.email}</span>
@@ -479,6 +475,11 @@ export default function Team() {
                   <a href={`tel:${emp.phone}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
                     <Phone className="w-3.5 h-3.5 flex-shrink-0" /> {emp.phone}
                   </a>
+                )}
+                {emp.start_date && getWorkTenure(emp.start_date) && (
+                  <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                    <Briefcase className="w-3.5 h-3.5 flex-shrink-0" /> อายุงาน: {getWorkTenure(emp.start_date)}
+                  </div>
                 )}
               </div>
 
