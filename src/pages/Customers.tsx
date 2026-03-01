@@ -315,7 +315,7 @@ export default function Customers() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {orderedCusts.map(cust => (
                       <SortableCustCard key={cust.id} id={cust.id}>
-                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group h-full cursor-pointer" onClick={() => openEditCustomer(cust)}>
+                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group h-full cursor-pointer" onDoubleClick={() => openEditCustomer(cust)}>
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
