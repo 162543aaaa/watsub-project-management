@@ -473,7 +473,7 @@ export default function Projects() {
                                   <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
                                 </div>
                               ) : proj.tasks.map(task => (
-                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }}>
+                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onDoubleClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }}>
                                    <div className="flex items-center gap-2">
                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                                      <div className="flex-1 min-w-0">

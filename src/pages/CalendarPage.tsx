@@ -1,10 +1,9 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, Search, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw } from "lucide-react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable,
 } from "@dnd-kit/core";
-import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useMeetings } from "@/hooks/useMeetings";
@@ -14,7 +13,7 @@ import { toast } from "@/hooks/use-toast";
 type TaskStatus = "To Do" | "In Progress" | "Done";
 type CalendarItemType = "task" | "meeting" | "onsite";
 
-type TaskSource = "standalone" | "project" | "customer";
+type TaskSource = "project" | "customer";
 
 interface CalendarItem {
   id: string;
@@ -205,17 +204,11 @@ function DayDetailModal({ dateStr, items, onClose, onSelectItem }: {
 export default function CalendarPage() {
   const today = new Date();
   const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [filterType, setFilterType] = useState<"all" | CalendarItemType>("all");
-  const [filterStatus, setFilterStatus] = useState<"all" | TaskStatus>("all");
-  const [filterPriority, setFilterPriority] = useState<"all" | string>("all");
-  const [filterSource, setFilterSource] = useState<"all" | TaskSource>("all");
-  const [filterPerson, setFilterPerson] = useState<string>("all");
-  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState<"all" | "meeting" | "onsite">("all");
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, updateTask: updateProjectTask } = useProjects();
   const { customers, updateTask: updateCustomerTask } = useCustomers();
   const { meetings, updateMeeting } = useMeetings();
@@ -223,16 +216,10 @@ export default function CalendarPage() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  /* ── Build items from all sources ── */
+  /* ── Build items from meetings & on-site work only ── */
   const allItems = useMemo<CalendarItem[]>(() => {
-    const standalone = standaloneTasks.filter(t => t.due_date).map(t => ({
-      id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
-      category: t.category, date: t.due_date!, priority: t.priority,
-      assigned_to: t.assigned_to, comments: t.comments, link: t.link,
-      taskType: "standalone" as const, sourceName: "Standalone",
-    }));
     const projectTasks = projects.flatMap(p =>
-      p.tasks.filter(t => t.due_date).map(t => ({
+      p.tasks.filter(t => t.due_date && (t.category === "meeting" || t.category === "onsite")).map(t => ({
         id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
         category: t.category, date: t.due_date!, priority: t.priority,
         assigned_to: t.assigned_to, comments: t.comments, link: t.link,
@@ -240,7 +227,7 @@ export default function CalendarPage() {
       }))
     );
     const customerTasks = customers.flatMap(c =>
-      c.tasks.filter(t => t.due_date).map(t => ({
+      c.tasks.filter(t => t.due_date && (t.category === "meeting" || t.category === "onsite")).map(t => ({
         id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
         category: t.category, date: t.due_date!, priority: t.priority,
         assigned_to: t.assigned_to, comments: t.comments, link: t.link,
@@ -256,47 +243,19 @@ export default function CalendarPage() {
       id: o.id, name: o.title, type: "onsite" as const, date: o.work_date,
       location: o.location, note: o.note, participants: o.participants,
     }));
-    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems];
-  }, [standaloneTasks, projects, customers, meetings, onsiteWork]);
-
-  /* ── Unique people for assigned filter ── */
-  const allPeople = useMemo(() => {
-    const names = new Set<string>();
-    allItems.forEach(i => {
-      (i.assigned_to || []).forEach(n => names.add(n));
-      (i.participants || []).forEach(n => names.add(n));
-    });
-    return [...names].sort();
-  }, [allItems]);
+    return [...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems];
+  }, [projects, customers, meetings, onsiteWork]);
 
   /* ── Filter ── */
-  const hasActiveFilters = filterType !== "all" || filterStatus !== "all" || filterPriority !== "all" || filterSource !== "all" || filterPerson !== "all" || search.trim() !== "";
+  const hasActiveFilters = filterCategory !== "all";
 
   const filteredItems = useMemo(() => {
-    let items = allItems;
-    if (filterType !== "all") items = items.filter(i => i.type === filterType);
-    if (filterStatus !== "all") items = items.filter(i => i.type !== "task" || i.status === filterStatus);
-    if (filterPriority !== "all") items = items.filter(i => i.type !== "task" || i.priority === filterPriority);
-    if (filterSource !== "all") items = items.filter(i => i.type !== "task" || i.taskType === filterSource);
-    if (filterPerson !== "all") items = items.filter(i =>
-      (i.assigned_to || []).includes(filterPerson) || (i.participants || []).includes(filterPerson)
-    );
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      items = items.filter(i =>
-        i.name.toLowerCase().includes(q) ||
-        i.sourceName?.toLowerCase().includes(q) ||
-        (i.assigned_to || []).some(a => a.toLowerCase().includes(q)) ||
-        (i.participants || []).some(p => p.toLowerCase().includes(q))
-      );
-    }
-    return items;
-  }, [allItems, filterType, filterStatus, filterPriority, filterSource, filterPerson, search]);
+    if (filterCategory === "all") return allItems;
+    if (filterCategory === "meeting") return allItems.filter(i => i.type === "meeting" || (i.type === "task" && i.category === "meeting"));
+    return allItems.filter(i => i.type === "onsite" || (i.type === "task" && i.category === "onsite"));
+  }, [allItems, filterCategory]);
 
-  const resetFilters = () => {
-    setFilterType("all"); setFilterStatus("all"); setFilterPriority("all");
-    setFilterSource("all"); setFilterPerson("all"); setSearch("");
-  };
+  const resetFilters = () => setFilterCategory("all");
 
   /* ── Calendar helpers ── */
   const daysInMonth = getDaysInMonth(current.year, current.month);
@@ -337,10 +296,8 @@ export default function CalendarPage() {
       await updateProjectTask(item.id, { due_date: newDate });
     } else if (item.taskType === "customer") {
       await updateCustomerTask(item.id, { due_date: newDate });
-      toast({ title: "ย้ายวันสำเร็จ!" });
-    } else {
-      await updateStandaloneTask(item.id, { due_date: newDate });
     }
+    toast({ title: "ย้ายวันสำเร็จ!" });
   };
 
   const activeItem = activeId ? findItemByDndId(activeId) : null;
@@ -374,67 +331,17 @@ export default function CalendarPage() {
       </div>
 
       {/* Filters */}
-      <div className="space-y-2 mb-4 animate-stagger-2">
-        {/* Row 1: Search + Reset */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
-            />
-          </div>
-          {/* Assigned / Person dropdown */}
-          {allPeople.length > 0 && (
-            <select
-              value={filterPerson} onChange={e => setFilterPerson(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none min-w-[140px]"
-            >
-              <option value="all">All people</option>
-              {allPeople.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          )}
-          {hasActiveFilters && (
-            <button onClick={resetFilters} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
-              <RotateCcw className="w-3.5 h-3.5" /> Reset
-            </button>
-          )}
-        </div>
-
-        {/* Row 2: Type + Status */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-12">Type</span>
-          {(["all", "task", "meeting", "onsite"] as const).map(v => (
-            <button key={v} onClick={() => setFilterType(v)} className={chipClass(filterType === v)}>
-              {v === "all" ? "All" : v === "task" ? "Tasks" : v === "meeting" ? "🗓 Meetings" : "📍 On-site"}
-            </button>
-          ))}
-          <div className="w-px h-4 bg-border mx-1" />
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-12">Status</span>
-          {(["all", "To Do", "In Progress", "Done"] as const).map(v => (
-            <button key={v} onClick={() => setFilterStatus(v)} className={chipClass(filterStatus === v)}>
-              {v === "all" ? "All" : v}
-            </button>
-          ))}
-        </div>
-
-        {/* Row 3: Priority + Source */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-12">Priority</span>
-          {(["all", "High", "Medium", "Low"] as const).map(v => (
-            <button key={v} onClick={() => setFilterPriority(v)} className={chipClass(filterPriority === v)}>
-              {v === "all" ? "All" : v}
-            </button>
-          ))}
-          <div className="w-px h-4 bg-border mx-1" />
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide w-12">Source</span>
-          {(["all", "standalone", "project", "customer"] as const).map(v => (
-            <button key={v} onClick={() => setFilterSource(v)} className={chipClass(filterSource === v)}>
-              {v === "all" ? "All" : v === "standalone" ? "Standalone" : v === "project" ? "🚀 Project" : "💼 Customer"}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-2 mb-4 animate-stagger-2">
+        {(["all", "meeting", "onsite"] as const).map(v => (
+          <button key={v} onClick={() => setFilterCategory(v)} className={chipClass(filterCategory === v)}>
+            {v === "all" ? "ทั้งหมด" : v === "meeting" ? "🗓 Meetings" : "📍 On-site Work"}
+          </button>
+        ))}
+        {hasActiveFilters && (
+          <button onClick={resetFilters} className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+            <RotateCcw className="w-3.5 h-3.5" /> Reset
+          </button>
+        )}
       </div>
 
       {/* Calendar grid with DnD */}

@@ -378,7 +378,7 @@ export default function Customers() {
                               {cust.tasks.length === 0 ? (
                                 <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
                               ) : cust.tasks.map(task => (
-                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={(e) => { e.stopPropagation(); openEditTask(cust.id, task); }}>
+                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onDoubleClick={(e) => { e.stopPropagation(); openEditTask(cust.id, task); }}>
                                    <div className="flex items-center gap-3">
                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                                      <div className="flex-1 min-w-0">
