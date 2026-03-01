@@ -4,6 +4,7 @@ import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable,
 } from "@dnd-kit/core";
+import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useMeetings } from "@/hooks/useMeetings";
@@ -13,7 +14,7 @@ import { toast } from "@/hooks/use-toast";
 type TaskStatus = "To Do" | "In Progress" | "Done";
 type CalendarItemType = "task" | "meeting" | "onsite";
 
-type TaskSource = "project" | "customer";
+type TaskSource = "standalone" | "project" | "customer";
 
 interface CalendarItem {
   id: string;
@@ -209,6 +210,7 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, updateTask: updateProjectTask } = useProjects();
   const { customers, updateTask: updateCustomerTask } = useCustomers();
   const { meetings, updateMeeting } = useMeetings();
@@ -216,10 +218,16 @@ export default function CalendarPage() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  /* ── Build items from meetings & on-site work only ── */
+  /* ── Build items from all sources ── */
   const allItems = useMemo<CalendarItem[]>(() => {
+    const standalone = standaloneTasks.filter(t => t.due_date).map(t => ({
+      id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
+      category: t.category, date: t.due_date!, priority: t.priority,
+      assigned_to: t.assigned_to, comments: t.comments, link: t.link,
+      taskType: "standalone" as const, sourceName: "Standalone",
+    }));
     const projectTasks = projects.flatMap(p =>
-      p.tasks.filter(t => t.due_date && (t.category === "meeting" || t.category === "onsite")).map(t => ({
+      p.tasks.filter(t => t.due_date).map(t => ({
         id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
         category: t.category, date: t.due_date!, priority: t.priority,
         assigned_to: t.assigned_to, comments: t.comments, link: t.link,
@@ -227,7 +235,7 @@ export default function CalendarPage() {
       }))
     );
     const customerTasks = customers.flatMap(c =>
-      c.tasks.filter(t => t.due_date && (t.category === "meeting" || t.category === "onsite")).map(t => ({
+      c.tasks.filter(t => t.due_date).map(t => ({
         id: t.id, name: t.name, type: "task" as const, status: t.status as TaskStatus,
         category: t.category, date: t.due_date!, priority: t.priority,
         assigned_to: t.assigned_to, comments: t.comments, link: t.link,
@@ -243,8 +251,8 @@ export default function CalendarPage() {
       id: o.id, name: o.title, type: "onsite" as const, date: o.work_date,
       location: o.location, note: o.note, participants: o.participants,
     }));
-    return [...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems];
-  }, [projects, customers, meetings, onsiteWork]);
+    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems];
+  }, [standaloneTasks, projects, customers, meetings, onsiteWork]);
 
   /* ── Filter ── */
   const hasActiveFilters = filterCategory !== "all";
@@ -296,6 +304,8 @@ export default function CalendarPage() {
       await updateProjectTask(item.id, { due_date: newDate });
     } else if (item.taskType === "customer") {
       await updateCustomerTask(item.id, { due_date: newDate });
+    } else {
+      await updateStandaloneTask(item.id, { due_date: newDate });
     }
     toast({ title: "ย้ายวันสำเร็จ!" });
   };
