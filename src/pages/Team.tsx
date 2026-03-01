@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from "react";
-import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter, Users, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter, Users, MapPin, Briefcase } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useTasks } from "@/hooks/useTasks";
@@ -26,6 +26,23 @@ function getPublicUrl(path: string) {
   return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
 }
 
+function getWorkTenure(startDate?: string): string | null {
+  if (!startDate) return null;
+  const start = new Date(startDate);
+  const now = new Date();
+  if (isNaN(start.getTime())) return null;
+  let years = now.getFullYear() - start.getFullYear();
+  let months = now.getMonth() - start.getMonth();
+  if (now.getDate() < start.getDate()) months--;
+  if (months < 0) { years--; months += 12; }
+  if (years < 0) return null;
+  if (years === 0 && months === 0) return "เริ่มงานเดือนนี้";
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} ปี`);
+  if (months > 0) parts.push(`${months} เดือน`);
+  return parts.join(" ");
+}
+
 export default function Team() {
   const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const { tasks: standaloneTasks } = useTasks();
@@ -35,7 +52,7 @@ export default function Team() {
   const { onsiteWork } = useOnsiteWork();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
-  const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "" });
+  const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "" });
   const [detail, setDetail] = useState<Employee | null>(null);
   const [uploading, setUploading] = useState<{ avatar?: boolean; qr?: boolean }>({});
   const avatarRef = useRef<HTMLInputElement>(null);
@@ -140,12 +157,12 @@ export default function Team() {
     }
     setShowAdd(false);
     setEditing(null);
-    setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "" });
+    setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "" });
   };
 
   const startEdit = (emp: Employee) => {
     setEditing(emp);
-    setForm({ name: emp.name, position: emp.position, email: emp.email, role: emp.role, phone: emp.phone || "", avatar: emp.avatar || "", promptpay_qr: emp.promptpay_qr || "" });
+    setForm({ name: emp.name, position: emp.position, email: emp.email, role: emp.role, phone: emp.phone || "", avatar: emp.avatar || "", promptpay_qr: emp.promptpay_qr || "", start_date: emp.start_date || "" });
     setShowAdd(true);
   };
 
@@ -201,12 +218,22 @@ export default function Team() {
                   <h1 className="text-lg font-bold text-foreground truncate">{detail.name}</h1>
                   <p className="text-sm text-muted-foreground mt-0.5">{detail.position}</p>
                   <span className="inline-block mt-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{detail.role}</span>
+                  {getWorkTenure(detail.start_date) && (
+                    <p className="text-xs text-primary mt-1 flex items-center gap-1">
+                      <Briefcase className="w-3 h-3" /> {getWorkTenure(detail.start_date)}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="hidden sm:block flex-1 min-w-0">
                 <h1 className="text-xl font-bold text-foreground">{detail.name}</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">{detail.position}</p>
                 <span className="inline-block mt-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{detail.role}</span>
+                {getWorkTenure(detail.start_date) && (
+                  <p className="text-sm text-primary mt-1 flex items-center gap-1.5">
+                    <Briefcase className="w-4 h-4" /> อายุงาน: {getWorkTenure(detail.start_date)}
+                  </p>
+                )}
               </div>
               <button onClick={() => startEdit(detail)} className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted transition-colors flex-shrink-0">
                 <Pencil className="w-3.5 h-3.5" /> Edit
@@ -311,7 +338,7 @@ export default function Team() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <FilterBar />
-          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "" }); }}
+          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "" }); }}
             className="btn-primary flex items-center gap-2 text-sm"><Plus className="w-4 h-4" /> Add</button>
         </div>
       </div>
@@ -349,14 +376,15 @@ export default function Team() {
 
             <div className="space-y-3">
               {[
-                { label: "Full Name", key: "name", placeholder: "Full name..." },
-                { label: "Position", key: "position", placeholder: "e.g. Community Support" },
-                { label: "Email", key: "email", placeholder: "email@example.com" },
-                { label: "Phone", key: "phone", placeholder: "e.g. 081-234-5678" },
+                { label: "Full Name", key: "name", placeholder: "Full name...", type: "text" },
+                { label: "Position", key: "position", placeholder: "e.g. Community Support", type: "text" },
+                { label: "Email", key: "email", placeholder: "email@example.com", type: "text" },
+                { label: "Phone", key: "phone", placeholder: "e.g. 081-234-5678", type: "text" },
+                { label: "วันเริ่มงาน", key: "start_date", placeholder: "", type: "date" },
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">{f.label}</label>
-                  <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  <input type={f.type} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                     value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} placeholder={f.placeholder} />
                 </div>
               ))}
@@ -421,6 +449,11 @@ export default function Team() {
                   <div className="min-w-0">
                     <h3 className="font-bold text-foreground text-sm leading-tight truncate">{emp.name}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{emp.position}</p>
+                    {getWorkTenure(emp.start_date) && (
+                      <p className="text-[10px] text-primary mt-0.5 flex items-center gap-1">
+                        <Briefcase className="w-3 h-3" /> {getWorkTenure(emp.start_date)}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-0.5 flex-shrink-0">
