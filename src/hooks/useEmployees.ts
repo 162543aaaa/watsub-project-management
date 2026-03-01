@@ -11,6 +11,7 @@ export interface Employee {
   avatar?: string;
   phone?: string;
   promptpay_qr?: string;
+  start_date?: string;
   created_at?: string;
 }
 
