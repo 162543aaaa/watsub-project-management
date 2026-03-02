@@ -417,7 +417,7 @@ export default function Projects() {
                       const donePct = proj.tasks.length ? Math.round(proj.tasks.filter(t => t.status === "Done").length / proj.tasks.length * 100) : 0;
                       const isExpanded = !!expanded[proj.id];
                       return <SortableProjCard key={proj.id} id={proj.id}>
-                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer" onClick={() => openEditProject(proj)}>
+                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer" onDoubleClick={() => openEditProject(proj)}>
                           <div className="flex items-start gap-2 mb-3">
                             <div className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
                               style={{ background: donePct === 100 ? "hsl(142 71% 45%)" : donePct > 0 ? "hsl(191 91% 37%)" : "hsl(215 14% 75%)" }} />
