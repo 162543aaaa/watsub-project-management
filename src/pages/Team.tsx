@@ -476,11 +476,13 @@ export default function Team() {
                     <Phone className="w-3.5 h-3.5 flex-shrink-0" /> {emp.phone}
                   </a>
                 )}
-                {emp.start_date && getWorkTenure(emp.start_date) && (
-                  <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-                    <Briefcase className="w-3.5 h-3.5 flex-shrink-0" /> อายุงาน: {getWorkTenure(emp.start_date)}
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                  <Briefcase className="w-3.5 h-3.5 flex-shrink-0" />
+                  {emp.start_date && getWorkTenure(emp.start_date)
+                    ? `อายุงาน: ${getWorkTenure(emp.start_date)}`
+                    : <span className="text-muted-foreground font-normal">อายุงาน: ยังไม่ระบุวันเริ่มงาน</span>
+                  }
+                </div>
               </div>
 
               {/* Monthly stats */}
