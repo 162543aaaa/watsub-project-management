@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from "react";
-import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter, Users, MapPin, Briefcase } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter, Users, MapPin, Briefcase, CalendarDays, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useTasks } from "@/hooks/useTasks";
@@ -7,6 +8,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { useProjects } from "@/hooks/useProjects";
 import { useMeetings } from "@/hooks/useMeetings";
 import { useOnsiteWork } from "@/hooks/useOnsiteWork";
+import { useLeave } from "@/hooks/useLeave";
 import { supabase } from "@/integrations/supabase/client";
 
 const gradients = [
@@ -50,9 +52,10 @@ export default function Team() {
   const { projects } = useProjects();
   const { meetings } = useMeetings();
   const { onsiteWork } = useOnsiteWork();
+  const { leaves } = useLeave();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
-  const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "" });
+  const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" });
   const [detail, setDetail] = useState<Employee | null>(null);
   const [uploading, setUploading] = useState<{ avatar?: boolean; qr?: boolean }>({});
   const avatarRef = useRef<HTMLInputElement>(null);
@@ -115,6 +118,20 @@ export default function Team() {
     };
   };
 
+  const getLeaveDays = (name: string) => {
+    const approvedLeaves = leaves.filter(l => l.requested_by === name && l.status === "Approved");
+    let totalDays = 0;
+    for (const l of approvedLeaves) {
+      const start = new Date(l.leave_start);
+      const end = new Date(l.leave_end);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        totalDays += Math.max(diff, 1);
+      }
+    }
+    return totalDays;
+  };
+
   const getStats = (name: string, tasks = allTasks) => {
     const myTasks = tasks.filter(t => t.assigned_to?.includes(name) && t.category !== "meeting" && t.category !== "onsite");
     const done = myTasks.filter(t => t.status === "Done").length;
@@ -158,12 +175,12 @@ export default function Team() {
     }
     setShowAdd(false);
     setEditing(null);
-    setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "" });
+    setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" });
   };
 
   const startEdit = (emp: Employee) => {
     setEditing(emp);
-    setForm({ name: emp.name, position: emp.position, email: emp.email, role: emp.role, phone: emp.phone || "", avatar: emp.avatar || "", promptpay_qr: emp.promptpay_qr || "", start_date: emp.start_date || "" });
+    setForm({ name: emp.name, position: emp.position, email: emp.email, role: emp.role, phone: emp.phone || "", avatar: emp.avatar || "", promptpay_qr: emp.promptpay_qr || "", start_date: emp.start_date || "", note: emp.note || "" });
     setShowAdd(true);
   };
 
@@ -339,7 +356,7 @@ export default function Team() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <FilterBar />
-          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "" }); }}
+          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" }); }}
             className="btn-primary flex items-center gap-2 text-sm"><Plus className="w-4 h-4" /> Add</button>
         </div>
       </div>
@@ -410,8 +427,19 @@ export default function Team() {
                     </button>
                     <input ref={qrRef} type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
                     {form.promptpay_qr && <p className="text-xs text-muted-foreground mt-1">✓ QR uploaded</p>}
-                  </div>
-                </div>
+              </div>
+
+              {/* Note */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">โน้ต / หน้าที่</label>
+                <Textarea
+                  className="w-full rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none min-h-[80px]"
+                  value={form.note}
+                  onChange={e => setForm({ ...form, note: e.target.value })}
+                  placeholder="ระบุหน้าที่ความรับผิดชอบ..."
+                />
+              </div>
+            </div>
               </div>
             </div>
 
@@ -483,6 +511,15 @@ export default function Team() {
                     : <span className="text-muted-foreground font-normal">อายุงาน: ยังไม่ระบุวันเริ่มงาน</span>
                   }
                 </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" /> วันลา: {getLeaveDays(emp.name)} วัน
+                </div>
+                {emp.note && (
+                  <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                    <FileText className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <span className="line-clamp-2">{emp.note}</span>
+                  </div>
+                )}
               </div>
 
               {/* Monthly stats */}

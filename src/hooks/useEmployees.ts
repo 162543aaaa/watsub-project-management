@@ -12,6 +12,7 @@ export interface Employee {
   phone?: string;
   promptpay_qr?: string;
   start_date?: string;
+  note?: string;
   created_at?: string;
 }
 

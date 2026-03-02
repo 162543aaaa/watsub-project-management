@@ -63,6 +63,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          note: string | null
           phone: string | null
           position: string
           promptpay_qr: string | null
@@ -76,6 +77,7 @@ export type Database = {
           email?: string
           id?: string
           name: string
+          note?: string | null
           phone?: string | null
           position?: string
           promptpay_qr?: string | null
@@ -89,6 +91,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          note?: string | null
           phone?: string | null
           position?: string
           promptpay_qr?: string | null
