@@ -62,6 +62,40 @@ const getItemIcon = (item: CalendarItem) => {
   return "";
 };
 
+/* ── Thai Holidays 2026 (พ.ศ. 2569) ── */
+const HOLIDAYS_2026: Record<string, string> = {
+  "2026-01-01": "วันขึ้นปีใหม่",
+  "2026-01-02": "หยุดพิเศษ",
+  "2026-03-03": "วันมาฆบูชา",
+  "2026-03-18": "อีดิ้ลฟิตรี",
+  "2026-03-19": "อีดิ้ลฟิตรี",
+  "2026-03-20": "อีดิ้ลฟิตรี",
+  "2026-03-21": "อีดิ้ลฟิตรี",
+  "2026-04-06": "วันจักรี",
+  "2026-04-13": "วันสงกรานต์",
+  "2026-04-14": "วันสงกรานต์",
+  "2026-04-15": "วันสงกรานต์",
+  "2026-05-01": "วันแรงงานแห่งชาติ",
+  "2026-05-04": "วันฉัตรมงคล",
+  "2026-05-11": "วันพืชมงคล",
+  "2026-05-31": "วันวิสาขบูชา",
+  "2026-06-01": "ชดเชยวันวิสาขบูชา",
+  "2026-06-03": "วันเฉลิมพระชนมพรรษาพระราชินี",
+  "2026-06-06": "อีดิ้ลอัฎฮา",
+  "2026-06-07": "อีดิ้ลอัฎฮา",
+  "2026-06-08": "อีดิ้ลอัฎฮา",
+  "2026-07-28": "วันเฉลิมพระชนมพรรษา ร.10",
+  "2026-07-29": "วันอาสาฬหบูชา",
+  "2026-07-30": "วันเข้าพรรษา",
+  "2026-08-12": "วันแม่แห่งชาติ",
+  "2026-10-13": "วันนวมินทรมหาราช",
+  "2026-10-23": "วันปิยมหาราช",
+  "2026-12-05": "วันพ่อแห่งชาติ",
+  "2026-12-07": "ชดเชยวันพ่อแห่งชาติ",
+  "2026-12-10": "วันรัฐธรรมนูญ",
+  "2026-12-31": "วันสิ้นปี",
+};
+
 /* ── Draggable calendar item ── */
 function DraggableItem({ item, onClick }: { item: CalendarItem; onClick: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -88,13 +122,13 @@ function DraggableItem({ item, onClick }: { item: CalendarItem; onClick: () => v
 }
 
 /* ── Droppable day cell ── */
-function DroppableDay({ dateStr, isToday, children }: { dateStr: string; isToday: boolean; children: React.ReactNode }) {
+function DroppableDay({ dateStr, isToday, isHoliday, children }: { dateStr: string; isToday: boolean; isHoliday: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: dateStr });
   return (
     <div
       ref={setNodeRef}
       className={`min-h-[100px] border-b border-r border-border/40 p-2 transition-all duration-200 ${
-        isOver ? "bg-primary/10 ring-2 ring-primary/30 ring-inset" : isToday ? "bg-primary/5" : "hover:bg-muted/30"
+        isOver ? "bg-primary/10 ring-2 ring-primary/30 ring-inset" : isHoliday ? "bg-red-50 dark:bg-red-950/20" : isToday ? "bg-primary/5" : "hover:bg-muted/30"
       }`}
     >
       {children}
@@ -372,11 +406,19 @@ export default function CalendarPage() {
               const day = i + 1;
               const dateStr = `${current.year}-${String(current.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
               const isToday = current.year === today.getFullYear() && current.month === today.getMonth() && day === today.getDate();
+              const holiday = HOLIDAYS_2026[dateStr];
               const dayItems = getItemsForDay(day);
               return (
-                <DroppableDay key={day} dateStr={dateStr} isToday={isToday}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold mb-1 ${isToday ? "bg-primary text-primary-foreground" : "text-foreground"}`}>
-                    {day}
+                <DroppableDay key={day} dateStr={dateStr} isToday={isToday} isHoliday={!!holiday}>
+                  <div className="flex items-center gap-1 mb-1">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${isToday ? "bg-primary text-primary-foreground" : holiday ? "text-red-500 dark:text-red-400" : "text-foreground"}`}>
+                      {day}
+                    </div>
+                    {holiday && (
+                      <span className="text-[9px] font-semibold text-red-500 dark:text-red-400 truncate leading-tight" title={holiday}>
+                        {holiday}
+                      </span>
+                    )}
                   </div>
                   <div className="space-y-1">
                     {dayItems.slice(0, 3).map(item => (
