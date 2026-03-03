@@ -517,7 +517,7 @@ export default function Team() {
                 {emp.note && (
                   <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
                     <FileText className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                    <span className="line-clamp-2">{emp.note}</span>
+                    <span>{emp.note}</span>
                   </div>
                 )}
               </div>
