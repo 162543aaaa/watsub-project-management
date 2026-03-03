@@ -8,6 +8,8 @@ export interface Holiday {
   holiday_date: string;
   holiday_type: string;
   color_tag: string | null;
+  start_date: string;
+  end_date: string;
 }
 
 export function useHolidays() {
@@ -30,7 +32,7 @@ export function useHolidays() {
   useEffect(() => { fetchHolidays(); }, []);
 
   const addHoliday = async (holiday: Omit<Holiday, "id">) => {
-    const { error } = await supabase.from("holidays").insert(holiday);
+    const { error } = await supabase.from("holidays").insert(holiday as any);
     if (error) {
       toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
     } else {

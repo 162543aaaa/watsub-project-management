@@ -210,14 +210,16 @@ function DayDetailModal({ dateStr, items, onClose, onSelectItem }: {
 }
 
 /* ── Add Holiday Modal ── */
-function AddHolidayModal({ onClose, onAdd }: { onClose: () => void; onAdd: (h: { name: string; holiday_date: string; holiday_type: string; color_tag: string | null }) => void }) {
+function AddHolidayModal({ onClose, onAdd }: { onClose: () => void; onAdd: (h: { name: string; holiday_date: string; holiday_type: string; color_tag: string | null; start_date: string; end_date: string }) => void }) {
   const [name, setName] = useState("");
-  const [date, setDate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [type, setType] = useState("government");
 
   const handleSubmit = () => {
-    if (!name || !date) { toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" }); return; }
-    onAdd({ name, holiday_date: date, holiday_type: type, color_tag: null });
+    if (!name || !startDate) { toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" }); return; }
+    const finalEnd = endDate || startDate;
+    onAdd({ name, holiday_date: startDate, holiday_type: type, color_tag: null, start_date: startDate, end_date: finalEnd });
     onClose();
   };
 
@@ -233,9 +235,15 @@ function AddHolidayModal({ onClose, onAdd }: { onClose: () => void; onAdd: (h: {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">ชื่อวันหยุด</label>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="เช่น วันสงกรานต์" />
           </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">วันที่</label>
-            <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">วันที่เริ่มต้น</label>
+              <Input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); if (!endDate) setEndDate(e.target.value); }} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">วันที่สิ้นสุด</label>
+              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} min={startDate} />
+            </div>
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">ประเภท</label>
@@ -309,10 +317,26 @@ export default function CalendarPage() {
       id: o.id, name: o.title, type: "onsite" as const, date: o.work_date,
       location: o.location, note: o.note, participants: o.participants,
     }));
-    const holidayItems = holidays.map(h => ({
-      id: h.id, name: h.name, type: "holiday" as const, date: h.holiday_date,
-      holidayType: h.holiday_type,
-    }));
+    const holidayItems: CalendarItem[] = [];
+    holidays.forEach(h => {
+      const start = new Date(h.start_date || h.holiday_date);
+      const end = new Date(h.end_date || h.holiday_date);
+      if (isNaN(start.getTime())) return;
+      const endDate = isNaN(end.getTime()) ? start : end;
+      const current = new Date(start);
+      const isMultiDay = start.getTime() !== endDate.getTime();
+      while (current <= endDate) {
+        const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
+        holidayItems.push({
+          id: `${h.id}-${dateStr}`,
+          name: isMultiDay ? `${h.name} (${h.start_date} ~ ${h.end_date})` : h.name,
+          type: "holiday" as const,
+          date: dateStr,
+          holidayType: h.holiday_type,
+        });
+        current.setDate(current.getDate() + 1);
+      }
+    });
     return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems, ...holidayItems];
   }, [standaloneTasks, projects, customers, meetings, onsiteWork, holidays]);
 

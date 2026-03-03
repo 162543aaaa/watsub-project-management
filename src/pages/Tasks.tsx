@@ -540,7 +540,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
   employees?: { name: string; avatar?: string | null }[];
 }) {
   return (
-    <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover cursor-pointer" onClick={onEdit}>
+    <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover">
       {/* Source label + navigate */}
       {task._source !== "standalone" && (
         <div className="mb-1.5 flex items-center justify-between">
