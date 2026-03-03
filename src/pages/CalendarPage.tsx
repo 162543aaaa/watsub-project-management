@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw, Plus, Trash2 } from "lucide-react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable,
@@ -9,11 +9,13 @@ import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useMeetings } from "@/hooks/useMeetings";
 import { useOnsiteWork } from "@/hooks/useOnsiteWork";
+import { useHolidays } from "@/hooks/useHolidays";
 import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type TaskStatus = "To Do" | "In Progress" | "Done";
-type CalendarItemType = "task" | "meeting" | "onsite";
-
+type CalendarItemType = "task" | "meeting" | "onsite" | "holiday";
 type TaskSource = "standalone" | "project" | "customer";
 
 interface CalendarItem {
@@ -36,6 +38,7 @@ interface CalendarItem {
   location?: string | null;
   note?: string | null;
   participants?: string[];
+  holidayType?: string;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -47,6 +50,7 @@ function getFirstDayOfMonth(year: number, month: number) {
 }
 
 const getItemStyle = (item: CalendarItem) => {
+  if (item.type === "holiday") return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
   if (item.type === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
   if (item.type === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
   if (item.category === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
@@ -57,6 +61,7 @@ const getItemStyle = (item: CalendarItem) => {
 };
 
 const getItemIcon = (item: CalendarItem) => {
+  if (item.type === "holiday") return "🎉 ";
   if (item.type === "meeting" || item.category === "meeting") return "🗓 ";
   if (item.type === "onsite" || item.category === "onsite") return "📍 ";
   return "";
@@ -67,6 +72,7 @@ function DraggableItem({ item, onClick }: { item: CalendarItem; onClick: () => v
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `${item.type}-${item.id}`,
     data: item,
+    disabled: item.type === "holiday",
   });
   return (
     <div
@@ -80,7 +86,7 @@ function DraggableItem({ item, onClick }: { item: CalendarItem; onClick: () => v
         touchAction: "none",
       }}
       title={item.name}
-      className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate cursor-grab active:cursor-grabbing hover:brightness-95 transition-all ${getItemStyle(item)}`}
+      className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${item.type !== "holiday" ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} hover:brightness-95 transition-all ${getItemStyle(item)}`}
     >
       {getItemIcon(item)}{item.name}
     </div>
@@ -110,8 +116,13 @@ function ItemDetailModal({ item, onClose }: { item: CalendarItem; onClose: () =>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getItemStyle(item)}`}>
-              {item.type === "meeting" ? "🗓 Meeting" : item.type === "onsite" ? "📍 On-site" : item.status || "Task"}
+              {item.type === "holiday" ? "🎉 วันหยุด" : item.type === "meeting" ? "🗓 Meeting" : item.type === "onsite" ? "📍 On-site" : item.status || "Task"}
             </span>
+            {item.holidayType && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
+                {item.holidayType === "government" ? "วันหยุดราชการ" : item.holidayType === "islamic" ? "วันหยุดอิสลาม" : "วันหยุดสตูดิโอ"}
+              </span>
+            )}
             {item.priority && (
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                 item.priority === "High" ? "badge-high" : item.priority === "Medium" ? "badge-medium" : "badge-low"
@@ -166,12 +177,9 @@ function ItemDetailModal({ item, onClose }: { item: CalendarItem; onClose: () =>
   );
 }
 
-/* ── Day detail modal ("+N more") ── */
+/* ── Day detail modal ── */
 function DayDetailModal({ dateStr, items, onClose, onSelectItem }: {
-  dateStr: string;
-  items: CalendarItem[];
-  onClose: () => void;
-  onSelectItem: (item: CalendarItem) => void;
+  dateStr: string; items: CalendarItem[]; onClose: () => void; onSelectItem: (item: CalendarItem) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
@@ -201,20 +209,70 @@ function DayDetailModal({ dateStr, items, onClose, onSelectItem }: {
   );
 }
 
+/* ── Add Holiday Modal ── */
+function AddHolidayModal({ onClose, onAdd }: { onClose: () => void; onAdd: (h: { name: string; holiday_date: string; holiday_type: string; color_tag: string | null }) => void }) {
+  const [name, setName] = useState("");
+  const [date, setDate] = useState("");
+  const [type, setType] = useState("government");
+
+  const handleSubmit = () => {
+    if (!name || !date) { toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" }); return; }
+    onAdd({ name, holiday_date: date, holiday_type: type, color_tag: null });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold">เพิ่มวันหยุด</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">ชื่อวันหยุด</label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="เช่น วันสงกรานต์" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">วันที่</label>
+            <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">ประเภท</label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="government">วันหยุดราชการ</SelectItem>
+                <SelectItem value="islamic">วันหยุดอิสลาม</SelectItem>
+                <SelectItem value="studio">วันหยุดสตูดิโอ</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <button onClick={handleSubmit} className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
+            เพิ่มวันหยุด
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Calendar Page ── */
 export default function CalendarPage() {
   const today = new Date();
   const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [filterCategory, setFilterCategory] = useState<"all" | "meeting" | "onsite">("all");
+  const [filterCategory, setFilterCategory] = useState<"all" | "meeting" | "onsite" | "holiday">("all");
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [showAddHoliday, setShowAddHoliday] = useState(false);
 
   const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, updateTask: updateProjectTask } = useProjects();
   const { customers, updateTask: updateCustomerTask } = useCustomers();
   const { meetings, updateMeeting } = useMeetings();
   const { onsiteWork, updateOnsiteWork } = useOnsiteWork();
+  const { holidays, addHoliday, deleteHoliday } = useHolidays();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -251,16 +309,25 @@ export default function CalendarPage() {
       id: o.id, name: o.title, type: "onsite" as const, date: o.work_date,
       location: o.location, note: o.note, participants: o.participants,
     }));
-    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems];
-  }, [standaloneTasks, projects, customers, meetings, onsiteWork]);
+    const holidayItems = holidays.map(h => ({
+      id: h.id, name: h.name, type: "holiday" as const, date: h.holiday_date,
+      holidayType: h.holiday_type,
+    }));
+    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems, ...holidayItems];
+  }, [standaloneTasks, projects, customers, meetings, onsiteWork, holidays]);
 
   /* ── Filter ── */
   const hasActiveFilters = filterCategory !== "all";
 
   const filteredItems = useMemo(() => {
-    if (filterCategory === "all") return allItems;
+    if (filterCategory === "all") {
+      // "ทั้งหมด" excludes meetings and onsite, shows tasks + holidays
+      return allItems.filter(i => i.type !== "meeting" && i.type !== "onsite" && i.category !== "meeting" && i.category !== "onsite");
+    }
     if (filterCategory === "meeting") return allItems.filter(i => i.type === "meeting" || (i.type === "task" && i.category === "meeting"));
-    return allItems.filter(i => i.type === "onsite" || (i.type === "task" && i.category === "onsite"));
+    if (filterCategory === "onsite") return allItems.filter(i => i.type === "onsite" || (i.type === "task" && i.category === "onsite"));
+    if (filterCategory === "holiday") return allItems.filter(i => i.type === "holiday");
+    return allItems;
   }, [allItems, filterCategory]);
 
   const resetFilters = () => setFilterCategory("all");
@@ -290,7 +357,7 @@ export default function CalendarPage() {
     if (!over) return;
 
     const item = findItemByDndId(active.id as string);
-    if (!item) return;
+    if (!item || item.type === "holiday") return;
 
     const newDate = over.id as string;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return;
@@ -327,6 +394,9 @@ export default function CalendarPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowAddHoliday(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
+            <Plus className="w-4 h-4" /> เพิ่มวันหยุด
+          </button>
           <button onClick={goToday} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
             <CalendarDays className="w-4 h-4" /> Today
           </button>
@@ -342,9 +412,9 @@ export default function CalendarPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2 mb-4 animate-stagger-2">
-        {(["all", "meeting", "onsite"] as const).map(v => (
+        {(["all", "meeting", "onsite", "holiday"] as const).map(v => (
           <button key={v} onClick={() => setFilterCategory(v)} className={chipClass(filterCategory === v)}>
-            {v === "all" ? "ทั้งหมด" : v === "meeting" ? "🗓 Meetings" : "📍 On-site Work"}
+            {v === "all" ? "ทั้งหมด" : v === "meeting" ? "🗓 Meetings" : v === "onsite" ? "📍 On-site Work" : "🎉 วันหยุด"}
           </button>
         ))}
         {hasActiveFilters && (
@@ -357,13 +427,11 @@ export default function CalendarPage() {
       {/* Calendar grid with DnD */}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="bg-card rounded-2xl border border-border overflow-hidden animate-stagger-3" style={{ boxShadow: "var(--shadow-sm)" }}>
-          {/* Day headers */}
           <div className="grid grid-cols-7 border-b border-border">
             {days.map(d => (
               <div key={d} className="p-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">{d}</div>
             ))}
           </div>
-          {/* Cells */}
           <div className="grid grid-cols-7">
             {Array.from({ length: firstDay }).map((_, i) => (
               <div key={`empty-${i}`} className="min-h-[100px] border-b border-r border-border/40 bg-muted/20" />
@@ -380,11 +448,7 @@ export default function CalendarPage() {
                   </div>
                   <div className="space-y-1">
                     {dayItems.slice(0, 3).map(item => (
-                      <DraggableItem
-                        key={`${item.type}-${item.id}`}
-                        item={item}
-                        onClick={() => setSelectedItem(item)}
-                      />
+                      <DraggableItem key={`${item.type}-${item.id}`} item={item} onClick={() => setSelectedItem(item)} />
                     ))}
                     {dayItems.length > 3 && (
                       <button
@@ -401,7 +465,6 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Drag overlay */}
         <DragOverlay>
           {activeItem && (
             <div className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-lg cursor-grabbing ${getItemStyle(activeItem)}`}>
@@ -411,20 +474,13 @@ export default function CalendarPage() {
         </DragOverlay>
       </DndContext>
 
-      {/* Item detail modal */}
-      {selectedItem && (
-        <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
-      )}
-
-      {/* Day detail modal */}
+      {/* Modals */}
+      {selectedItem && <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
       {selectedDay && (
-        <DayDetailModal
-          dateStr={selectedDay.dateStr}
-          items={selectedDay.items}
-          onClose={() => setSelectedDay(null)}
-          onSelectItem={(item) => { setSelectedDay(null); setSelectedItem(item); }}
-        />
+        <DayDetailModal dateStr={selectedDay.dateStr} items={selectedDay.items} onClose={() => setSelectedDay(null)}
+          onSelectItem={(item) => { setSelectedDay(null); setSelectedItem(item); }} />
       )}
+      {showAddHoliday && <AddHolidayModal onClose={() => setShowAddHoliday(false)} onAdd={addHoliday} />}
     </div>
   );
 }
