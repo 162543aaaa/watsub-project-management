@@ -1,6 +1,6 @@
-import { useState, useMemo, forwardRef, useCallback, useRef } from "react";
+import { useState, useMemo, forwardRef, useCallback, useRef, useEffect } from "react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
-import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle, Layers } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
@@ -22,6 +22,7 @@ type TaskStatus = "To Do" | "In Progress" | "Done";
 type TaskPriority = "Low" | "Medium" | "High";
 const COLUMNS: TaskStatus[] = ["To Do", "In Progress", "Done"];
 const YEARS = [2025, 2026, 2027];
+const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 interface AllTask extends Task {
@@ -47,6 +48,15 @@ const PriorityBadge = forwardRef<HTMLSpanElement, { priority?: string }>(({ prio
 });
 PriorityBadge.displayName = "PriorityBadge";
 
+function isOverdue(dueDate?: string, status?: string) {
+  if (!dueDate || status === "Done") return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  return today.getTime() > due.getTime();
+}
+
 function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate?: string; status: string }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -61,9 +71,13 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
     const due = new Date(dueDate);
     due.setHours(0, 0, 0, 0);
     const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff > 0) badges.push(<span key="o" className="inline-flex items-center gap-0.5 text-[9px] font-semibold animate-pulse" style={{ color: "hsl(0 84% 50%)" }}><AlertTriangle className="w-2.5 h-2.5" />เลย {diff}d</span>);
+    if (diff > 0) badges.push(
+      <span key="o" className="inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-md" style={{ color: "hsl(0 84% 45%)", background: "hsl(0 84% 50% / 0.12)" }}>
+        <AlertTriangle className="w-3 h-3" />เลย {diff}d
+      </span>
+    );
   }
-  return badges.length > 0 ? <div className="flex items-center gap-1.5 mt-0.5">{badges}</div> : null;
+  return badges.length > 0 ? <div className="flex items-center gap-1.5 mt-1">{badges}</div> : null;
 }
 
 function TaskModal({ task, employees, onSave, onClose }: {
@@ -84,79 +98,84 @@ function TaskModal({ task, employees, onSave, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
-        <div className="flex items-center justify-between mb-5">
+      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 pb-0">
           <h3 className="text-lg font-bold">{form.id ? "Edit Task" : "New Task"}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
         </div>
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
-            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-              value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Enter task name..." autoFocus />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        {/* Scrollable content */}
+        <div className="overflow-y-auto flex-1 p-6 pt-5">
+          <div className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Status</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Enter task name..." autoFocus />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Status</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.status} onChange={e => setForm({ ...form, status: e.target.value as TaskStatus })}>
+                  {COLUMNS.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Priority</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value as TaskPriority })}>
+                  <option>High</option><option>Medium</option><option>Low</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
               <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={form.status} onChange={e => setForm({ ...form, status: e.target.value as TaskStatus })}>
-                {COLUMNS.map(c => <option key={c}>{c}</option>)}
+                value={form.category || "none"} onChange={e => setForm({ ...form, category: e.target.value })}>
+                <option value="none">— ไม่ระบุ —</option>
+                <option value="meeting">🗓 Meetings</option>
+                <option value="onsite">📍 On-site Work</option>
               </select>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Priority</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value as TaskPriority })}>
-                <option>High</option><option>Medium</option><option>Low</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
-            <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-              value={form.category || "none"} onChange={e => setForm({ ...form, category: e.target.value })}>
-              <option value="none">— ไม่ระบุ —</option>
-              <option value="meeting">🗓 Meetings</option>
-              <option value="onsite">📍 On-site Work</option>
-            </select>
-          </div>
 
-          {/* Multi-select Assigned To */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
-              Assigned To
-            </label>
-            <MultiSelectAssignee
-              selected={form.assigned_to || []}
-              onChange={val => setForm({ ...form, assigned_to: val })}
-              employees={employees}
-            />
-          </div>
+            {/* Multi-select Assigned To */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                Assigned To
+              </label>
+              <MultiSelectAssignee
+                selected={form.assigned_to || []}
+                onChange={val => setForm({ ...form, assigned_to: val })}
+                employees={employees}
+              />
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start Date</label>
-              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={form.start_date || ""} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start Date</label>
+                <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.start_date || ""} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due Date</label>
+                <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.due_date || ""} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+              </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due Date</label>
-              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={form.due_date || ""} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.link || ""} onChange={e => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
-            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-              value={form.link || ""} onChange={e => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
-            <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
-              value={form.comments || ""} onChange={e => setForm({ ...form, comments: e.target.value })} placeholder="Additional notes..." />
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
+              <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
+                value={form.comments || ""} onChange={e => setForm({ ...form, comments: e.target.value })} placeholder="Additional notes..." />
+            </div>
           </div>
         </div>
-        <div className="flex gap-3 mt-6">
+        {/* Sticky footer buttons */}
+        <div className="flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
             <Save className="w-4 h-4" /> Save Task
@@ -212,9 +231,26 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<"all" | "High" | "Medium" | "Low">("all");
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [groupByProject, setGroupByProject] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const monthScrollRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 200, tolerance: 5 } }));
+
+  // Keyboard shortcut: "N" to open New Task modal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "n" || e.key === "N") {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement)?.isContentEditable) return;
+        e.preventDefault();
+        setModal({ open: true, task: null });
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // Build allTasks from all sources
   const allTasks = useMemo<AllTask[]>(() => {
@@ -228,16 +264,30 @@ export default function Tasks() {
     return [...standalone, ...projectTasks, ...customerTasks];
   }, [tasks, projects, customers]);
 
-  const availableMonths = useMemo(() => {
-    const months = new Set<number>();
-    allTasks.forEach(t => { if (t._month) months.add(t._month); });
-    return [...months].sort();
+  // Unique source names for filter
+  const sourceOptions = useMemo(() => {
+    const names = new Map<string, string>();
+    allTasks.forEach(t => {
+      if (t._sourceName && t._source) {
+        const key = `${t._source}:${t._sourceName}`;
+        if (!names.has(key)) {
+          names.set(key, `${t._source === "project" ? "🚀" : "💼"} ${t._sourceName}`);
+        }
+      }
+    });
+    return [...names.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [allTasks]);
 
   const filtered = useMemo(() => {
     let result = allTasks;
     if (filterMonth !== "all") result = result.filter(t => t._month === filterMonth);
     if (priorityFilter !== "all") result = result.filter(t => t.priority === priorityFilter);
+    if (filterSource !== "all") {
+      result = result.filter(t => {
+        const key = `${t._source}:${t._sourceName}`;
+        return key === filterSource;
+      });
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(t =>
@@ -247,7 +297,7 @@ export default function Tasks() {
       );
     }
     return result;
-  }, [allTasks, search, priorityFilter, filterMonth]);
+  }, [allTasks, search, priorityFilter, filterMonth, filterSource]);
 
   const loading = loadingTasks || loadingProjects || loadingCustomers;
 
@@ -291,10 +341,6 @@ export default function Tasks() {
 
     const activeTask = findTaskByCardId(activeCardId);
     if (!activeTask || activeTask.status === targetCol) return;
-
-    // Optimistically update the status so the card appears in the new column
-    // We do this by updating the underlying data through the appropriate hook
-    // But for smooth UX, we handle this in onDragEnd instead
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -385,6 +431,19 @@ export default function Tasks() {
 
   const activeTask = activeId ? findTaskByCardId(activeId) : null;
 
+  // Group tasks by project within a column
+  const getGroupedColTasks = useCallback((col: TaskStatus) => {
+    const colTasks = getColTasks(col);
+    if (!groupByProject) return null;
+    const groups = new Map<string, AllTask[]>();
+    colTasks.forEach(t => {
+      const key = t._sourceName || "Standalone Tasks";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(t);
+    });
+    return groups;
+  }, [getColTasks, groupByProject]);
+
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
@@ -395,7 +454,7 @@ export default function Tasks() {
           <h1 className="text-2xl font-bold">Tasks</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{allTasks.length} total · {filtered.length} shown</p>
         </div>
-        <button onClick={() => setModal({ open: true, task: null })} className="btn-primary flex items-center gap-2">
+        <button onClick={() => setModal({ open: true, task: null })} className="btn-primary flex items-center gap-2" title="เพิ่ม Task (กด N)">
           <Plus className="w-4 h-4" /> New Task
         </button>
       </div>
@@ -416,7 +475,28 @@ export default function Tasks() {
               </button>
             ))}
           </div>
+          {/* Fix #3: Project/Customer filter */}
+          <select
+            value={filterSource}
+            onChange={e => setFilterSource(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-border bg-background text-xs font-semibold focus:ring-2 focus:ring-primary/30 outline-none min-w-[160px]"
+          >
+            <option value="all">โครงการ / Customer ทั้งหมด</option>
+            {sourceOptions.map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          {/* Fix #7: Group by Project toggle */}
+          <button
+            onClick={() => setGroupByProject(g => !g)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupByProject ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
+            title="จัดกลุ่มตามโครงการ"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Group by Project
+          </button>
         </div>
+        {/* Fix #10: Show all 12 months with horizontal scroll */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1">
             {YEARS.map(y => (
@@ -427,20 +507,23 @@ export default function Tasks() {
             ))}
           </div>
           <div className="w-px h-4 bg-border" />
-          <button onClick={() => setFilterMonth("all")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-            All months
-          </button>
-          {availableMonths.map(m => (
-            <button key={m} onClick={() => setFilterMonth(m)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-              {monthNames[m]?.slice(0, 3)}
+          <div ref={monthScrollRef} className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            <button onClick={() => setFilterMonth("all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              All months
             </button>
-          ))}
+            {ALL_MONTHS.map(m => (
+              <button key={m} onClick={() => setFilterMonth(m)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+                {monthNames[m]?.slice(0, 3)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Kanban — Single DndContext for cross-column drag */}
+      {/* Fix #1: columns align at top so page scrolls as one unit */}
       <DndContext
         sensors={sensors}
         collisionDetection={rectIntersection}
@@ -448,44 +531,78 @@ export default function Tasks() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-stagger-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start animate-stagger-3">
           {COLUMNS.map((col) => {
             const style = getColStyle(col);
             const colT = getColTasks(col);
             const ids = colT.map(t => getCardId(t));
+            const grouped = getGroupedColTasks(col);
             return (
               <DroppableColumn key={col} id={col} style={style}>
-                <div className="flex items-center justify-between mb-4">
+                {/* Sticky column header */}
+                <div className="flex items-center justify-between mb-4 sticky top-0 z-10 py-1" style={{ background: style.bg }}>
                   <div className="flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-green-500" : col === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                     <span className="text-sm font-semibold text-foreground">{col}</span>
                     <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{colT.length}</span>
                   </div>
+                  {/* Fix #4: Bigger + button with tooltip and hover effect */}
                   {col === "To Do" && (
                     <button onClick={() => setModal({ open: true, task: { status: col } })}
-                      className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-background transition-colors text-muted-foreground hover:text-foreground">
-                      <Plus className="w-3.5 h-3.5" />
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground hover:scale-110"
+                      title="เพิ่ม Task">
+                      <Plus className="w-4.5 h-4.5" />
                     </button>
                   )}
                 </div>
                 <SortableContext items={ids} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3 min-h-[60px]">
-                    {colT.map(task => {
-                      const cardId = getCardId(task);
-                      return (
-                        <SortableCard key={cardId} id={cardId}>
-                          <TaskCard
-                            task={task}
-                            col={col}
-                            onEdit={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
-                            onDelete={() => handleDeleteTask(task)}
-                            onStatusToggle={() => handleStatusToggle(task)}
-                            onNavigate={() => navigateToSource(task)}
-                            employees={employees}
-                          />
-                        </SortableCard>
-                      );
-                    })}
+                    {/* Fix #7: Group by Project rendering */}
+                    {groupByProject && grouped ? (
+                      [...grouped.entries()].map(([groupName, groupTasks]) => (
+                        <div key={groupName}>
+                          <div className="flex items-center gap-1.5 mb-2 mt-1">
+                            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{groupName}</span>
+                            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{groupTasks.length}</span>
+                          </div>
+                          {groupTasks.map(task => {
+                            const cardId = getCardId(task);
+                            return (
+                              <div key={cardId} className="mb-3">
+                                <SortableCard id={cardId}>
+                                  <TaskCard
+                                    task={task}
+                                    col={col}
+                                    onEdit={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
+                                    onDelete={() => handleDeleteTask(task)}
+                                    onStatusToggle={() => handleStatusToggle(task)}
+                                    onNavigate={() => navigateToSource(task)}
+                                    employees={employees}
+                                  />
+                                </SortableCard>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))
+                    ) : (
+                      colT.map(task => {
+                        const cardId = getCardId(task);
+                        return (
+                          <SortableCard key={cardId} id={cardId}>
+                            <TaskCard
+                              task={task}
+                              col={col}
+                              onEdit={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
+                              onDelete={() => handleDeleteTask(task)}
+                              onStatusToggle={() => handleStatusToggle(task)}
+                              onNavigate={() => navigateToSource(task)}
+                              employees={employees}
+                            />
+                          </SortableCard>
+                        );
+                      })
+                    )}
                     {colT.length === 0 && (
                       <p className="text-xs text-muted-foreground text-center py-8">No tasks</p>
                     )}
@@ -536,8 +653,13 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
   onNavigate: () => void;
   employees?: { name: string; avatar?: string | null }[];
 }) {
+  const overdue = isOverdue(task.due_date, task.status);
   return (
-    <div className="bg-card rounded-xl px-3.5 py-3.5 border border-border/60 group card-hover" onDoubleClick={onEdit}>
+    <div
+      className={`bg-card rounded-xl px-3.5 py-3.5 border group card-hover ${overdue ? "border-l-[3px] border-l-red-400 border-t-border/60 border-r-border/60 border-b-border/60" : "border-border/60"}`}
+      style={overdue ? { background: "hsl(0 84% 60% / 0.03)" } : undefined}
+      onDoubleClick={onEdit}
+    >
       {/* Source label + navigate */}
       {task._source !== "standalone" && (
         <div className="mb-1.5 flex items-center justify-between">
@@ -612,9 +734,14 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
           {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
         </div>
       )}
-      {task.comments && (
-        <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-2">{task.comments}</p>
-      )}
+      {/* Fix #5: Consistent notes area — always show min height, truncate at 2 lines */}
+      <div className="mt-2 min-h-[2rem]">
+        {task.comments ? (
+          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{task.comments}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground/40 leading-relaxed italic">—</p>
+        )}
+      </div>
     </div>
   );
 }

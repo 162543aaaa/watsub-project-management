@@ -128,7 +128,7 @@
   /* Kanban column */
   .kanban-col {
     @apply rounded-2xl bg-secondary/60 border border-border/40 p-4;
-    min-height: 400px;
+    min-height: 200px;
   }
 
   /* Top nav item */
