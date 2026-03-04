@@ -481,7 +481,7 @@ export default function Team() {
                   </div>
                 </div>
                 <div className="flex gap-0.5 flex-shrink-0">
-                  <button onClick={() => setDetail(emp)}
+                  <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); setDetail(emp); } }}
                     className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors sm:opacity-0 sm:group-hover:opacity-100">
                     <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
@@ -558,7 +558,7 @@ export default function Team() {
               </div>
 
               {/* View detail link */}
-              <button onClick={() => setDetail(emp)}
+              <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); setDetail(emp); } }}
                 className="mt-3 w-full text-xs text-center text-muted-foreground hover:text-primary transition-colors py-1.5 rounded-lg hover:bg-muted/50">
                 View details →
               </button>

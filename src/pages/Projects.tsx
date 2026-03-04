@@ -417,7 +417,7 @@ export default function Projects() {
                       const donePct = proj.tasks.length ? Math.round(proj.tasks.filter(t => t.status === "Done").length / proj.tasks.length * 100) : 0;
                       const isExpanded = !!expanded[proj.id];
                       return <SortableProjCard key={proj.id} id={proj.id}>
-                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer" onDoubleClick={() => openEditProject(proj)}>
+                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer" onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); openEditProject(proj); } }}>
                           <div className="flex items-start gap-2 mb-3">
                             <div className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
                               style={{ background: donePct === 100 ? "hsl(142 71% 45%)" : donePct > 0 ? "hsl(191 91% 37%)" : "hsl(215 14% 75%)" }} />
@@ -473,7 +473,7 @@ export default function Projects() {
                                   <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
                                 </div>
                               ) : proj.tasks.map(task => (
-                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onDoubleClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }}>
+                                <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); openEditTask(proj.id, task); } }}>
                                    <div className="flex items-center gap-2">
                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                                      <div className="flex-1 min-w-0">
