@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw, Plus, Trash2, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw, Plus, Trash2, Pencil, Save } from "lucide-react";
+import MultiSelectAssignee from "@/components/MultiSelectAssignee";
+import { useEmployees } from "@/hooks/useEmployees";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable,
@@ -46,6 +48,7 @@ interface CalendarItem {
   holidayOriginalId?: string;
   holidayStartDate?: string;
   holidayEndDate?: string;
+  start_date?: string;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -75,7 +78,7 @@ const getItemIcon = (item: CalendarItem) => {
 };
 
 /* ── Draggable calendar item ── */
-function DraggableItem({ item, onClick }: { item: CalendarItem; onClick: () => void }) {
+function DraggableItem({ item, onClick, onDoubleClick }: { item: CalendarItem; onClick: () => void; onDoubleClick?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `${item.type}-${item.id}`,
     data: item,
@@ -87,6 +90,7 @@ function DraggableItem({ item, onClick }: { item: CalendarItem; onClick: () => v
       {...attributes}
       {...listeners}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(); }}
       style={{
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
         opacity: isDragging ? 0.3 : 1,
@@ -304,6 +308,122 @@ function HolidayFormModal({ onClose, onSubmit, initial }: {
   );
 }
 
+/* ── Task Edit Modal (double-click edit from calendar) ── */
+type TaskStatus_ = "To Do" | "In Progress" | "Done";
+type TaskPriority_ = "Low" | "Medium" | "High";
+const COLUMNS_ = ["To Do", "In Progress", "Done"] as const;
+
+function TaskEditModal({ item, employees, onSave, onClose }: {
+  item: CalendarItem;
+  employees: { name: string; avatar?: string }[];
+  onSave: (id: string, updates: Record<string, unknown>) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: item.name || "",
+    status: (item.status || "To Do") as TaskStatus_,
+    priority: (item.priority || "Medium") as TaskPriority_,
+    category: item.category || "none",
+    assigned_to: item.assigned_to || [],
+    start_date: item.start_date || "",
+    due_date: item.date || "",
+    link: item.link || "",
+    comments: item.comments || "",
+  });
+
+  const save = () => {
+    if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" }); return; }
+    onSave(item.id, {
+      name: form.name, status: form.status, priority: form.priority,
+      category: form.category, assigned_to: form.assigned_to,
+      start_date: form.start_date, due_date: form.due_date,
+      link: form.link, comments: form.comments,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 pb-0">
+          <h3 className="text-lg font-bold">Edit Task</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6 pt-5">
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Status</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.status} onChange={e => setForm({ ...form, status: e.target.value as TaskStatus_ })}>
+                  {COLUMNS_.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Priority</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value as TaskPriority_ })}>
+                  <option>High</option><option>Medium</option><option>Low</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
+              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                <option value="none">— ไม่ระบุ —</option>
+                <option value="meeting">🗓 Meetings</option>
+                <option value="onsite">📍 On-site Work</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Assigned To</label>
+              <MultiSelectAssignee
+                selected={form.assigned_to}
+                onChange={val => setForm({ ...form, assigned_to: val })}
+                employees={employees}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start Date</label>
+                <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due Date</label>
+                <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.link} onChange={e => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
+              <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
+                value={form.comments} onChange={e => setForm({ ...form, comments: e.target.value })} placeholder="Additional notes..." />
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+          <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
+            <Save className="w-4 h-4" /> Save Task
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Calendar Page ── */
 export default function CalendarPage() {
   const today = new Date();
@@ -315,6 +435,7 @@ export default function CalendarPage() {
   const [showAddHoliday, setShowAddHoliday] = useState(false);
   const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [editingTask, setEditingTask] = useState<CalendarItem | null>(null);
 
   const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, updateTask: updateProjectTask } = useProjects();
@@ -322,6 +443,7 @@ export default function CalendarPage() {
   const { meetings, updateMeeting } = useMeetings();
   const { onsiteWork, updateOnsiteWork } = useOnsiteWork();
   const { holidays, addHoliday, updateHoliday, deleteHoliday } = useHolidays();
+  const { employees } = useEmployees();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -332,6 +454,7 @@ export default function CalendarPage() {
       category: t.category, date: t.due_date!, priority: t.priority,
       assigned_to: t.assigned_to, comments: t.comments, link: t.link,
       taskType: "standalone" as const, sourceName: "Standalone",
+      start_date: t.start_date,
     }));
     const projectTasks = projects.flatMap(p =>
       p.tasks.filter(t => t.due_date).map(t => ({
@@ -339,6 +462,7 @@ export default function CalendarPage() {
         category: t.category, date: t.due_date!, priority: t.priority,
         assigned_to: t.assigned_to, comments: t.comments, link: t.link,
         taskType: "project" as const, projectId: p.id, sourceName: p.name,
+        start_date: t.start_date,
       }))
     );
     const customerTasks = customers.flatMap(c =>
@@ -347,6 +471,7 @@ export default function CalendarPage() {
         category: t.category, date: t.due_date!, priority: t.priority,
         assigned_to: t.assigned_to, comments: t.comments, link: t.link,
         taskType: "customer" as const, customerId: c.id, sourceName: c.name,
+        start_date: t.start_date,
       }))
     );
     const meetingItems = meetings.map(m => ({
@@ -469,6 +594,25 @@ export default function CalendarPage() {
     }
   };
 
+  const handleEditTaskSave = async (id: string, updates: Record<string, unknown>) => {
+    const task = editingTask;
+    if (!task) return;
+    if (task.taskType === "project") {
+      await updateProjectTask(id, updates);
+    } else if (task.taskType === "customer") {
+      await updateCustomerTask(id, updates);
+    } else {
+      await updateStandaloneTask(id, updates);
+    }
+    toast({ title: "บันทึกสำเร็จ!" });
+  };
+
+  const handleTaskDoubleClick = (item: CalendarItem) => {
+    if (item.type === "task") {
+      setEditingTask(item);
+    }
+  };
+
   const editingHoliday = editingHolidayId ? holidays.find(h => h.id === editingHolidayId) : null;
 
   const activeItem = activeId ? findItemByDndId(activeId) : null;
@@ -542,7 +686,7 @@ export default function CalendarPage() {
                   </div>
                   <div className="space-y-1">
                     {dayItems.slice(0, 3).map(item => (
-                      <DraggableItem key={`${item.type}-${item.id}`} item={item} onClick={() => setSelectedItem(item)} />
+                      <DraggableItem key={`${item.type}-${item.id}`} item={item} onClick={() => setSelectedItem(item)} onDoubleClick={() => handleTaskDoubleClick(item)} />
                     ))}
                     {dayItems.length > 3 && (
                       <button
@@ -580,6 +724,14 @@ export default function CalendarPage() {
       {selectedDay && (
         <DayDetailModal dateStr={selectedDay.dateStr} items={selectedDay.items} onClose={() => setSelectedDay(null)}
           onSelectItem={(item) => { setSelectedDay(null); setSelectedItem(item); }} />
+      )}
+      {editingTask && (
+        <TaskEditModal
+          item={editingTask}
+          employees={employees}
+          onSave={handleEditTaskSave}
+          onClose={() => setEditingTask(null)}
+        />
       )}
       {showAddHoliday && <HolidayFormModal onClose={() => setShowAddHoliday(false)} onSubmit={addHoliday} />}
       {editingHolidayId && editingHoliday && (
