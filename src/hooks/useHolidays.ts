@@ -41,6 +41,16 @@ export function useHolidays() {
     }
   };
 
+  const updateHoliday = async (id: string, updates: Partial<Omit<Holiday, "id">>) => {
+    const { error } = await supabase.from("holidays").update(updates as any).eq("id", id);
+    if (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "แก้ไขวันหยุดสำเร็จ!" });
+      fetchHolidays();
+    }
+  };
+
   const deleteHoliday = async (id: string) => {
     const { error } = await supabase.from("holidays").delete().eq("id", id);
     if (error) {
@@ -51,5 +61,5 @@ export function useHolidays() {
     }
   };
 
-  return { holidays, loading, addHoliday, deleteHoliday, refetch: fetchHolidays };
+  return { holidays, loading, addHoliday, updateHoliday, deleteHoliday, refetch: fetchHolidays };
 }

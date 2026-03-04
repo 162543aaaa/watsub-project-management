@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw, Plus, Trash2, Pencil } from "lucide-react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable,
@@ -13,6 +13,10 @@ import { useHolidays } from "@/hooks/useHolidays";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type TaskStatus = "To Do" | "In Progress" | "Done";
 type CalendarItemType = "task" | "meeting" | "onsite" | "holiday";
@@ -39,6 +43,9 @@ interface CalendarItem {
   note?: string | null;
   participants?: string[];
   holidayType?: string;
+  holidayOriginalId?: string;
+  holidayStartDate?: string;
+  holidayEndDate?: string;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -108,8 +115,13 @@ function DroppableDay({ dateStr, isToday, children }: { dateStr: string; isToday
   );
 }
 
-/* ── Item detail modal ── */
-function ItemDetailModal({ item, onClose }: { item: CalendarItem; onClose: () => void }) {
+/* ── Item detail modal (updated with holiday edit/delete) ── */
+function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
+  item: CalendarItem; onClose: () => void;
+  onEditHoliday?: (id: string) => void;
+  onDeleteHoliday?: (id: string, name: string) => void;
+}) {
+  const isHoliday = item.type === "holiday" && item.holidayOriginalId;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
@@ -142,7 +154,12 @@ function ItemDetailModal({ item, onClose }: { item: CalendarItem; onClose: () =>
         <div className="space-y-2.5 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             <CalendarDays className="w-4 h-4 flex-shrink-0" />
-            <span>{new Date(item.date).toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
+            <span>
+              {isHoliday && item.holidayStartDate && item.holidayEndDate && item.holidayStartDate !== item.holidayEndDate
+                ? `${new Date(item.holidayStartDate).toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })} — ${new Date(item.holidayEndDate).toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}`
+                : new Date(item.date).toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+              }
+            </span>
           </div>
           {item.startTime && (
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -172,6 +189,24 @@ function ItemDetailModal({ item, onClose }: { item: CalendarItem; onClose: () =>
             <p className="text-muted-foreground mt-2 p-3 bg-muted/50 rounded-xl text-sm leading-relaxed whitespace-pre-wrap">{item.comments || item.note}</p>
           )}
         </div>
+
+        {/* Holiday action buttons */}
+        {isHoliday && (
+          <div className="flex gap-3 mt-5 pt-4 border-t border-border">
+            <button
+              onClick={() => onEditHoliday?.(item.holidayOriginalId!)}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              <Pencil className="w-4 h-4" /> แก้ไข
+            </button>
+            <button
+              onClick={() => onDeleteHoliday?.(item.holidayOriginalId!, item.name)}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" /> ลบ
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -209,17 +244,21 @@ function DayDetailModal({ dateStr, items, onClose, onSelectItem }: {
   );
 }
 
-/* ── Add Holiday Modal ── */
-function AddHolidayModal({ onClose, onAdd }: { onClose: () => void; onAdd: (h: { name: string; holiday_date: string; holiday_type: string; color_tag: string | null; start_date: string; end_date: string }) => void }) {
-  const [name, setName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [type, setType] = useState("government");
+/* ── Add/Edit Holiday Modal ── */
+function HolidayFormModal({ onClose, onSubmit, initial }: {
+  onClose: () => void;
+  onSubmit: (h: { name: string; holiday_date: string; holiday_type: string; color_tag: string | null; start_date: string; end_date: string }) => void;
+  initial?: { name: string; start_date: string; end_date: string; holiday_type: string };
+}) {
+  const [name, setName] = useState(initial?.name || "");
+  const [startDate, setStartDate] = useState(initial?.start_date || "");
+  const [endDate, setEndDate] = useState(initial?.end_date || "");
+  const [type, setType] = useState(initial?.holiday_type || "government");
 
   const handleSubmit = () => {
     if (!name || !startDate) { toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" }); return; }
     const finalEnd = endDate || startDate;
-    onAdd({ name, holiday_date: startDate, holiday_type: type, color_tag: null, start_date: startDate, end_date: finalEnd });
+    onSubmit({ name, holiday_date: startDate, holiday_type: type, color_tag: null, start_date: startDate, end_date: finalEnd });
     onClose();
   };
 
@@ -227,7 +266,7 @@ function AddHolidayModal({ onClose, onAdd }: { onClose: () => void; onAdd: (h: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">เพิ่มวันหยุด</h3>
+          <h3 className="text-lg font-bold">{initial ? "แก้ไขวันหยุด" : "เพิ่มวันหยุด"}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
         </div>
         <div className="space-y-3">
@@ -257,7 +296,7 @@ function AddHolidayModal({ onClose, onAdd }: { onClose: () => void; onAdd: (h: {
             </Select>
           </div>
           <button onClick={handleSubmit} className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
-            เพิ่มวันหยุด
+            {initial ? "บันทึก" : "เพิ่มวันหยุด"}
           </button>
         </div>
       </div>
@@ -274,13 +313,15 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showAddHoliday, setShowAddHoliday] = useState(false);
+  const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
   const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, updateTask: updateProjectTask } = useProjects();
   const { customers, updateTask: updateCustomerTask } = useCustomers();
   const { meetings, updateMeeting } = useMeetings();
   const { onsiteWork, updateOnsiteWork } = useOnsiteWork();
-  const { holidays, addHoliday, deleteHoliday } = useHolidays();
+  const { holidays, addHoliday, updateHoliday, deleteHoliday } = useHolidays();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -333,6 +374,9 @@ export default function CalendarPage() {
           type: "holiday" as const,
           date: dateStr,
           holidayType: h.holiday_type,
+          holidayOriginalId: h.id,
+          holidayStartDate: h.start_date || h.holiday_date,
+          holidayEndDate: h.end_date || h.holiday_date,
         });
         current.setDate(current.getDate() + 1);
       }
@@ -345,7 +389,6 @@ export default function CalendarPage() {
 
   const filteredItems = useMemo(() => {
     if (filterCategory === "all") {
-      // "ทั้งหมด" excludes meetings and onsite, shows tasks + holidays
       return allItems.filter(i => i.type !== "meeting" && i.type !== "onsite" && i.category !== "meeting" && i.category !== "onsite");
     }
     if (filterCategory === "meeting") return allItems.filter(i => i.type === "meeting" || (i.type === "task" && i.category === "meeting"));
@@ -400,6 +443,33 @@ export default function CalendarPage() {
     }
     toast({ title: "ย้ายวันสำเร็จ!" });
   };
+
+  /* ── Holiday actions ── */
+  const handleEditHoliday = (id: string) => {
+    setSelectedItem(null);
+    setEditingHolidayId(id);
+  };
+
+  const handleDeleteHoliday = (id: string, name: string) => {
+    setSelectedItem(null);
+    setDeleteConfirm({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (deleteConfirm) {
+      await deleteHoliday(deleteConfirm.id);
+      setDeleteConfirm(null);
+    }
+  };
+
+  const handleUpdateHoliday = async (data: { name: string; holiday_date: string; holiday_type: string; color_tag: string | null; start_date: string; end_date: string }) => {
+    if (editingHolidayId) {
+      await updateHoliday(editingHolidayId, data);
+      setEditingHolidayId(null);
+    }
+  };
+
+  const editingHoliday = editingHolidayId ? holidays.find(h => h.id === editingHolidayId) : null;
 
   const activeItem = activeId ? findItemByDndId(activeId) : null;
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -499,12 +569,49 @@ export default function CalendarPage() {
       </DndContext>
 
       {/* Modals */}
-      {selectedItem && <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
+      {selectedItem && (
+        <ItemDetailModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onEditHoliday={handleEditHoliday}
+          onDeleteHoliday={handleDeleteHoliday}
+        />
+      )}
       {selectedDay && (
         <DayDetailModal dateStr={selectedDay.dateStr} items={selectedDay.items} onClose={() => setSelectedDay(null)}
           onSelectItem={(item) => { setSelectedDay(null); setSelectedItem(item); }} />
       )}
-      {showAddHoliday && <AddHolidayModal onClose={() => setShowAddHoliday(false)} onAdd={addHoliday} />}
+      {showAddHoliday && <HolidayFormModal onClose={() => setShowAddHoliday(false)} onSubmit={addHoliday} />}
+      {editingHolidayId && editingHoliday && (
+        <HolidayFormModal
+          onClose={() => setEditingHolidayId(null)}
+          onSubmit={handleUpdateHoliday}
+          initial={{
+            name: editingHoliday.name,
+            start_date: editingHoliday.start_date || editingHoliday.holiday_date,
+            end_date: editingHoliday.end_date || editingHoliday.holiday_date,
+            holiday_type: editingHoliday.holiday_type,
+          }}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+            <AlertDialogDescription>
+              ต้องการลบ "{deleteConfirm?.name}" ใช่หรือไม่?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              ยืนยัน
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
