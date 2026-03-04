@@ -1,6 +1,6 @@
 import { useState, useMemo, forwardRef, useCallback, useRef } from "react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
-import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, GripVertical, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
@@ -173,14 +173,11 @@ function SortableCard({ id, children }: { id: string; children: React.ReactNode 
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className="relative"
+      {...attributes}
+      {...listeners}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, touchAction: "none" }}
+      className={`relative cursor-grab ${isDragging ? "cursor-grabbing" : ""}`}
     >
-      <div {...attributes} {...listeners}
-        className="absolute top-3 left-2 z-10 cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-        style={{ touchAction: "none" }}>
-        <GripVertical className="w-3 h-3" />
-      </div>
       {children}
     </div>
   );
@@ -217,7 +214,7 @@ export default function Tasks() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 200, tolerance: 5 } }));
 
   // Build allTasks from all sources
   const allTasks = useMemo<AllTask[]>(() => {
@@ -540,7 +537,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
   employees?: { name: string; avatar?: string | null }[];
 }) {
   return (
-    <div className="bg-card rounded-xl pl-6 pr-3.5 py-3.5 border border-border/60 group card-hover" onDoubleClick={onEdit}>
+    <div className="bg-card rounded-xl px-3.5 py-3.5 border border-border/60 group card-hover" onDoubleClick={onEdit}>
       {/* Source label + navigate */}
       {task._source !== "standalone" && (
         <div className="mb-1.5 flex items-center justify-between">
