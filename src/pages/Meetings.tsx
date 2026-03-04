@@ -88,7 +88,7 @@ export default function Meetings() {
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-sm font-semibold text-foreground flex-1 truncate pr-2">{m.title}</h3>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></button>
+                  <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); openEdit(m); } }} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></button>
                   <button onClick={() => setConfirmDelete(m.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"><Trash2 className="w-3.5 h-3.5 text-destructive/70" /></button>
                 </div>
               </div>

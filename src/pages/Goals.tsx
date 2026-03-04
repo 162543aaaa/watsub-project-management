@@ -207,7 +207,7 @@ export default function Goals() {
                   )}
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(goal)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Edit">
+                  <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); openEdit(goal); } }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Edit">
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={() => setConfirmDelete(goal.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">

@@ -435,7 +435,7 @@ export default function Projects() {
                               {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                              <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
+                              <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); openEditProject(proj); } }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
@@ -506,7 +506,7 @@ export default function Projects() {
                                             <ExternalLink className="w-3 h-3 text-primary" />
                                           </a>
                                         )}
-                                     <button onClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
+                                     <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); openEditTask(proj.id, task); } }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
                                        <Pencil className="w-3 h-3 text-primary" />
                                      </button>
                                      <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id, proj.id); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">

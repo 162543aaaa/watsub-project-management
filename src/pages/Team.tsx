@@ -485,7 +485,7 @@ export default function Team() {
                     className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors sm:opacity-0 sm:group-hover:opacity-100">
                     <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
-                  <button onClick={() => startEdit(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
+                  <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); startEdit(emp); } }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                   <button onClick={() => deleteEmployee(emp.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">

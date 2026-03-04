@@ -338,7 +338,7 @@ export default function Customers() {
                               {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
                             </div>
                             <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={(e) => { e.stopPropagation(); openEditCustomer(cust); }}
+                              <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); openEditCustomer(cust); } }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
@@ -414,7 +414,7 @@ export default function Customers() {
                                        <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
                                          {task.status}
                                        </span>
-                                        <button onClick={(e) => { e.stopPropagation(); openEditTask(cust.id, task); }}
+                                        <button onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); openEditTask(cust.id, task); } }}
                                           className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
                                           <Pencil className="w-3 h-3 text-primary" />
                                         </button>
