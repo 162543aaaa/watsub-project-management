@@ -84,12 +84,21 @@ function DraggableItem({ item, onClick, onDoubleClick }: { item: CalendarItem; o
     data: item,
     disabled: item.type === "holiday",
   });
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 1) { // Middle click
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onMouseDown={handleMouseDown}
       onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(); }}
       style={{
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -349,7 +358,7 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
           <h3 className="text-lg font-bold">Edit Task</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
         </div>
-        <div className="overflow-y-auto flex-1 p-6 pt-5">
+        <div className="overflow-y-auto flex-1 p-6 pt-5 scrollbar-hide">
           <div className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
@@ -413,7 +422,7 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
             </div>
           </div>
         </div>
-        <div className="flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl">
+        <div className="sticky bottom-0 flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
             <Save className="w-4 h-4" /> Save Task
@@ -608,8 +617,19 @@ export default function CalendarPage() {
   };
 
   const handleTaskDoubleClick = (item: CalendarItem) => {
-    if (item.type === "task") {
+    // Only allow editing for standalone, project, and customer tasks
+    // Meeting, onsite, holiday should only open detail view (which is handled by middle click now, 
+    // but for double click we just don't open the edit modal)
+    if (item.type === "task" && 
+        item.category !== "meeting" && 
+        item.category !== "onsite" && 
+        item.type !== "meeting" && 
+        item.type !== "onsite" && 
+        item.type !== "holiday") {
       setEditingTask(item);
+    } else {
+      // For meeting, onsite, holiday, double-click just opens detail view
+      setSelectedItem(item);
     }
   };
 
