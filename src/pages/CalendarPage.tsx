@@ -787,14 +787,15 @@ export default function CalendarPage() {
   };
 
   const handleTaskDoubleClick = (item: CalendarItem) => {
-    if (item.type === "task" && 
-        item.category !== "meeting" && 
-        item.category !== "onsite") {
-      setEditingTask(item);
-    } else if (item.type === "meeting" || item.category === "meeting") {
+    if (item.type === "meeting") {
+      // Actual meeting from meetings table
       setEditingMeeting(item);
-    } else if (item.type === "onsite" || item.category === "onsite") {
+    } else if (item.type === "onsite") {
+      // Actual onsite from onsite_work table
       setEditingOnsite(item);
+    } else if (item.type === "task") {
+      // All tasks (standalone, project, customer) regardless of category
+      setEditingTask(item);
     } else if (item.type === "holiday") {
       handleEditHoliday(item.holidayOriginalId!);
     } else {
