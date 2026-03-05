@@ -237,8 +237,13 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {task.due_date && (
-                        <span className="text-xs text-muted-foreground hidden sm:block">
+                        <span className={`text-xs hidden sm:block ${
+                          task.status !== "Done" && new Date(task.due_date) < today 
+                            ? "text-red-500 font-medium animate-pulse" 
+                            : "text-muted-foreground"
+                        }`}>
                           {new Date(task.due_date).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
+                          {task.status !== "Done" && new Date(task.due_date) < today && " (Overdue)"}
                         </span>
                       )}
                       <span className={

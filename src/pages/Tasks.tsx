@@ -234,7 +234,20 @@ export default function Tasks() {
   const [filterSource, setFilterSource] = useState<string>("all");
   const [groupByProject, setGroupByProject] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const monthScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 200, tolerance: 5 } }));
 
@@ -459,65 +472,67 @@ export default function Tasks() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="space-y-3 mb-5 animate-stagger-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
-          </div>
-          <div className="flex gap-1.5">
-            {(["all", "High", "Medium", "Low"] as const).map(p => (
-              <button key={p} onClick={() => setPriorityFilter(p)}
-                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {p === "all" ? "All" : p}
-              </button>
-            ))}
-          </div>
-          {/* Fix #3: Project/Customer filter */}
-          <select
-            value={filterSource}
-            onChange={e => setFilterSource(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-border bg-background text-xs font-semibold focus:ring-2 focus:ring-primary/30 outline-none min-w-[160px]"
-          >
-            <option value="all">โครงการ / Customer ทั้งหมด</option>
-            {sourceOptions.map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-          {/* Fix #7: Group by Project toggle */}
-          <button
-            onClick={() => setGroupByProject(g => !g)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupByProject ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
-            title="จัดกลุ่มตามโครงการ"
-          >
-            <Layers className="w-3.5 h-3.5" />
-            Group by Project
-          </button>
-        </div>
-        {/* Fix #10: Show all 12 months with horizontal scroll */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1">
-            {YEARS.map(y => (
-              <button key={y} onClick={() => setFilterYear(y)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterYear === y ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {y}
-              </button>
-            ))}
-          </div>
-          <div className="w-px h-4 bg-border" />
-          <div ref={monthScrollRef} className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            <button onClick={() => setFilterMonth("all")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-              All months
+      {/* Filters - Sticky Header */}
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md py-4 mb-5 animate-stagger-2 border-b border-border/50 -mx-4 px-4 sm:-mx-6 sm:px-6">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
+            </div>
+            <div className="flex gap-1.5">
+              {(["all", "High", "Medium", "Low"] as const).map(p => (
+                <button key={p} onClick={() => setPriorityFilter(p)}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+                  {p === "all" ? "All" : p}
+                </button>
+              ))}
+            </div>
+            {/* Fix #3: Project/Customer filter */}
+            <select
+              value={filterSource}
+              onChange={e => setFilterSource(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-border bg-background text-xs font-semibold focus:ring-2 focus:ring-primary/30 outline-none min-w-[160px]"
+            >
+              <option value="all">โครงการ / Customer ทั้งหมด</option>
+              {sourceOptions.map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            {/* Fix #7: Group by Project toggle */}
+            <button
+              onClick={() => setGroupByProject(g => !g)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupByProject ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
+              title="จัดกลุ่มตามโครงการ"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Group by Project
             </button>
-            {ALL_MONTHS.map(m => (
-              <button key={m} onClick={() => setFilterMonth(m)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {monthNames[m]?.slice(0, 3)}
+          </div>
+          {/* Fix #10: Show all 12 months with horizontal scroll */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1">
+              {YEARS.map(y => (
+                <button key={y} onClick={() => setFilterYear(y)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterYear === y ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+                  {y}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-4 bg-border" />
+            <div ref={monthScrollRef} className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+              <button onClick={() => setFilterMonth("all")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+                All months
               </button>
-            ))}
+              {ALL_MONTHS.map(m => (
+                <button key={m} onClick={() => setFilterMonth(m)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+                  {monthNames[m]?.slice(0, 3)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -639,6 +654,17 @@ export default function Tasks() {
           onClose={() => setModal({ open: false, task: null })}
         />
       )}
+
+      {/* Back to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-8 right-8 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-300 z-40 hover:scale-110 active:scale-95 ${
+          showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+        }`}
+        title="Back to Top"
+      >
+        <ArrowUpRight className="w-6 h-6 -rotate-45" />
+      </button>
     </div>
   );
 }

@@ -67,6 +67,7 @@ export default function Customers() {
   const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer } = useCustomers();
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1 });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
@@ -335,7 +336,21 @@ export default function Customers() {
                                 )}
                               </div>
                               {cust.project_title && <p className="text-xs text-muted-foreground mt-0.5">{cust.project_title}</p>}
-                              {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
+                              {cust.detail && (
+                                <div className="mt-1">
+                                  <p className={`text-xs text-muted-foreground ${expandedDetails[cust.id] ? "" : "line-clamp-2"}`}>
+                                    {cust.detail}
+                                  </p>
+                                  {cust.detail.length > 100 && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setExpandedDetails(prev => ({ ...prev, [cust.id]: !prev[cust.id] })); }}
+                                      className="text-[10px] text-primary font-semibold hover:underline mt-0.5"
+                                    >
+                                      {expandedDetails[cust.id] ? "Read less" : "Read more"}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={(e) => { e.stopPropagation(); openEditCustomer(cust); }}
