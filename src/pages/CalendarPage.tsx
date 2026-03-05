@@ -226,8 +226,9 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
 }
 
 /* ── Day detail modal ── */
-function DayDetailModal({ dateStr, items, onClose, onSelectItem }: {
+function DayDetailModal({ dateStr, items, onClose, onSelectItem, onDoubleClickItem }: {
   dateStr: string; items: CalendarItem[]; onClose: () => void; onSelectItem: (item: CalendarItem) => void;
+  onDoubleClickItem?: (item: CalendarItem) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
@@ -245,6 +246,7 @@ function DayDetailModal({ dateStr, items, onClose, onSelectItem }: {
             <button
               key={`${item.type}-${item.id}`}
               onClick={() => onSelectItem(item)}
+              onDoubleClick={(e) => { e.stopPropagation(); onDoubleClickItem?.(item); }}
               className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:brightness-95 ${getItemStyle(item)}`}
             >
               {getItemIcon(item)}{item.name}
@@ -910,7 +912,8 @@ export default function CalendarPage() {
       )}
       {selectedDay && (
         <DayDetailModal dateStr={selectedDay.dateStr} items={selectedDay.items} onClose={() => setSelectedDay(null)}
-          onSelectItem={(item) => { setSelectedDay(null); setSelectedItem(item); }} />
+          onSelectItem={(item) => { setSelectedDay(null); setSelectedItem(item); }}
+          onDoubleClickItem={(item) => { setSelectedDay(null); handleTaskDoubleClick(item); }} />
       )}
       {editingTask && (
         <TaskEditModal
