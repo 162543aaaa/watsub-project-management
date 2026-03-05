@@ -317,6 +317,162 @@ function HolidayFormModal({ onClose, onSubmit, initial }: {
   );
 }
 
+/* ── Meeting Edit Modal ── */
+function MeetingEditModal({ item, employees, onSave, onClose }: {
+  item: CalendarItem;
+  employees: { name: string; avatar?: string }[];
+  onSave: (id: string, updates: Record<string, any>) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: item.name || "",
+    meeting_date: item.date || "",
+    start_time: item.startTime || "",
+    end_time: item.endTime || "",
+    location: item.location || "",
+    note: item.note || "",
+    participants: item.participants || [],
+  });
+
+  const save = () => {
+    if (!form.title.trim()) { toast({ title: "กรุณากรอกหัวข้อการประชุม", variant: "destructive" }); return; }
+    onSave(item.id, form);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 pb-0">
+          <h3 className="text-lg font-bold">Edit Meeting</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6 pt-5 scrollbar-hide">
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Meeting Title</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} autoFocus />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Date</label>
+              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.meeting_date} onChange={e => setForm({ ...form, meeting_date: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start Time</label>
+                <input type="time" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">End Time</label>
+                <input type="time" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Location</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Meeting room, Zoom, etc." />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Participants</label>
+              <MultiSelectAssignee
+                selected={form.participants}
+                onChange={val => setForm({ ...form, participants: val })}
+                employees={employees}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
+              <textarea rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
+                value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Meeting agenda or notes..." />
+            </div>
+          </div>
+        </div>
+        <div className="sticky bottom-0 flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+          <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
+            <Save className="w-4 h-4" /> Save Meeting
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── On-site Edit Modal ── */
+function OnsiteEditModal({ item, employees, onSave, onClose }: {
+  item: CalendarItem;
+  employees: { name: string; avatar?: string }[];
+  onSave: (id: string, updates: Record<string, any>) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: item.name || "",
+    work_date: item.date || "",
+    location: item.location || "",
+    note: item.note || "",
+    participants: item.participants || [],
+  });
+
+  const save = () => {
+    if (!form.title.trim()) { toast({ title: "กรุณากรอกหัวข้อ On-site", variant: "destructive" }); return; }
+    onSave(item.id, form);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 pb-0">
+          <h3 className="text-lg font-bold">Edit On-site Work</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6 pt-5 scrollbar-hide">
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Title</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} autoFocus />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Date</label>
+              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.work_date} onChange={e => setForm({ ...form, work_date: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Location</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Customer site, branch, etc." />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Participants</label>
+              <MultiSelectAssignee
+                selected={form.participants}
+                onChange={val => setForm({ ...form, participants: val })}
+                employees={employees}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
+              <textarea rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
+                value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Work details or notes..." />
+            </div>
+          </div>
+        </div>
+        <div className="sticky bottom-0 flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+          <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
+            <Save className="w-4 h-4" /> Save On-site
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Task Edit Modal (double-click edit from calendar) ── */
 type TaskStatus_ = "To Do" | "In Progress" | "Done";
 type TaskPriority_ = "Low" | "Medium" | "High";
@@ -325,7 +481,7 @@ const COLUMNS_ = ["To Do", "In Progress", "Done"] as const;
 function TaskEditModal({ item, employees, onSave, onClose }: {
   item: CalendarItem;
   employees: { name: string; avatar?: string }[];
-  onSave: (id: string, updates: Record<string, unknown>) => void;
+  onSave: (id: string, updates: Record<string, any>) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({
@@ -445,6 +601,8 @@ export default function CalendarPage() {
   const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [editingTask, setEditingTask] = useState<CalendarItem | null>(null);
+  const [editingMeeting, setEditingMeeting] = useState<CalendarItem | null>(null);
+  const [editingOnsite, setEditingOnsite] = useState<CalendarItem | null>(null);
 
   const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, updateTask: updateProjectTask } = useProjects();
@@ -603,7 +761,7 @@ export default function CalendarPage() {
     }
   };
 
-  const handleEditTaskSave = async (id: string, updates: Record<string, unknown>) => {
+  const handleEditTaskSave = async (id: string, updates: Record<string, any>) => {
     const task = editingTask;
     if (!task) return;
     if (task.taskType === "project") {
@@ -616,19 +774,28 @@ export default function CalendarPage() {
     toast({ title: "บันทึกสำเร็จ!" });
   };
 
+  const handleEditMeetingSave = async (id: string, updates: Record<string, any>) => {
+    await updateMeeting(id, updates);
+    toast({ title: "บันทึกการประชุมสำเร็จ!" });
+  };
+
+  const handleEditOnsiteSave = async (id: string, updates: Record<string, any>) => {
+    await updateOnsiteWork(id, updates);
+    toast({ title: "บันทึก On-site สำเร็จ!" });
+  };
+
   const handleTaskDoubleClick = (item: CalendarItem) => {
-    // Only allow editing for standalone, project, and customer tasks
-    // Meeting, onsite, holiday should only open detail view (which is handled by middle click now, 
-    // but for double click we just don't open the edit modal)
     if (item.type === "task" && 
         item.category !== "meeting" && 
-        item.category !== "onsite" && 
-        item.type !== "meeting" && 
-        item.type !== "onsite" && 
-        item.type !== "holiday") {
+        item.category !== "onsite") {
       setEditingTask(item);
+    } else if (item.type === "meeting" || item.category === "meeting") {
+      setEditingMeeting(item);
+    } else if (item.type === "onsite" || item.category === "onsite") {
+      setEditingOnsite(item);
+    } else if (item.type === "holiday") {
+      handleEditHoliday(item.holidayOriginalId!);
     } else {
-      // For meeting, onsite, holiday, double-click just opens detail view
       setSelectedItem(item);
     }
   };
@@ -751,6 +918,22 @@ export default function CalendarPage() {
           employees={employees}
           onSave={handleEditTaskSave}
           onClose={() => setEditingTask(null)}
+        />
+      )}
+      {editingMeeting && (
+        <MeetingEditModal
+          item={editingMeeting}
+          employees={employees}
+          onSave={handleEditMeetingSave}
+          onClose={() => setEditingMeeting(null)}
+        />
+      )}
+      {editingOnsite && (
+        <OnsiteEditModal
+          item={editingOnsite}
+          employees={employees}
+          onSave={handleEditOnsiteSave}
+          onClose={() => setEditingOnsite(null)}
         />
       )}
       {showAddHoliday && <HolidayFormModal onClose={() => setShowAddHoliday(false)} onSubmit={addHoliday} />}
