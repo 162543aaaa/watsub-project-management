@@ -443,7 +443,7 @@ function OnsiteFormModal({ item, employees, onSave, onAdd, onClose }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 pb-0">
-          <h3 className="text-lg font-bold">Edit On-site Work</h3>
+          <h3 className="text-lg font-bold">{isEdit ? "Edit On-site Work" : "เพิ่ม On-site Work"}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
         </div>
         <div className="overflow-y-auto flex-1 p-6 pt-5 scrollbar-hide">
