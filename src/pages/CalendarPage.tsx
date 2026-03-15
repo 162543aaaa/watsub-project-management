@@ -614,6 +614,8 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showAddHoliday, setShowAddHoliday] = useState(false);
+  const [showAddMeeting, setShowAddMeeting] = useState(false);
+  const [showAddOnsite, setShowAddOnsite] = useState(false);
   const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [editingTask, setEditingTask] = useState<CalendarItem | null>(null);
