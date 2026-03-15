@@ -838,8 +838,14 @@ export default function CalendarPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowAddMeeting(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
+            <Plus className="w-4 h-4" /> 🗓 Meeting
+          </button>
+          <button onClick={() => setShowAddOnsite(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
+            <Plus className="w-4 h-4" /> 📍 On-site
+          </button>
           <button onClick={() => setShowAddHoliday(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> เพิ่มวันหยุด
+            <Plus className="w-4 h-4" /> วันหยุด
           </button>
           <button onClick={goToday} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
             <CalendarDays className="w-4 h-4" /> Today
