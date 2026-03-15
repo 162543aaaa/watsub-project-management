@@ -947,7 +947,7 @@ export default function CalendarPage() {
         />
       )}
       {editingMeeting && (
-        <MeetingEditModal
+        <MeetingFormModal
           item={editingMeeting}
           employees={employees}
           onSave={handleEditMeetingSave}
@@ -955,11 +955,25 @@ export default function CalendarPage() {
         />
       )}
       {editingOnsite && (
-        <OnsiteEditModal
+        <OnsiteFormModal
           item={editingOnsite}
           employees={employees}
           onSave={handleEditOnsiteSave}
           onClose={() => setEditingOnsite(null)}
+        />
+      )}
+      {showAddMeeting && (
+        <MeetingFormModal
+          employees={employees}
+          onAdd={async (data) => { await addMeeting(data as any); }}
+          onClose={() => setShowAddMeeting(false)}
+        />
+      )}
+      {showAddOnsite && (
+        <OnsiteFormModal
+          employees={employees}
+          onAdd={async (data) => { await addOnsiteWork(data as any); }}
+          onClose={() => setShowAddOnsite(false)}
         />
       )}
       {showAddHoliday && <HolidayFormModal onClose={() => setShowAddHoliday(false)} onSubmit={addHoliday} />}
