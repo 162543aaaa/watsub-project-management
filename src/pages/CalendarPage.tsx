@@ -411,24 +411,31 @@ function MeetingFormModal({ item, employees, onSave, onAdd, onClose }: {
   );
 }
 
-/* ── On-site Edit Modal ── */
-function OnsiteEditModal({ item, employees, onSave, onClose }: {
-  item: CalendarItem;
+/* ── On-site Add/Edit Modal ── */
+function OnsiteFormModal({ item, employees, onSave, onAdd, onClose }: {
+  item?: CalendarItem | null;
   employees: { name: string; avatar?: string }[];
-  onSave: (id: string, updates: Record<string, any>) => void;
+  onSave?: (id: string, updates: Record<string, any>) => void;
+  onAdd?: (data: Record<string, any>) => void;
   onClose: () => void;
 }) {
+  const isEdit = !!item;
   const [form, setForm] = useState({
-    title: item.name || "",
-    work_date: item.date || "",
-    location: item.location || "",
-    note: item.note || "",
-    participants: item.participants || [],
+    title: item?.name || "",
+    work_date: item?.date || "",
+    location: item?.location || "",
+    note: item?.note || "",
+    participants: item?.participants || [],
   });
 
   const save = () => {
     if (!form.title.trim()) { toast({ title: "กรุณากรอกหัวข้อ On-site", variant: "destructive" }); return; }
-    onSave(item.id, form);
+    if (!form.work_date) { toast({ title: "กรุณาเลือกวันที่", variant: "destructive" }); return; }
+    if (isEdit && onSave) {
+      onSave(item!.id, form);
+    } else if (onAdd) {
+      onAdd(form);
+    }
     onClose();
   };
 
