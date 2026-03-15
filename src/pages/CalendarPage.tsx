@@ -625,8 +625,8 @@ export default function CalendarPage() {
   const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, updateTask: updateProjectTask } = useProjects();
   const { customers, updateTask: updateCustomerTask } = useCustomers();
-  const { meetings, updateMeeting } = useMeetings();
-  const { onsiteWork, updateOnsiteWork } = useOnsiteWork();
+  const { meetings, addMeeting, updateMeeting } = useMeetings();
+  const { onsiteWork, addOnsiteWork, updateOnsiteWork } = useOnsiteWork();
   const { holidays, addHoliday, updateHoliday, deleteHoliday } = useHolidays();
   const { employees } = useEmployees();
 
