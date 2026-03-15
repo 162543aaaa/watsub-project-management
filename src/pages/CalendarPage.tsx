@@ -319,26 +319,33 @@ function HolidayFormModal({ onClose, onSubmit, initial }: {
   );
 }
 
-/* ── Meeting Edit Modal ── */
-function MeetingEditModal({ item, employees, onSave, onClose }: {
-  item: CalendarItem;
+/* ── Meeting Add/Edit Modal ── */
+function MeetingFormModal({ item, employees, onSave, onAdd, onClose }: {
+  item?: CalendarItem | null;
   employees: { name: string; avatar?: string }[];
-  onSave: (id: string, updates: Record<string, any>) => void;
+  onSave?: (id: string, updates: Record<string, any>) => void;
+  onAdd?: (data: Record<string, any>) => void;
   onClose: () => void;
 }) {
+  const isEdit = !!item;
   const [form, setForm] = useState({
-    title: item.name || "",
-    meeting_date: item.date || "",
-    start_time: item.startTime || "",
-    end_time: item.endTime || "",
-    location: item.location || "",
-    note: item.note || "",
-    participants: item.participants || [],
+    title: item?.name || "",
+    meeting_date: item?.date || "",
+    start_time: item?.startTime || "",
+    end_time: item?.endTime || "",
+    location: item?.location || "",
+    note: item?.note || "",
+    participants: item?.participants || [],
   });
 
   const save = () => {
     if (!form.title.trim()) { toast({ title: "กรุณากรอกหัวข้อการประชุม", variant: "destructive" }); return; }
-    onSave(item.id, form);
+    if (!form.meeting_date) { toast({ title: "กรุณาเลือกวันที่", variant: "destructive" }); return; }
+    if (isEdit && onSave) {
+      onSave(item!.id, form);
+    } else if (onAdd) {
+      onAdd(form);
+    }
     onClose();
   };
 
@@ -346,7 +353,7 @@ function MeetingEditModal({ item, employees, onSave, onClose }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 pb-0">
-          <h3 className="text-lg font-bold">Edit Meeting</h3>
+          <h3 className="text-lg font-bold">{isEdit ? "Edit Meeting" : "เพิ่ม Meeting"}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
         </div>
         <div className="overflow-y-auto flex-1 p-6 pt-5 scrollbar-hide">
@@ -396,7 +403,7 @@ function MeetingEditModal({ item, employees, onSave, onClose }: {
         <div className="sticky bottom-0 flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
-            <Save className="w-4 h-4" /> Save Meeting
+            <Save className="w-4 h-4" /> {isEdit ? "Save Meeting" : "เพิ่ม Meeting"}
           </button>
         </div>
       </div>
@@ -404,24 +411,31 @@ function MeetingEditModal({ item, employees, onSave, onClose }: {
   );
 }
 
-/* ── On-site Edit Modal ── */
-function OnsiteEditModal({ item, employees, onSave, onClose }: {
-  item: CalendarItem;
+/* ── On-site Add/Edit Modal ── */
+function OnsiteFormModal({ item, employees, onSave, onAdd, onClose }: {
+  item?: CalendarItem | null;
   employees: { name: string; avatar?: string }[];
-  onSave: (id: string, updates: Record<string, any>) => void;
+  onSave?: (id: string, updates: Record<string, any>) => void;
+  onAdd?: (data: Record<string, any>) => void;
   onClose: () => void;
 }) {
+  const isEdit = !!item;
   const [form, setForm] = useState({
-    title: item.name || "",
-    work_date: item.date || "",
-    location: item.location || "",
-    note: item.note || "",
-    participants: item.participants || [],
+    title: item?.name || "",
+    work_date: item?.date || "",
+    location: item?.location || "",
+    note: item?.note || "",
+    participants: item?.participants || [],
   });
 
   const save = () => {
     if (!form.title.trim()) { toast({ title: "กรุณากรอกหัวข้อ On-site", variant: "destructive" }); return; }
-    onSave(item.id, form);
+    if (!form.work_date) { toast({ title: "กรุณาเลือกวันที่", variant: "destructive" }); return; }
+    if (isEdit && onSave) {
+      onSave(item!.id, form);
+    } else if (onAdd) {
+      onAdd(form);
+    }
     onClose();
   };
 
@@ -429,7 +443,7 @@ function OnsiteEditModal({ item, employees, onSave, onClose }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 pb-0">
-          <h3 className="text-lg font-bold">Edit On-site Work</h3>
+          <h3 className="text-lg font-bold">{isEdit ? "Edit On-site Work" : "เพิ่ม On-site Work"}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
         </div>
         <div className="overflow-y-auto flex-1 p-6 pt-5 scrollbar-hide">
@@ -467,7 +481,7 @@ function OnsiteEditModal({ item, employees, onSave, onClose }: {
         <div className="sticky bottom-0 flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
-            <Save className="w-4 h-4" /> Save On-site
+            <Save className="w-4 h-4" /> {isEdit ? "Save On-site" : "เพิ่ม On-site"}
           </button>
         </div>
       </div>
@@ -600,6 +614,8 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showAddHoliday, setShowAddHoliday] = useState(false);
+  const [showAddMeeting, setShowAddMeeting] = useState(false);
+  const [showAddOnsite, setShowAddOnsite] = useState(false);
   const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [editingTask, setEditingTask] = useState<CalendarItem | null>(null);
@@ -609,8 +625,8 @@ export default function CalendarPage() {
   const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, updateTask: updateProjectTask } = useProjects();
   const { customers, updateTask: updateCustomerTask } = useCustomers();
-  const { meetings, updateMeeting } = useMeetings();
-  const { onsiteWork, updateOnsiteWork } = useOnsiteWork();
+  const { meetings, addMeeting, updateMeeting } = useMeetings();
+  const { onsiteWork, addOnsiteWork, updateOnsiteWork } = useOnsiteWork();
   const { holidays, addHoliday, updateHoliday, deleteHoliday } = useHolidays();
   const { employees } = useEmployees();
 
@@ -822,8 +838,14 @@ export default function CalendarPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowAddMeeting(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
+            <Plus className="w-4 h-4" /> 🗓 Meeting
+          </button>
+          <button onClick={() => setShowAddOnsite(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
+            <Plus className="w-4 h-4" /> 📍 On-site
+          </button>
           <button onClick={() => setShowAddHoliday(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> เพิ่มวันหยุด
+            <Plus className="w-4 h-4" /> วันหยุด
           </button>
           <button onClick={goToday} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
             <CalendarDays className="w-4 h-4" /> Today
@@ -925,7 +947,7 @@ export default function CalendarPage() {
         />
       )}
       {editingMeeting && (
-        <MeetingEditModal
+        <MeetingFormModal
           item={editingMeeting}
           employees={employees}
           onSave={handleEditMeetingSave}
@@ -933,11 +955,25 @@ export default function CalendarPage() {
         />
       )}
       {editingOnsite && (
-        <OnsiteEditModal
+        <OnsiteFormModal
           item={editingOnsite}
           employees={employees}
           onSave={handleEditOnsiteSave}
           onClose={() => setEditingOnsite(null)}
+        />
+      )}
+      {showAddMeeting && (
+        <MeetingFormModal
+          employees={employees}
+          onAdd={async (data) => { await addMeeting(data as any); }}
+          onClose={() => setShowAddMeeting(false)}
+        />
+      )}
+      {showAddOnsite && (
+        <OnsiteFormModal
+          employees={employees}
+          onAdd={async (data) => { await addOnsiteWork(data as any); }}
+          onClose={() => setShowAddOnsite(false)}
         />
       )}
       {showAddHoliday && <HolidayFormModal onClose={() => setShowAddHoliday(false)} onSubmit={addHoliday} />}
