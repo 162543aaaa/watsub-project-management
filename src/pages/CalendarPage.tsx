@@ -403,7 +403,7 @@ function MeetingFormModal({ item, employees, onSave, onAdd, onClose }: {
         <div className="sticky bottom-0 flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
-            <Save className="w-4 h-4" /> Save Meeting
+            <Save className="w-4 h-4" /> {isEdit ? "Save Meeting" : "เพิ่ม Meeting"}
           </button>
         </div>
       </div>
