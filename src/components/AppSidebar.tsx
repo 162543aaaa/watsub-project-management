@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin, TrendingUp
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useState } from "react";
@@ -18,7 +18,6 @@ const navItems = [
   { label: "On-site Work", icon: MapPin, path: "/onsite-work" },
   { label: "Leave", icon: Plane, path: "/leave" },
   { label: "Budget", icon: Wallet, path: "/budget" },
-  { label: "KPI", icon: TrendingUp, path: "/kpi" },
   { label: "Reports", icon: BarChart3, path: "/reports" },
   { label: "Notifications", icon: Bell, path: "/notifications" },
   { label: "Import", icon: Upload, path: "/import" },
