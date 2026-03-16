@@ -25,6 +25,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import WaitingApproval from "./pages/WaitingApproval";
 import AdminPanel from "./pages/AdminPanel";
+import KPI from "./pages/KPI";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -62,6 +63,7 @@ const App = () => (
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/import" element={<Import />} />
                 <Route path="/export" element={<Export />} />
+                <Route path="/kpi" element={<KPI />} />
                 <Route path="/admin" element={<AdminPanel />} />
               </Route>
             </Route>
