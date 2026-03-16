@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Plus, TrendingUp, CheckCircle2, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin } from "lucide-react";
+import { Plus, TrendingUp, CheckCircle2, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin, BarChart2, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
@@ -8,8 +8,12 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useMeetings } from "@/hooks/useMeetings";
 import { useOnsiteWork } from "@/hooks/useOnsiteWork";
+import { useKpiEvaluations } from "@/hooks/useKPI";
+import { useGoals } from "@/hooks/useGoals";
+import { useLeave } from "@/hooks/useLeave";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
+import { Progress } from "@/components/ui/progress";
 
 const today = new Date();
 
@@ -60,6 +64,9 @@ export default function Dashboard() {
   const { unreadCount } = useNotifications();
   const { meetings, loading: loadingMeetings } = useMeetings();
   const { onsiteWork, loading: loadingOnsite } = useOnsiteWork();
+  const { evaluations } = useKpiEvaluations();
+  const { goals } = useGoals();
+  const { leaves } = useLeave();
 
   const loading = loadingTasks || loadingProjects || loadingCustomers || loadingEmployees || loadingMeetings || loadingOnsite;
 
@@ -92,6 +99,69 @@ export default function Dashboard() {
       .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
       .slice(0, 5);
   }, [allTasks]);
+
+  const kpiOverview = useMemo(() => {
+    const pendingEvals = evaluations.filter(e => e.status === "draft").length;
+    const completedEvals = evaluations.filter(e => e.status === "completed");
+    const thisMonth = today.getMonth();
+    const thisYear = today.getFullYear();
+
+    const perEmployee = employees.map(emp => {
+      // 1. Formal KPI score (most recent completed evaluation)
+      const empEvals = completedEvals
+        .filter(e => e.employee_id === emp.id)
+        .sort((a, b) => new Date(b.period_end).getTime() - new Date(a.period_end).getTime());
+      const formalScore = empEvals.length > 0 ? (empEvals[0].total_score ?? null) : null;
+
+      // 2. Task completion rate
+      const myTasks = allTasks.filter(
+        t => t.assigned_to?.includes(emp.name) && t.category !== "meeting" && t.category !== "onsite"
+      );
+      const taskRate = myTasks.length > 0
+        ? Math.round((myTasks.filter(t => t.status === "Done").length / myTasks.length) * 100)
+        : null;
+
+      // 3. Goal achievement rate
+      const myGoals = goals.filter(g => g.assigned_to === emp.name || g.type === "team");
+      const goalRate = myGoals.length > 0
+        ? Math.round(myGoals.reduce((sum, g) => sum + Math.min((g.current_value / (g.target_value || 1)) * 100, 100), 0) / myGoals.length)
+        : null;
+
+      // 4. Leave flag this month
+      const leaveFlag = leaves.some(l => {
+        if (l.requested_by !== emp.name || l.status === "Rejected") return false;
+        const d = new Date(l.leave_start);
+        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+      });
+
+      // Composite display score
+      let displayScore: number | null = null;
+      let scoreSource: "formal" | "derived" | "tasks_only" | "none" = "none";
+      if (formalScore !== null) {
+        displayScore = formalScore;
+        scoreSource = "formal";
+      } else if (taskRate !== null && goalRate !== null) {
+        displayScore = Math.round(taskRate * 0.6 + goalRate * 0.4);
+        scoreSource = "derived";
+      } else if (taskRate !== null) {
+        displayScore = taskRate;
+        scoreSource = "tasks_only";
+      }
+
+      const hasPendingEval = evaluations.some(e => e.employee_id === emp.id && e.status === "draft");
+      return { emp, displayScore, scoreSource, leaveFlag, hasPendingEval };
+    });
+
+    const withData = perEmployee
+      .filter(e => e.displayScore !== null)
+      .sort((a, b) => {
+        if (a.scoreSource === "formal" && b.scoreSource !== "formal") return -1;
+        if (a.scoreSource !== "formal" && b.scoreSource === "formal") return 1;
+        return (b.displayScore ?? 0) - (a.displayScore ?? 0);
+      });
+
+    return { pendingEvals, completedCount: completedEvals.length, perEmployee: withData };
+  }, [evaluations, employees, allTasks, goals, leaves]);
 
   const donutData = [
     { name: "Done", value: stats.completed, color: "hsl(142 71% 45%)" },
@@ -132,7 +202,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-5 sm:mb-7 animate-stagger-2">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3 sm:gap-4 mb-5 sm:mb-7 animate-stagger-2">
         <StatCard
           label="Completion Rate"
           value={`${stats.rate}%`}
@@ -181,6 +251,15 @@ export default function Dashboard() {
           icon={MapPin}
           gradient="bg-gradient-to-br from-rose-500 to-pink-600"
           trend="neutral"
+        />
+        <StatCard
+          label="KPI Evaluations"
+          value={kpiOverview.pendingEvals > 0 ? `${kpiOverview.pendingEvals} pending` : `${kpiOverview.completedCount} done`}
+          sub={kpiOverview.pendingEvals > 0 ? "รอประเมิน" : "ประเมินครบแล้ว"}
+          icon={BarChart2}
+          gradient="bg-gradient-to-br from-indigo-500 to-violet-600"
+          trend={kpiOverview.pendingEvals > 0 ? "down" : "up"}
+          trendLabel={kpiOverview.pendingEvals > 0 ? `${kpiOverview.pendingEvals} รายการ` : "Up to date"}
         />
       </div>
 
@@ -344,6 +423,81 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* KPI Overview Section */}
+      {kpiOverview.perEmployee.length > 0 && (
+        <div className="mt-5 sm:mt-7 animate-stagger-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">KPI Overview</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {kpiOverview.perEmployee.some(e => e.scoreSource === "formal")
+                  ? "คะแนนจากการประเมิน KPI และประสิทธิภาพงาน"
+                  : "คะแนนจากงานและเป้าหมาย (ยังไม่มีการประเมิน KPI ทางการ)"}
+              </p>
+            </div>
+            <Link to="/kpi" className="flex items-center gap-1 text-xs font-medium text-primary hover:gap-2 transition-all">
+              ดูทั้งหมด <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {kpiOverview.perEmployee.map(({ emp, displayScore, scoreSource, leaveFlag, hasPendingEval }, idx) => {
+              const pct = displayScore ?? 0;
+              const scoreColor = pct >= 80 ? "text-emerald-600 dark:text-emerald-400"
+                : pct >= 60 ? "text-amber-600 dark:text-amber-400"
+                : "text-red-500 dark:text-red-400";
+              const barColor = pct >= 80 ? "hsl(142 71% 45%)"
+                : pct >= 60 ? "hsl(38 92% 50%)"
+                : "hsl(0 84% 60%)";
+              const label = pct >= 90 ? "ดีเยี่ยม"
+                : pct >= 80 ? "ดี"
+                : pct >= 70 ? "พอใช้"
+                : pct >= 60 ? "ต้องปรับปรุง"
+                : "ต่ำกว่าเกณฑ์";
+              const badgeCls = scoreSource === "formal"
+                ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                : "bg-muted text-muted-foreground";
+
+              return (
+                <div key={emp.id} className="bg-card rounded-2xl border border-border/60 p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <EmployeeAvatar name={emp.name} avatar={emp.avatar} size="sm" index={idx} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold truncate">{emp.name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{emp.position}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-lg font-bold ${scoreColor}`}>{pct.toFixed(0)}%</span>
+                      <div className="flex items-center gap-1">
+                        {hasPendingEval && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" title="มีการประเมินรอดำเนินการ" />
+                        )}
+                        {leaveFlag && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="มีการลาเดือนนี้" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: barColor }} />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                    <span className="text-[10px] font-semibold" style={{ color: barColor }}>{label}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${badgeCls}`}>
+                      {scoreSource === "formal" ? <span className="flex items-center gap-0.5"><Award className="w-2.5 h-2.5 inline" /> KPI ทางการ</span> : "จากงาน"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
