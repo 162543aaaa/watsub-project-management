@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Plus, TrendingUp, CheckCircle2, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
@@ -82,10 +82,14 @@ export default function Dashboard() {
     return employees.map(emp => {
       const myTasks = allTasks.filter(t => t.assigned_to?.includes(emp.name) && t.category !== "meeting" && t.category !== "onsite");
       const done = myTasks.filter(t => t.status === "Done").length;
+      const inProgress = myTasks.filter(t => t.status === "In Progress").length;
+      const todo = myTasks.filter(t => t.status === "To Do").length;
       const progress = myTasks.length ? Math.round((done / myTasks.length) * 100) : 0;
-      return { ...emp, total: myTasks.length, done, progress };
+      return { ...emp, total: myTasks.length, done, inProgress, todo, progress, tasks: myTasks };
     }).filter(e => e.total > 0).sort((a, b) => b.progress - a.progress);
   }, [employees, allTasks]);
+
+  const [selectedEmployee, setSelectedEmployee] = useState<typeof employeeStats[0] | null>(null);
 
   const recentTasks = useMemo(() => {
     return [...allTasks]
@@ -303,24 +307,29 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-3.5">
                 {employeeStats.slice(0, 4).map((emp, idx) => (
-                  <div key={emp.id}>
+                  <div key={emp.id} className="cursor-pointer group" onClick={() => setSelectedEmployee(emp)}>
                     <div className="flex items-center gap-2.5 mb-1.5">
                       <EmployeeAvatar name={emp.name} avatar={emp.avatar} size="sm" index={idx} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-foreground truncate">{emp.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{emp.done}/{emp.total} tasks</div>
+                        <div className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">{emp.name}</div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-medium" style={{ color: "hsl(142 71% 45%)" }}>✓ {emp.done}</span>
+                          <span className="text-[10px] font-medium" style={{ color: "hsl(191 91% 37%)" }}>▶ {emp.inProgress}</span>
+                          <span className="text-[10px] text-muted-foreground">○ {emp.todo}</span>
+                        </div>
                       </div>
                       <span className="text-xs font-bold" style={{ color: emp.progress >= 70 ? "hsl(142 71% 40%)" : emp.progress >= 40 ? "hsl(191 91% 37%)" : "hsl(38 92% 45%)" }}>
                         {emp.progress}%
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden flex">
                       <div
-                        className="h-full rounded-full transition-all duration-700 ease-out"
-                        style={{
-                          width: `${emp.progress}%`,
-                          background: emp.progress >= 70 ? "hsl(142 71% 45%)" : emp.progress >= 40 ? "hsl(191 91% 37%)" : "hsl(38 92% 50%)"
-                        }}
+                        className="h-full transition-all duration-700 ease-out"
+                        style={{ width: `${emp.total ? (emp.done / emp.total) * 100 : 0}%`, background: "hsl(142 71% 45%)" }}
+                      />
+                      <div
+                        className="h-full transition-all duration-700 ease-out"
+                        style={{ width: `${emp.total ? (emp.inProgress / emp.total) * 100 : 0}%`, background: "hsl(191 91% 37%)" }}
                       />
                     </div>
                   </div>
@@ -344,6 +353,58 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Employee Task Modal */}
+      {selectedEmployee && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setSelectedEmployee(null)}
+        >
+          <div
+            className="bg-card rounded-2xl border border-border/50 p-6 w-[420px] max-h-[80vh] overflow-y-auto shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <EmployeeAvatar name={selectedEmployee.name} avatar={selectedEmployee.avatar} size="md" index={0} />
+                <div>
+                  <div className="font-semibold text-foreground">{selectedEmployee.name}</div>
+                  <div className="text-xs text-muted-foreground">{selectedEmployee.total} tasks · {selectedEmployee.progress}% done</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedEmployee(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors text-lg leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Task groups */}
+            {(["Done", "In Progress", "To Do"] as const).map(status => {
+              const tasks = selectedEmployee.tasks.filter(t => t.status === status);
+              if (!tasks.length) return null;
+              const color = status === "Done" ? "hsl(142 71% 45%)" : status === "In Progress" ? "hsl(191 91% 37%)" : "hsl(215 14% 60%)";
+              const icon = status === "Done" ? "✓" : status === "In Progress" ? "▶" : "○";
+              return (
+                <div key={status} className="mb-4">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold mb-2" style={{ color }}>
+                    <span>{icon}</span>
+                    <span>{status}</span>
+                    <span className="font-normal text-muted-foreground">({tasks.length})</span>
+                  </div>
+                  <div className="space-y-1 pl-3 border-l-2" style={{ borderColor: `${color}40` }}>
+                    {tasks.map(t => (
+                      <div key={t.id} className="text-xs text-muted-foreground py-0.5">{t.name}</div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
