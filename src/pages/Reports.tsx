@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, Users, CheckCircle2, AlertCircle, FolderOpen, Clock,
@@ -37,7 +36,6 @@ export default function Reports() {
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showAllOverdue, setShowAllOverdue] = useState(false);
-  const [revenueMonth, setRevenueMonth] = useState(3); // March default
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -216,30 +214,6 @@ export default function Reports() {
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 400);
   };
 
-  const REVENUE_MONTHS = [
-    { num: 1, short: "Jan" },
-    { num: 2, short: "Feb" },
-    { num: 3, short: "Mar" },
-  ];
-  const revenueItems = [
-    { name: "YRU Branding", type: "project", amount: 45000, status: "ชำระแล้ว" },
-    { name: "SRA YALA", type: "project", amount: 35000, status: "ชำระแล้ว" },
-    { name: "นครเครื่องเงิน", type: "customer", amount: 28000, status: "รอชำระ" },
-    { name: "กะยัสมิน Workshop", type: "customer", amount: 18000, status: "ในกระบวนการ" },
-    { name: "Benja Project", type: "customer", amount: 22000, status: "ชำระแล้ว" },
-  ];
-  const revenuePieData = [
-    { name: "Client Work", value: 68, color: "hsl(25 95% 53%)" },
-    { name: "Original Content", value: 22, color: "hsl(162 72% 40%)" },
-    { name: "Community", value: 10, color: "hsl(221 83% 53%)" },
-  ];
-  const statusStyle: Record<string, { bg: string; color: string }> = {
-    "ชำระแล้ว":     { bg: "hsl(142 71% 45% / 0.12)", color: "hsl(142 71% 40%)" },
-    "รอชำระ":       { bg: "hsl(38 92% 50% / 0.12)",  color: "hsl(38 92% 45%)" },
-    "ในกระบวนการ": { bg: "hsl(0 0% 60% / 0.10)",    color: "hsl(0 0% 50%)" },
-  };
-  const revenueTotal = revenueItems.reduce((s, i) => s + i.amount, 0);
-
   if (loading) return (
     <div className="p-6 flex items-center justify-center h-64">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -270,107 +244,6 @@ export default function Reports() {
               </button>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Studio Revenue */}
-      <div className="mb-8 animate-stagger-2">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">รายรับ Studio</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Client Work · ปี 2569</p>
-          </div>
-          <div className="flex gap-1">
-            {REVENUE_MONTHS.map(m => (
-              <button
-                key={m.num}
-                onClick={() => setRevenueMonth(m.num)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${revenueMonth === m.num ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
-              >
-                {m.short}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Left: Income Table */}
-          <div className="bg-card rounded-2xl border border-border/50 overflow-hidden" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/40">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">ลูกค้า / Project</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">มูลค่า</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">สถานะ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {revenueItems.map((item, i) => {
-                  const ss = statusStyle[item.status];
-                  return (
-                    <tr key={i} className="border-b border-border/20 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-foreground">{item.name}</td>
-                      <td className="px-4 py-3 text-sm text-right font-semibold text-foreground">
-                        {item.amount.toLocaleString("th-TH")} ฿
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: ss.bg, color: ss.color }}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-border/40 bg-muted/20">
-                  <td className="px-4 py-3 text-sm font-bold text-foreground">รวมทั้งหมด</td>
-                  <td className="px-4 py-3 text-sm text-right font-bold text-foreground">
-                    {revenueTotal.toLocaleString("th-TH")} ฿
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          {/* Right: Donut Chart */}
-          <div className="bg-card rounded-2xl border border-border/50 p-5 flex flex-col" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <h3 className="text-sm font-semibold text-foreground mb-4">Revenue Breakdown</h3>
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <div className="relative w-44 h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={revenuePieData}
-                      cx="50%" cy="50%"
-                      innerRadius={46} outerRadius={68}
-                      paddingAngle={3}
-                      dataKey="value"
-                      strokeWidth={0}
-                      label={({ cx, cy, midAngle, outerRadius, value }: { cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; value: number }) => {
-                        const RADIAN = Math.PI / 180;
-                        const r = outerRadius + 20;
-                        const x = cx + r * Math.cos(-midAngle * RADIAN);
-                        const y = cy + r * Math.sin(-midAngle * RADIAN);
-                        return <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fontSize={11} fontWeight={600}>{value}%</text>;
-                      }}
-                    >
-                      {revenuePieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex flex-wrap gap-3 justify-center mt-2">
-                {revenuePieData.map(d => (
-                  <div key={d.name} className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
-                    <span className="text-xs text-muted-foreground">{d.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Menu, X, ChevronDown, Shield, LogOut, Award
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Menu, X, ChevronDown, Shield, LogOut
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -17,7 +17,6 @@ const primaryNav = [
 
 const secondaryNav = [
   { label: "Goals", icon: Target, path: "/goals" },
-  { label: "KPI", icon: Award, path: "/kpi" },
   { label: "Team", icon: Users, path: "/team" },
   { label: "Leave", icon: Plane, path: "/leave" },
   { label: "Budget", icon: Wallet, path: "/budget" },
