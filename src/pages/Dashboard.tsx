@@ -220,138 +220,8 @@ export default function Dashboard() {
         <StatCard label="On-site Work" value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length} sub="งานออกกองทั้งหมด" icon={MapPin} gradient="bg-gradient-to-br from-rose-500 to-pink-600" trend="neutral" />
       </div>
 
-      {/* Recent Tasks + Task Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 animate-stagger-3">
-        {/* Recent Tasks */}
-        <div className="lg:col-span-2">
-          <div className="bg-card rounded-2xl border border-border/50 p-5 h-full" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-foreground">Recent Tasks</h2>
-              <Link to="/tasks" className="flex items-center gap-1 text-xs font-medium text-primary hover:gap-2 transition-all">
-                View all <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            {recentTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <CheckCircle2 className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">No tasks yet</p>
-                <Link to="/tasks" className="mt-2 text-xs text-primary font-medium hover:underline">Add your first task →</Link>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {recentTasks.map(task => (
-                  <div key={task.id}
-                    className="flex items-center gap-3 p-3 rounded-xl transition-all duration-150 hover:bg-muted/50 cursor-pointer group"
-                    onClick={() => openTaskDetail(task)}
-                  >
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{task.name}</div>
-                      {task.assigned_to && task.assigned_to.length > 0 && (
-                        <div className="text-xs text-muted-foreground truncate">
-                          {task.assigned_to.slice(0, 2).join(", ")}{task.assigned_to.length > 2 ? ` +${task.assigned_to.length - 2}` : ""}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {task.due_date && (
-                        <span className="text-xs text-muted-foreground hidden sm:block">
-                          {new Date(task.due_date).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
-                        </span>
-                      )}
-                      <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
-                        {task.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Task Status — redesigned */}
-        <div className="bg-card rounded-2xl border border-border/50 p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-          <h2 className="text-base font-semibold text-foreground mb-0.5">Task Status</h2>
-          <p className="text-xs text-muted-foreground mb-4">{stats.total} tasks ทั้งหมด</p>
-
-          {stats.total > 0 ? (
-            <>
-              {/* Centered donut with completion rate overlay */}
-              <div className="relative w-40 h-40 mx-auto mb-5">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={donutData}
-                      cx="50%" cy="50%"
-                      innerRadius={46} outerRadius={68}
-                      paddingAngle={3}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-3xl font-bold text-foreground leading-none">{stats.rate}%</span>
-                  <span className="text-[11px] text-muted-foreground mt-1">เสร็จแล้ว</span>
-                </div>
-              </div>
-
-              {/* Horizontal progress bars */}
-              <div className="space-y-3">
-                {[
-                  { name: "Done", value: stats.completed, color: STATUS_CONFIG.Done.color, icon: STATUS_CONFIG.Done.icon },
-                  { name: "In Progress", value: stats.inProgress, color: STATUS_CONFIG["In Progress"].color, icon: STATUS_CONFIG["In Progress"].icon },
-                  { name: "To Do", value: stats.todo, color: STATUS_CONFIG["To Do"].color, icon: STATUS_CONFIG["To Do"].icon },
-                ].map(d => {
-                  const pct = stats.total ? Math.round((d.value / stats.total) * 100) : 0;
-                  return (
-                    <div key={d.name}>
-                      <div className="flex items-center justify-between text-xs mb-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span style={{ color: d.color }}>{d.icon}</span>
-                          <span className="text-muted-foreground">{d.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-foreground">{d.value}</span>
-                          <span className="text-[10px] text-muted-foreground/60 w-7 text-right">{pct}%</span>
-                        </div>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-700 ease-out"
-                          style={{ width: `${pct}%`, background: d.color }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Summary */}
-              <div className="mt-4 pt-4 border-t border-border/40 grid grid-cols-3 gap-2">
-                {[
-                  { label: "Projects", value: projects.length },
-                  { label: "Customers", value: customers.length },
-                  { label: "Pending", value: stats.todo },
-                ].map(s => (
-                  <div key={s.label} className="text-center">
-                    <div className="text-base font-bold text-foreground">{s.value}</div>
-                    <div className="text-[10px] text-muted-foreground">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-10">No data yet</p>
-          )}
-        </div>
-      </div>
-
       {/* Team Progress — Full Width */}
-      <div className="mt-6 animate-stagger-4">
+      <div className="animate-stagger-3">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-semibold text-foreground">Team Progress</h2>
@@ -369,7 +239,7 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {employeeStats.map((emp, idx) => {
-              const filter = empStatusFilter[emp.id] ?? "All";
+              const filter = empStatusFilter[emp.id] ?? "To Do";
               const filteredTasks = filter === "All" ? emp.tasks : emp.tasks.filter(t => t.status === filter);
 
               return (
@@ -452,6 +322,123 @@ export default function Dashboard() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Recent Tasks + Task Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6 animate-stagger-4">
+        {/* Recent Tasks */}
+        <div className="lg:col-span-2">
+          <div className="bg-card rounded-2xl border border-border/50 p-5 h-full" style={{ boxShadow: "var(--shadow-sm)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-foreground">Recent Tasks</h2>
+              <Link to="/tasks" className="flex items-center gap-1 text-xs font-medium text-primary hover:gap-2 transition-all">
+                View all <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+            {recentTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <CheckCircle2 className="w-10 h-10 mb-3 opacity-30" />
+                <p className="text-sm">No tasks yet</p>
+                <Link to="/tasks" className="mt-2 text-xs text-primary font-medium hover:underline">Add your first task →</Link>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {recentTasks.map(task => (
+                  <div key={task.id}
+                    className="flex items-center gap-3 p-3 rounded-xl transition-all duration-150 hover:bg-muted/50 cursor-pointer group"
+                    onClick={() => openTaskDetail(task)}
+                  >
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{task.name}</div>
+                      {task.assigned_to && task.assigned_to.length > 0 && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {task.assigned_to.slice(0, 2).join(", ")}{task.assigned_to.length > 2 ? ` +${task.assigned_to.length - 2}` : ""}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {task.due_date && (
+                        <span className="text-xs text-muted-foreground hidden sm:block">
+                          {new Date(task.due_date).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
+                        </span>
+                      )}
+                      <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
+                        {task.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Task Status */}
+        <div className="bg-card rounded-2xl border border-border/50 p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
+          <h2 className="text-base font-semibold text-foreground mb-0.5">Task Status</h2>
+          <p className="text-xs text-muted-foreground mb-4">{stats.total} tasks ทั้งหมด</p>
+
+          {stats.total > 0 ? (
+            <>
+              <div className="relative w-40 h-40 mx-auto mb-5">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={donutData} cx="50%" cy="50%" innerRadius={46} outerRadius={68} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                      {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-3xl font-bold text-foreground leading-none">{stats.rate}%</span>
+                  <span className="text-[11px] text-muted-foreground mt-1">เสร็จแล้ว</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { name: "Done", value: stats.completed, color: STATUS_CONFIG.Done.color, icon: STATUS_CONFIG.Done.icon },
+                  { name: "In Progress", value: stats.inProgress, color: STATUS_CONFIG["In Progress"].color, icon: STATUS_CONFIG["In Progress"].icon },
+                  { name: "To Do", value: stats.todo, color: STATUS_CONFIG["To Do"].color, icon: STATUS_CONFIG["To Do"].icon },
+                ].map(d => {
+                  const pct = stats.total ? Math.round((d.value / stats.total) * 100) : 0;
+                  return (
+                    <div key={d.name}>
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span style={{ color: d.color }}>{d.icon}</span>
+                          <span className="text-muted-foreground">{d.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">{d.value}</span>
+                          <span className="text-[10px] text-muted-foreground/60 w-7 text-right">{pct}%</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${pct}%`, background: d.color }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-border/40 grid grid-cols-3 gap-2">
+                {[
+                  { label: "Projects", value: projects.length },
+                  { label: "Customers", value: customers.length },
+                  { label: "Pending", value: stats.todo },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <div className="text-base font-bold text-foreground">{s.value}</div>
+                    <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-10">No data yet</p>
+          )}
+        </div>
       </div>
 
       {/* Task Detail Modal */}
