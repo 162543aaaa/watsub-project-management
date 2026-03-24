@@ -18,9 +18,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-type TaskStatus = "To Do" | "In Progress" | "Done";
+type TaskStatus = "To Do" | "In Progress" | "รออนุมัติ" | "Done";
 type TaskPriority = "Low" | "Medium" | "High";
-const COLUMNS: TaskStatus[] = ["To Do", "In Progress", "Done"];
+const COLUMNS: TaskStatus[] = ["To Do", "In Progress", "รออนุมัติ", "Done"];
 const YEARS = [2025, 2026, 2027];
 const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -35,6 +35,7 @@ interface AllTask extends Task {
 function getColStyle(col: TaskStatus) {
   if (col === "Done") return { bg: "hsl(142 71% 45% / 0.06)", border: "hsl(142 71% 45% / 0.2)" };
   if (col === "In Progress") return { bg: "hsl(191 91% 37% / 0.06)", border: "hsl(191 91% 37% / 0.2)" };
+  if (col === "รออนุมัติ") return { bg: "hsl(38 92% 50% / 0.06)", border: "hsl(38 92% 50% / 0.25)" };
   return { bg: "hsl(220 14% 96%)", border: "hsl(220 13% 88%)" };
 }
 
@@ -417,11 +418,19 @@ export default function Tasks() {
   };
 
   const handleStatusToggle = async (task: AllTask) => {
-    const nextStatus: Record<TaskStatus, TaskStatus> = { "To Do": "In Progress", "In Progress": "Done", "Done": "To Do" };
+    const nextStatus: Record<TaskStatus, TaskStatus> = { "To Do": "In Progress", "In Progress": "รออนุมัติ", "รออนุมัติ": "Done", "Done": "To Do" };
     const newStatus = nextStatus[task.status as TaskStatus] || "To Do";
     if (task._source === "project") await updateProjectTask(task.id, { status: newStatus });
     else if (task._source === "customer") await updateCustomerTask(task.id, { status: newStatus });
     else await updateTask(task.id, { status: newStatus });
+  };
+
+  const handleSendBack = async (task: AllTask) => {
+    const updates = { status: "In Progress" as TaskStatus };
+    if (task._source === "project") await updateProjectTask(task.id, updates);
+    else if (task._source === "customer") await updateCustomerTask(task.id, updates);
+    else await updateTask(task.id, updates);
+    toast({ title: "ส่งกลับแก้ไขสำเร็จ" });
   };
 
   const navigateToSource = (task: AllTask) => {
@@ -531,7 +540,7 @@ export default function Tasks() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start animate-stagger-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 items-start animate-stagger-3">
           {COLUMNS.map((col) => {
             const style = getColStyle(col);
             const colT = getColTasks(col);
@@ -542,7 +551,7 @@ export default function Tasks() {
                 {/* Sticky column header */}
                 <div className="flex items-center justify-between mb-4 sticky top-0 z-10 py-1" style={{ background: style.bg }}>
                   <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-green-500" : col === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                    <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-green-500" : col === "In Progress" ? "bg-cyan-500" : col === "รออนุมัติ" ? "bg-amber-500" : "bg-gray-400"}`} />
                     <span className="text-sm font-semibold text-foreground">{col}</span>
                     <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{colT.length}</span>
                   </div>
@@ -577,6 +586,7 @@ export default function Tasks() {
                                     onDelete={() => handleDeleteTask(task)}
                                     onStatusToggle={() => handleStatusToggle(task)}
                                     onNavigate={() => navigateToSource(task)}
+                                    onSendBack={() => handleSendBack(task)}
                                     employees={employees}
                                   />
                                 </SortableCard>
@@ -597,6 +607,7 @@ export default function Tasks() {
                               onDelete={() => handleDeleteTask(task)}
                               onStatusToggle={() => handleStatusToggle(task)}
                               onNavigate={() => navigateToSource(task)}
+                              onSendBack={() => handleSendBack(task)}
                               employees={employees}
                             />
                           </SortableCard>
@@ -644,13 +655,14 @@ export default function Tasks() {
 }
 
 // Extracted TaskCard for reuse with DragOverlay
-function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, employees }: {
+function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, onSendBack, employees }: {
   task: AllTask;
   col: TaskStatus;
   onEdit: () => void;
   onDelete: () => void;
   onStatusToggle: () => void;
   onNavigate: () => void;
+  onSendBack?: () => void;
   employees?: { name: string; avatar?: string | null }[];
 }) {
   const overdue = isOverdue(task.due_date, task.status);
@@ -674,6 +686,31 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
           >
             View <ArrowUpRight className="w-2.5 h-2.5" />
           </button>
+        </div>
+      )}
+      {/* Approval steps indicator for รออนุมัติ column */}
+      {col === "รออนุมัติ" && (
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-[8px] text-white font-bold">✓</span>
+            </div>
+            <span className="text-[9px] font-medium text-green-600 whitespace-nowrap">Draft</span>
+          </div>
+          <div className="flex-1 h-px" style={{ background: "hsl(191 91% 37% / 0.4)" }} />
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "hsl(191 91% 37%)", boxShadow: "0 0 0 2px hsl(191 91% 37% / 0.3)" }}>
+              <span className="text-[8px] text-white font-bold">2</span>
+            </div>
+            <span className="text-[9px] font-medium whitespace-nowrap" style={{ color: "hsl(191 91% 37%)" }}>ต้า Review</span>
+          </div>
+          <div className="flex-1 h-px bg-border/50" />
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded-full border-2 border-border flex items-center justify-center flex-shrink-0">
+              <span className="text-[8px] text-muted-foreground font-bold">3</span>
+            </div>
+            <span className="text-[9px] text-muted-foreground whitespace-nowrap">Approve</span>
+          </div>
         </div>
       )}
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -705,7 +742,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
       )}
       <div className="flex items-center gap-1.5 flex-wrap">
         <button onClick={(e) => { e.stopPropagation(); onStatusToggle(); }}
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
+          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : col === "รออนุมัติ" ? "badge-progress" : "badge-todo"}`}>
           {task.status}
         </button>
         <PriorityBadge priority={task.priority} />
@@ -742,6 +779,24 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
           <p className="text-xs text-muted-foreground/40 leading-relaxed italic">—</p>
         )}
       </div>
+      {/* Action buttons for รออนุมัติ column */}
+      {col === "รออนุมัติ" && (
+        <div className="flex gap-1.5 mt-2.5 pt-2 border-t border-border/40">
+          <button
+            onClick={(e) => { e.stopPropagation(); onSendBack?.(); }}
+            className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"
+          >
+            ส่งกลับแก้
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onStatusToggle(); }}
+            className="flex-1 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
+            style={{ background: "hsl(162 72% 40%)" }}
+          >
+            อนุมัติ ✓
+          </button>
+        </div>
+      )}
     </div>
   );
 }
