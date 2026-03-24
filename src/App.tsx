@@ -12,7 +12,6 @@ import Projects from "./pages/Projects";
 import Customers from "./pages/Customers";
 import CalendarPage from "./pages/CalendarPage";
 import Goals from "./pages/Goals";
-import KPI from "./pages/KPI";
 import Team from "./pages/Team";
 import Leave from "./pages/Leave";
 import Meetings from "./pages/Meetings";
@@ -54,7 +53,6 @@ const App = () => (
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/goals" element={<Goals />} />
-                <Route path="/kpi" element={<KPI />} />
                 <Route path="/team" element={<Team />} />
                 <Route path="/leave" element={<Leave />} />
                 <Route path="/meetings" element={<Meetings />} />

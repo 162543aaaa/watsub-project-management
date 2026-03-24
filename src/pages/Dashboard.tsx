@@ -8,7 +8,7 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useMeetings } from "@/hooks/useMeetings";
 import { useOnsiteWork } from "@/hooks/useOnsiteWork";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, ReferenceLine, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 
 const today = new Date();
@@ -220,73 +220,8 @@ export default function Dashboard() {
         <StatCard label="On-site Work" value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length} sub="งานออกกองทั้งหมด" icon={MapPin} gradient="bg-gradient-to-br from-rose-500 to-pink-600" trend="neutral" />
       </div>
 
-      {/* KPI Team + Content Pillars widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5 sm:mb-6 animate-stagger-3">
-        {/* Widget 1: KPI ทีม Q1/2569 */}
-        <div className="bg-card rounded-2xl border border-border/50 p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-foreground">KPI ทีม Q1/2569</h2>
-            <Link to="/kpi" className="text-xs text-primary hover:underline">ดูทั้งหมด →</Link>
-          </div>
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart
-              data={[
-                { name: "ต้า", score: 4.6, fill: "hsl(38 92% 50%)" },
-                { name: "ฮาฟีซ", score: 4.4, fill: "hsl(142 71% 45%)" },
-                { name: "สุไมยนา", score: 4.1, fill: "hsl(221 83% 53%)" },
-              ]}
-              layout="vertical"
-              margin={{ top: 0, right: 16, bottom: 0, left: 0 }}
-            >
-              <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 10 }} tickCount={6} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={56} />
-              <Tooltip
-                formatter={(v: number) => [`${v}`, "KPI Score"]}
-                contentStyle={{ fontSize: 11, borderRadius: 8 }}
-              />
-              <ReferenceLine x={4.0} stroke="hsl(38 92% 50%)" strokeDasharray="4 2" label={{ value: "เกณฑ์ Lead", position: "top", fontSize: 9, fill: "hsl(38 92% 45%)" }} />
-              <Bar dataKey="score" radius={[0, 4, 4, 0]}>
-                {[
-                  { fill: "hsl(38 92% 50%)" },
-                  { fill: "hsl(142 71% 45%)" },
-                  { fill: "hsl(221 83% 53%)" },
-                ].map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <p className="text-[10px] text-muted-foreground text-center mt-1">KPI Score Q1/2569</p>
-        </div>
-
-        {/* Widget 2: Content Pillars */}
-        <div className="bg-card rounded-2xl border border-border/50 p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-foreground">Content Pillars</h2>
-            <Link to="/reports" className="text-xs text-primary hover:underline">ดูทั้งหมด →</Link>
-          </div>
-          <div className="space-y-3">
-            {[
-              { pillar: "#VIBES", count: 3, reach: "12.4K", engLabel: "Eng", engVal: "8.2%", color: "hsl(84 85% 35%)", bg: "hsl(84 85% 35% / 0.12)" },
-              { pillar: "#SOUL",  count: 2, reach: "5.8K",  engLabel: "Eng", engVal: "11.4%", color: "hsl(270 67% 50%)", bg: "hsl(270 67% 50% / 0.12)" },
-              { pillar: "#JOINT", count: 2, reach: "3.2K",  engLabel: "Leads", engVal: "4",  color: "hsl(221 83% 53%)", bg: "hsl(221 83% 53% / 0.12)" },
-            ].map(row => (
-              <div key={row.pillar} className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: row.color }} />
-                <span className="text-sm font-semibold w-14 flex-shrink-0" style={{ color: row.color }}>{row.pillar}</span>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: row.bg, color: row.color }}>{row.count} ชิ้น</span>
-                <div className="flex items-center gap-3 ml-auto text-xs text-muted-foreground">
-                  <span>Reach <span className="font-semibold text-foreground">{row.reach}</span></span>
-                  <span>{row.engLabel} <span className="font-semibold text-foreground">{row.engVal}</span></span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Team Progress — Full Width */}
-      <div className="animate-stagger-4">
+      <div className="animate-stagger-3">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-semibold text-foreground">Team Progress</h2>

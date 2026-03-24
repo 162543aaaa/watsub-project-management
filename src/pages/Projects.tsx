@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle } from "lucide-react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
@@ -13,23 +13,6 @@ import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const YEARS = [2025, 2026, 2027];
-
-type ContentPillar = "ทั้งหมด" | "Client Work" | "#JOINT" | "#SOUL" | "#VIBES";
-const PILLARS: ContentPillar[] = ["ทั้งหมด", "Client Work", "#JOINT", "#SOUL", "#VIBES"];
-
-function getPillar(name: string): Exclude<ContentPillar, "ทั้งหมด"> {
-  if (/work wok|live sub|cool sub/i.test(name)) return "#JOINT";
-  if (/sgnc|raw gen|watwrite|row gen|what.?s write/i.test(name)) return "#SOUL";
-  if (/color walk|mood|watlife/i.test(name)) return "#VIBES";
-  return "Client Work";
-}
-
-const PILLAR_STYLE: Record<Exclude<ContentPillar, "ทั้งหมด">, { bg: string; color: string }> = {
-  "Client Work": { bg: "hsl(25 95% 53% / 0.12)", color: "hsl(25 95% 45%)" },
-  "#JOINT":      { bg: "hsl(221 83% 53% / 0.12)", color: "hsl(221 83% 53%)" },
-  "#SOUL":       { bg: "hsl(270 67% 55% / 0.12)", color: "hsl(270 67% 50%)" },
-  "#VIBES":      { bg: "hsl(84 85% 35% / 0.12)",  color: "hsl(84 85% 30%)" },
-};
 
 const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "", category: "none" };
 
@@ -86,7 +69,6 @@ export default function Projects() {
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", month: 1, note: "", link: "" });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
-  const [filterPillar, setFilterPillar] = useState<ContentPillar>("ทั้งหมด");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
@@ -97,11 +79,7 @@ export default function Projects() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const months = [...new Set(projects.map(p => p.month))].sort();
-  const filtered = useMemo(() => {
-    let result = filterMonth === "all" ? projects : projects.filter(p => p.month === filterMonth);
-    if (filterPillar !== "ทั้งหมด") result = result.filter(p => getPillar(p.name) === filterPillar);
-    return result;
-  }, [projects, filterMonth, filterPillar]);
+  const filtered = filterMonth === "all" ? projects : projects.filter(p => p.month === filterMonth);
   const grouped: Record<number, typeof projects> = {};
   filtered.forEach(p => { if (!grouped[p.month]) grouped[p.month] = []; grouped[p.month].push(p); });
 
@@ -250,29 +228,6 @@ export default function Projects() {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Content Pillar filter */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pillar:</span>
-        {PILLARS.map(p => {
-          const isActive = filterPillar === p;
-          const style = p !== "ทั้งหมด" ? PILLAR_STYLE[p] : undefined;
-          return (
-            <button
-              key={p}
-              onClick={() => setFilterPillar(p)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={isActive && style
-                ? { background: style.bg, color: style.color, border: `1px solid ${style.color}50` }
-                : isActive
-                ? { background: "hsl(var(--primary) / 0.12)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary) / 0.3)" }
-                : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", border: "1px solid transparent" }}
-            >
-              {p}
-            </button>
-          );
-        })}
       </div>
 
       {/* Add Project Modal */}
@@ -478,18 +433,6 @@ export default function Projects() {
                                 )}
                               </div>
                               {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
-                              {(() => {
-                                const pillar = getPillar(proj.name);
-                                const ps = PILLAR_STYLE[pillar];
-                                return (
-                                  <span
-                                    className="inline-block mt-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
-                                    style={{ background: ps.bg, color: ps.color }}
-                                  >
-                                    {pillar}
-                                  </span>
-                                );
-                              })()}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
                               <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
