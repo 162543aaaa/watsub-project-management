@@ -349,6 +349,7 @@ export type Database = {
           month: number
           name: string
           note: string | null
+          pillar: string
           sort_order: number | null
           updated_at: string
         }
@@ -359,6 +360,7 @@ export type Database = {
           month?: number
           name: string
           note?: string | null
+          pillar?: string
           sort_order?: number | null
           updated_at?: string
         }
@@ -369,6 +371,7 @@ export type Database = {
           month?: number
           name?: string
           note?: string | null
+          pillar?: string
           sort_order?: number | null
           updated_at?: string
         }

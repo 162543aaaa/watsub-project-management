@@ -7,12 +7,19 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from "@dnd-kit/utilities";
 import { useProjects } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
-import { Task } from "@/hooks/useProjects";
+import { Task, Pillar } from "@/hooks/useProjects";
 import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const YEARS = [2025, 2026, 2027];
+
+const PILLAR_CONFIG: Record<Pillar, { label: string; color: string; textColor: string }> = {
+  VIBES: { label: "#VIBES", color: "#C8FF00", textColor: "#3D4D00" },
+  SOUL: { label: "#SOUL", color: "#7B4FCC", textColor: "#FFFFFF" },
+  JOINT: { label: "#JOINT", color: "#FF6B35", textColor: "#FFFFFF" },
+};
+const PILLARS: Pillar[] = ["VIBES", "SOUL", "JOINT"];
 
 const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "", category: "none" };
 
@@ -67,36 +74,38 @@ export default function Projects() {
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", month: 1, note: "", link: "" });
+  const [newProject, setNewProject] = useState({ name: "", month: 1, note: "", link: "", pillar: "SOUL" as Pillar });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
+  const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
-  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string; link: string } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string; link: string; pillar: Pillar } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const months = [...new Set(projects.map(p => p.month))].sort();
-  const filtered = filterMonth === "all" ? projects : projects.filter(p => p.month === filterMonth);
+  const afterPillar = filterPillar === "all" ? projects : projects.filter(p => p.pillar === filterPillar);
+  const filtered = filterMonth === "all" ? afterPillar : afterPillar.filter(p => p.month === filterMonth);
   const grouped: Record<number, typeof projects> = {};
   filtered.forEach(p => { if (!grouped[p.month]) grouped[p.month] = []; grouped[p.month].push(p); });
 
   const handleAddProject = async () => {
     if (!newProject.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    await addProject({ name: newProject.name, month: newProject.month, note: newProject.note, link: newProject.link });
-    setNewProject({ name: "", month: 1, note: "", link: "" });
+    await addProject({ name: newProject.name, month: newProject.month, note: newProject.note, link: newProject.link, pillar: newProject.pillar });
+    setNewProject({ name: "", month: 1, note: "", link: "", pillar: "SOUL" });
     setShowAddProject(false);
   };
 
   const openEditProject = (proj: typeof projects[0]) => {
-    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "", link: proj.link || "" });
+    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "", link: proj.link || "", pillar: proj.pillar });
   };
 
   const handleEditProject = async () => {
     if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    await updateProject(editModal.id, { name: editModal.name, month: editModal.month, note: editModal.note, link: editModal.link });
+    await updateProject(editModal.id, { name: editModal.name, month: editModal.month, note: editModal.note, link: editModal.link, pillar: editModal.pillar });
     setEditModal(null);
   };
 
@@ -228,6 +237,25 @@ export default function Projects() {
             </button>
           ))}
         </div>
+        <div className="w-px h-5 bg-border" />
+        <div className="flex flex-wrap gap-1.5">
+          <button onClick={() => setFilterPillar("all")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterPillar === "all" ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
+            All
+          </button>
+          {PILLARS.map(p => (
+            <button key={p} onClick={() => setFilterPillar(p)}
+              className="px-3 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 hover:scale-105"
+              style={{
+                background: filterPillar === p ? PILLAR_CONFIG[p].color : `${PILLAR_CONFIG[p].color}22`,
+                color: filterPillar === p ? PILLAR_CONFIG[p].textColor : PILLAR_CONFIG[p].color,
+                border: filterPillar === p ? "none" : `1px solid ${PILLAR_CONFIG[p].color}44`,
+                transform: filterPillar === p ? "scale(1.05)" : undefined,
+              }}>
+              {PILLAR_CONFIG[p].label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Add Project Modal */}
@@ -249,6 +277,13 @@ export default function Projects() {
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
                   value={newProject.month} onChange={e => setNewProject({ ...newProject, month: Number(e.target.value) })}>
                   {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Pillar <span className="text-destructive">*</span></label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={newProject.pillar} onChange={e => setNewProject({ ...newProject, pillar: e.target.value as Pillar })}>
+                  {PILLARS.map(p => <option key={p} value={p}>{PILLAR_CONFIG[p].label}</option>)}
                 </select>
               </div>
               <div>
@@ -289,6 +324,13 @@ export default function Projects() {
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
                   value={editModal.month} onChange={e => setEditModal({ ...editModal, month: Number(e.target.value) })}>
                   {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Pillar <span className="text-destructive">*</span></label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={editModal.pillar} onChange={e => setEditModal({ ...editModal, pillar: e.target.value as Pillar })}>
+                  {PILLARS.map(p => <option key={p} value={p}>{PILLAR_CONFIG[p].label}</option>)}
                 </select>
               </div>
               <div>
@@ -433,6 +475,11 @@ export default function Projects() {
                                 )}
                               </div>
                               {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
+                              <span
+                                className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold leading-tight w-fit"
+                                style={{ background: PILLAR_CONFIG[proj.pillar]?.color || "#888", color: PILLAR_CONFIG[proj.pillar]?.textColor || "#fff" }}>
+                                {PILLAR_CONFIG[proj.pillar]?.label || `#${proj.pillar}`}
+                              </span>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
                               <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}

@@ -20,12 +20,15 @@ export interface Task {
   category?: string;
 }
 
+export type Pillar = "VIBES" | "SOUL" | "JOINT";
+
 export interface Project {
   id: string;
   name: string;
   month: number;
   note?: string;
   link?: string;
+  pillar: Pillar;
   created_at?: string;
   sort_order?: number;
   tasks: Task[];
@@ -59,7 +62,7 @@ export function useProjects() {
 
   useEffect(() => { fetchProjects(); }, []);
 
-  const addProject = async (proj: { name: string; month: number; note?: string; link?: string }) => {
+  const addProject = async (proj: { name: string; month: number; note?: string; link?: string; pillar: Pillar }) => {
     const { data, error } = await supabase.from("projects").insert(proj).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setProjects(prev => [...prev, { ...data, tasks: [] }]);
