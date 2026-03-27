@@ -6,6 +6,7 @@ import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { getEligiblePeerReviewers } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
@@ -62,8 +63,9 @@ export default function KpiOverview() {
     const rows = employees.map(emp => {
       const selfDone  = pEvals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === "self" && e.submitted_at);
       const supDone   = pEvals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
-      const peersTotal = employees.length - 1;
-      const peersDone  = employees.filter(p => p.id !== emp.id)
+      const eligiblePeers = getEligiblePeerReviewers(emp, employees);
+      const peersTotal = eligiblePeers.length;
+      const peersDone  = eligiblePeers
         .filter(peer => pEvals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && e.type === "peer" && e.submitted_at))
         .length;
 

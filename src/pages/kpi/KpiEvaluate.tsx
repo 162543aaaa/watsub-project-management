@@ -11,7 +11,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import {
   KPI_QUESTIONS, ROLE_WEIGHTS,
-  resolveRoleKey,
+  getEligiblePeerReviewers, resolveRoleKey,
   type RoleKey, type ReviewerType, type AutoValueId, type KPISection,
 } from "@/config/kpiQuestions";
 
@@ -26,23 +26,26 @@ interface AutoValues {
   tasks_done_count: string;
   revision_avg: string;
   projects_closed: string;
+  revenue_vs_target_q: string;
   scripts_ontime_pct: string;
   client_count: string;
   task_approve_d1: string;
 }
 
 async function computeAutoValues(empId: string): Promise<AutoValues> {
-  const [tasksRes, projectsRes] = await Promise.all([
+  const [tasksRes, projectsRes, customersRes, goalsRes] = await Promise.all([
     supabase.from("tasks").select("status,due_date,comments,customer_id").contains("assigned_to", [empId]),
     supabase.from("projects").select("id,status").contains("member_ids", [empId]),
+    supabase.from("customers").select("id,payment_fee"),
+    supabase.from("goals").select("target_value,assigned_to"),
   ]);
 
   const tasks = tasksRes.data ?? [];
   const projects = projectsRes.data ?? [];
+  const customers = customersRes.data ?? [];
+  const goals = goalsRes.data ?? [];
 
   const done = tasks.filter(t => t.status === "Done");
-  const onTime = done.filter(t => t.due_date && new Date(t.due_date) >= new Date(t.due_date /* always true, check against now */));
-  // Actually check if completed before/on due date — we approximate with due_date >= now for pending
   const onTimeActual = done.filter(t => t.due_date);
   const revisionTasks = done.filter(t =>
     (t.comments ?? "").toLowerCase().includes("revision") ||
@@ -51,12 +54,18 @@ async function computeAutoValues(empId: string): Promise<AutoValues> {
 
   const clientIds = new Set(tasks.map(t => t.customer_id).filter(Boolean));
   const closedProjects = projects.filter(p => p.status === "completed" || p.status === "done");
+  const revenueTotal = customers.reduce((sum, customer) => {
+    const parsed = Number(String(customer.payment_fee ?? "").replace(/,/g, ""));
+    return Number.isFinite(parsed) ? sum + parsed : sum;
+  }, 0);
+  const goalTarget = goals.reduce((sum, goal) => sum + (goal.target_value ?? 0), 0);
 
   return {
     tasks_ontime_pct: done.length ? `${((onTimeActual.length / done.length) * 100).toFixed(0)}%` : "—",
     tasks_done_count: `${done.length} งาน`,
     revision_avg: `${avgRevision} ครั้ง/งาน`,
     projects_closed: `${closedProjects.length} โปรเจกต์`,
+    revenue_vs_target_q: `฿${revenueTotal.toLocaleString()} / ฿${goalTarget.toLocaleString()}`,
     scripts_ontime_pct: done.length ? `${((onTimeActual.length / done.length) * 100).toFixed(0)}%` : "—",
     client_count: `${clientIds.size} client`,
     task_approve_d1: done.length ? `${Math.round((onTimeActual.length / done.length) * 100)}%` : "—",
@@ -116,10 +125,16 @@ function SectionCard({
     <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
       <div className="px-5 py-3.5 border-b border-border/40"
         style={{ background: `${section.color}12` }}>
-        <h3 className="font-semibold text-sm">{section.labelTh}</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-semibold text-sm">{section.title ?? section.labelTh}</h3>
+          {section.weight && (
+            <span className="text-[11px] font-medium text-muted-foreground">{section.weight}</span>
+          )}
+        </div>
       </div>
       <div className="divide-y divide-border/20">
         {visibleQ.map(q => {
+          const questionLabel = q.question ?? q.labelTh;
           switch (q.type) {
 
             case "auto":
@@ -127,7 +142,7 @@ function SectionCard({
                 <div key={q.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground truncate">{q.labelTh}</p>
+                    <p className="text-sm text-muted-foreground truncate">{questionLabel}</p>
                   </div>
                   <span className="text-sm font-bold flex-shrink-0" style={{ color: section.color }}>
                     {autoValues?.[q.autoId as AutoValueId] ?? "—"}
@@ -138,7 +153,8 @@ function SectionCard({
             case "rate":
               return (
                 <div key={q.id} className="px-5 py-4">
-                  <p className="text-sm font-medium mb-2.5">{q.labelTh}</p>
+                  <p className="text-sm font-medium mb-2.5">{questionLabel}</p>
+                  {q.helperText && <p className="text-xs text-muted-foreground mb-2">{q.helperText}</p>}
                   <StarRating
                     value={scores[q.scoreKey!] ?? 3}
                     onChange={v => onRate(q.scoreKey!, v)}
@@ -150,7 +166,7 @@ function SectionCard({
               return (
                 <div key={q.id} className="px-5 py-4">
                   <label className="text-sm font-medium mb-1.5 block">
-                    {q.labelTh} <span className="text-destructive">*</span>
+                    {questionLabel} <span className="text-destructive">*</span>
                   </label>
                   <textarea
                     value={textAnswers[q.id] ?? ""}
@@ -213,7 +229,9 @@ export default function KpiEvaluate() {
   // Determine eval type
   const evalType = useMemo((): ReviewerType => {
     if (!evaluator || !evaluatee) return "peer";
-    if (evaluator.id === evaluatee.id) return "self";
+    if (evaluator.id === evaluatee.id) {
+      return resolveRoleKey(evaluatee.name) === "ta" ? "supervisor" : "self";
+    }
     if (evaluator.role?.toLowerCase().includes("director")) return "supervisor";
     return "peer";
   }, [evaluator, evaluatee]);
@@ -223,6 +241,10 @@ export default function KpiEvaluate() {
     () => evaluatee ? resolveRoleKey(evaluatee.name) : "default" as RoleKey,
     [evaluatee],
   );
+  const isPeerAllowed = useMemo(() => {
+    if (!evaluatee || !evaluator || evalType !== "peer") return true;
+    return getEligiblePeerReviewers(evaluatee, employees).some((emp) => emp.id === evaluator.id);
+  }, [evaluatee, evaluator, evalType, employees]);
   const formConfig = useMemo(
     () => KPI_QUESTIONS[roleKey][evalType],
     [roleKey, evalType],
@@ -271,12 +293,16 @@ export default function KpiEvaluate() {
       toast({ title: "กรุณาเลือกชื่อของคุณก่อน", variant: "destructive" });
       return;
     }
+    if (!isPeerAllowed) {
+      toast({ title: "คุณไม่มีสิทธิ์ประเมินแบบ Peer สำหรับคนนี้", variant: "destructive" });
+      return;
+    }
     // Validate required text fields
     if (formConfig) {
       for (const sec of formConfig.sections) {
         for (const q of sec.questions) {
           if (q.type === "text" && !textAnswers[q.id]?.trim()) {
-            toast({ title: `กรุณากรอก: ${q.labelTh}`, variant: "destructive" });
+            toast({ title: `กรุณากรอก: ${q.question ?? q.labelTh}`, variant: "destructive" });
             return;
           }
         }
@@ -347,6 +373,11 @@ export default function KpiEvaluate() {
             </div>
           </div>
         </div>
+        {formConfig.note && (
+          <div className="mt-3 text-xs text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
+            {formConfig.note}
+          </div>
+        )}
 
         {/* Role weights */}
         <div className="mt-4 pt-4 border-t border-border/40">
@@ -416,9 +447,9 @@ export default function KpiEvaluate() {
       {/* Submit */}
       <button
         onClick={handleSubmit}
-        disabled={submitting}
+        disabled={submitting || !isPeerAllowed}
         className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-all">
-        {submitting ? "กำลังส่ง..." : "ส่งการประเมิน"}
+        {submitting ? "กำลังส่ง..." : !isPeerAllowed ? "ไม่มีสิทธิ์ประเมิน" : "ส่งการประเมิน"}
       </button>
     </div>
   );
