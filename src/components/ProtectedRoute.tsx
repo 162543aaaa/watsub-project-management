@@ -9,8 +9,9 @@ export default function ProtectedRoute() {
   if (!user) return <Navigate to="/login" replace />;
   if (!isApproved && !isAdmin) return <Navigate to="/waiting-approval" replace />;
 
-  // Check page access (admin panel always accessible for admins)
+  // Admin-only pages
   if (location.pathname === "/admin" && !isAdmin) return <Navigate to="/" replace />;
+  if (location.pathname === "/kpi/admin" && !isAdmin) return <Navigate to="/kpi/overview" replace />;
   if (!canAccessPage(location.pathname)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
