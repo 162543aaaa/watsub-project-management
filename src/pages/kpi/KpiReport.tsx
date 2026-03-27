@@ -221,7 +221,6 @@ export default function KpiReport() {
               </p>
             )}
 
-            {(isAdmin || showPeerIdentity) && (breakdown?.peerEvaluators?.length ?? 0) > 0 && (
               <p className="text-xs text-muted-foreground mb-3">
                 Peer evaluators: {breakdown?.peerEvaluators.join(", ")}
               </p>
