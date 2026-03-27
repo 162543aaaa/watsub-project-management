@@ -57,7 +57,7 @@ export const REVIEWER_WEIGHTS = { auto: 0.30, self: 0.10, peer: 0.20, supervisor
 
 export function resolveRoleKey(name: string): RoleKey | null {
   const n = name.toLowerCase().trim();
-  if (n === "ta" || n.startsWith("ta ") || n.endsWith(" ta")) return "ta";
+  if (n === "ta" || n.startsWith("ta ") || n.endsWith(" ta") || n.includes("tarmisi")) return "ta";
   if (n.includes("hafeez")) return "hafeez";
   if (n.includes("sumayna")) return "sumayna";
   return null;
