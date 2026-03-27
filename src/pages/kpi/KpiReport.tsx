@@ -14,7 +14,7 @@ import {
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { resolveRoleKey, ROLE_WEIGHTS, REVIEWER_WEIGHTS } from "@/config/kpiQuestions";
+import { canSeePeerIdentity, resolveRoleKey, ROLE_WEIGHTS, REVIEWER_WEIGHTS } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
@@ -25,7 +25,8 @@ function avgScores(evals: KpiEvaluation[]): KpiSubScores | null {
   if (!evals.length) return null;
   const acc: Record<string, number> = {};
   for (const ev of evals) {
-    for (const [k, v] of Object.entries(ev.scores as Record<string, number>)) {
+    for (const [k, v] of Object.entries(ev.scores as Record<string, number | string>)) {
+      if (typeof v !== "number") continue;
       acc[k] = (acc[k] ?? 0) + v;
     }
   }
@@ -59,13 +60,19 @@ function avgWeighted(evals: KpiEvaluation[], memberName?: string): number | null
 export default function KpiReport() {
   const { memberId } = useParams<{ memberId: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useAuthContext();
+  const { isAdmin, user } = useAuthContext();
 
   const { periods } = useKpiPeriods();
   const { evaluations: allEvals } = useKpiEvaluations();
   const { employees } = useEmployees();
 
   const member = useMemo(() => employees.find(e => e.id === memberId), [employees, memberId]);
+  const me = useMemo(() => {
+    const email = user?.email?.toLowerCase();
+    if (!email) return null;
+    return employees.find((e) => (e.email ?? "").toLowerCase() === email) ?? null;
+  }, [employees, user?.email]);
+
 
   const closedPeriods = useMemo(() =>
     periods.filter(p => p.status === "closed").sort((a, b) => a.created_at.localeCompare(b.created_at)),
@@ -80,10 +87,12 @@ export default function KpiReport() {
       supervisor: avgWeighted(evals.filter(e => e.type === "supervisor"), member?.name),
       allScores: avgScores(evals),
       peerCount: evals.filter(e => e.type === "peer").length,
+      peerEvaluators: evals.filter(e => e.type === "peer").map((e) => employees.find((emp) => emp.id === e.evaluator_id)?.name).filter(Boolean) as string[],
     };
   }
 
   const breakdown = latest ? getBreakdown(latest.id) : null;
+  const showPeerIdentity = !!(me && canSeePeerIdentity(me));
 
   // Auto score from tasks
   const [autoScore, setAutoScore] = useState(0);
@@ -190,7 +199,7 @@ export default function KpiReport() {
               {[
                 { label: "Auto (งาน)", value: autoScore, color: "hsl(215 14% 50%)", w: REVIEWER_WEIGHTS.auto },
                 { label: "ตนเอง (Self)", value: breakdown?.self ?? null, color: "hsl(191 91% 37%)", w: REVIEWER_WEIGHTS.self },
-                ...(isAdmin ? [{ label: `เพื่อน (${breakdown?.peerCount ?? 0} คน)`, value: breakdown?.peer ?? null, color: "hsl(262 83% 58%)", w: REVIEWER_WEIGHTS.peer }] : []),
+                ...((isAdmin || showPeerIdentity) ? [{ label: `เพื่อน (${breakdown?.peerCount ?? 0} คน)`, value: breakdown?.peer ?? null, color: "hsl(262 83% 58%)", w: REVIEWER_WEIGHTS.peer }] : []),
                 { label: "หัวหน้า", value: breakdown?.supervisor ?? null, color: "hsl(38 92% 50%)", w: REVIEWER_WEIGHTS.supervisor },
               ].map(s => (
                 <div key={s.label} className="bg-muted/50 rounded-xl p-3 text-center">
@@ -209,6 +218,12 @@ export default function KpiReport() {
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-3">
                 <Star className="w-3 h-3" />
                 คะแนนเพื่อนร่วมงาน ({breakdown?.peerCount} คน) เป็นนิรนาม
+              </p>
+            )}
+
+            {(isAdmin || showPeerIdentity) && (breakdown?.peerEvaluators?.length ?? 0) > 0 && (
+              <p className="text-xs text-muted-foreground mb-3">
+                Peer evaluators: {breakdown?.peerEvaluators.join(", ")}
               </p>
             )}
 
