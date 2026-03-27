@@ -92,7 +92,6 @@ export default function KpiReport() {
   }
 
   const breakdown = latest ? getBreakdown(latest.id) : null;
-  const showPeerIdentity = !!(me && canSeePeerIdentity(me));
 
   // Auto score from tasks
   const [autoScore, setAutoScore] = useState(0);
@@ -221,7 +220,7 @@ export default function KpiReport() {
               </p>
             )}
 
-            {(isAdmin || showPeerIdentity) && (breakdown?.peerEvaluators?.length ?? 0) > 0 && (
+
               <p className="text-xs text-muted-foreground mb-3">
                 Peer evaluators: {breakdown?.peerEvaluators.join(", ")}
               </p>

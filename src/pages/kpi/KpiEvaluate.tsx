@@ -67,9 +67,7 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 }
 
-function getAutoValue(autoValues: AutoValues | null, questionAutoId?: AutoValueId): string {
-  if (!questionAutoId || !autoValues) return "—";
-  return autoValues[questionAutoId] ?? "—";
+
 }
 
 const SCORE_LABELS = ["", "ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"];
@@ -286,7 +284,7 @@ export default function KpiEvaluate() {
       evaluator_id: evaluator.id,
       evaluatee_id: evaluateeId!,
       type: evalType,
-      scores: answersInScores,
+
       notes_strength: null,
       notes_improve: null,
       submitted_at: new Date().toISOString(),
