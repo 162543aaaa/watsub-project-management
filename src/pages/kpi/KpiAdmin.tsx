@@ -1,5 +1,12 @@
 import { useState, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+function getAvatarUrl(path: string | undefined) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
+}
 import { Shield, Plus, Lock, Unlock, CheckCircle2, Clock, ExternalLink } from "lucide-react";
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -195,8 +202,8 @@ export default function KpiAdmin() {
                 <div key={emp.id} className="px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
                     <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
-                      {emp.avatar
-                        ? <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+                      {getAvatarUrl(emp.avatar)
+                        ? <img src={getAvatarUrl(emp.avatar)!} alt={emp.name} className="w-full h-full object-cover" />
                         : <span className="text-[10px] font-bold text-primary">{emp.name.charAt(0)}</span>
                       }
                     </div>

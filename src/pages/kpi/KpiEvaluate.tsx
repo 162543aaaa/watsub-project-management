@@ -7,6 +7,13 @@ import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+function getAvatarUrl(path: string | undefined) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
+}
+
 const SCORE_LABELS: Record<string, { th: string; desc: string[] }> = {
   job_performance: {
     th: "ผลการปฏิบัติงาน",
@@ -94,16 +101,31 @@ export default function KpiEvaluate() {
   const [notesImprove, setNotesImprove] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [evaluatorEmployee, setEvaluatorEmployee] = useState<Employee | null>(null);
+  const [evaluatorNotFound, setEvaluatorNotFound] = useState(false);
 
   const evaluatee = useMemo(() => employees.find(e => e.id === evaluateeId), [employees, evaluateeId]);
   const period = useMemo(() => periods.find(p => p.id === periodId), [periods, periodId]);
 
-  // Find current user's employee record
+  // Find current user's employee record by email, fallback to display_name match
   useEffect(() => {
-    if (!user) return;
+    if (!user || employees.length === 0) return;
+    // Try email match first
     supabase.from("employees").select("*").eq("email", user.email ?? "").maybeSingle()
-      .then(({ data }) => { if (data) setEvaluatorEmployee(data as Employee); });
-  }, [user]);
+      .then(({ data }) => {
+        if (data) {
+          setEvaluatorEmployee(data as Employee);
+        } else {
+          // Fallback: match by display_name vs employee name
+          const displayName = (user.user_metadata?.display_name ?? "").toLowerCase();
+          const matched = employees.find(e => e.name.toLowerCase() === displayName);
+          if (matched) {
+            setEvaluatorEmployee(matched);
+          } else {
+            setEvaluatorNotFound(true);
+          }
+        }
+      });
+  }, [user, employees]);
 
   // Determine evaluation type
   const evalType = useMemo((): "self" | "peer" | "supervisor" => {
@@ -204,6 +226,41 @@ export default function KpiEvaluate() {
           <p className="text-sm text-muted-foreground">{evaluatee.position} · {period.label} · ประเภท: {evalType === "self" ? "ตนเอง" : evalType === "supervisor" ? "หัวหน้า" : "เพื่อนร่วมงาน"}</p>
         </div>
       </div>
+
+      {/* Evaluator identity picker (shown only when auto-match fails) */}
+      {evaluatorNotFound && !evaluatorEmployee && (
+        <div className="bg-card border border-border/60 rounded-xl p-4 mb-5">
+          <p className="text-sm font-medium mb-2">คุณคือใครในทีม? <span className="text-destructive">*</span></p>
+          <p className="text-xs text-muted-foreground mb-3">ไม่พบข้อมูลของคุณในระบบโดยอัตโนมัติ กรุณาเลือกชื่อของคุณ</p>
+          <select
+            onChange={e => {
+              const emp = employees.find(em => em.id === e.target.value);
+              if (emp) setEvaluatorEmployee(emp);
+            }}
+            defaultValue=""
+            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="" disabled>— เลือกชื่อของคุณ —</option>
+            {employees.map(e => (
+              <option key={e.id} value={e.id}>{e.name} ({e.position})</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Evaluator identity confirmed */}
+      {evaluatorEmployee && (
+        <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg"
+          style={{ background: "hsl(191 91% 37% / 0.08)" }}>
+          <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
+            {getAvatarUrl(evaluatorEmployee.avatar)
+              ? <img src={getAvatarUrl(evaluatorEmployee.avatar)!} alt={evaluatorEmployee.name} className="w-full h-full object-cover" />
+              : <span className="text-[10px] font-bold text-primary">{evaluatorEmployee.name.charAt(0)}</span>
+            }
+          </div>
+          <p className="text-xs text-muted-foreground">ประเมินในฐานะ: <span className="font-semibold text-foreground">{evaluatorEmployee.name}</span></p>
+        </div>
+      )}
 
       {/* Auto stats card */}
       {taskStats !== null && (
