@@ -8,8 +8,10 @@ export type QuestionType = "auto" | "rate" | "text" | "hidden";
 
 export interface KPIQuestion {
   id: string;
+  question?: string;
   labelTh: string;
   type: QuestionType;
+  helperText?: string;
   /** For 'rate' questions — which score key this maps to */
   scoreKey?: KpiSubScoreKey;
   /** For 'auto' questions — which computed value to display */
@@ -17,6 +19,9 @@ export interface KPIQuestion {
 }
 
 export interface KPISection {
+  id?: string;
+  title?: string;
+  weight?: string;
   key: string;
   labelTh: string;
   color: string;
@@ -26,6 +31,7 @@ export interface KPISection {
 export interface KPIFormConfig {
   /** Override the reviewer type label shown in the header badge */
   uiLabel?: string;
+  note?: string;
   sections: KPISection[];
 }
 
@@ -37,6 +43,7 @@ export type AutoValueId =
   | "tasks_done_count"     // total tasks with status Done
   | "revision_avg"         // avg revisions per task (from comments)
   | "projects_closed"      // count of closed projects
+  | "revenue_vs_target_q"  // revenue total vs quarterly target
   | "scripts_ontime_pct"   // % of script/caption tasks on time (sumayna)
   | "client_count"         // distinct clients managed
   | "task_approve_d1";     // tasks with approval within D-1 (%)
@@ -56,12 +63,42 @@ export const REVIEWER_WEIGHTS = { auto: 0.30, self: 0.10, peer: 0.20, supervisor
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+export function normalizeName(name: string): string {
+  return name.toLowerCase().trim();
+}
+
 export function resolveRoleKey(name: string): RoleKey {
-  const n = name.toLowerCase().trim();
+  const n = normalizeName(name);
   if (n === "ta" || n.startsWith("ta ") || n.endsWith(" ta") || n.includes("tarmisi")) return "ta";
-  if (n.includes("hafeez")) return "hafeez";
-  if (n.includes("sumayna")) return "sumayna";
+  if (n.includes("hafeez") || n.includes("hafiz") || n.includes("ฮาฟีซ")) return "hafeez";
+  if (n.includes("sumayna") || n.includes("สุไมยนา")) return "sumayna";
   return "default";
+}
+
+export function getEligiblePeerReviewers<T extends { id: string; name: string }>(
+  evaluatee: T,
+  employees: T[],
+): T[] {
+  const evaluateeRole = resolveRoleKey(evaluatee.name);
+  if (evaluateeRole === "ta") {
+    return employees.filter((emp) =>
+      emp.id !== evaluatee.id &&
+      ["hafeez", "sumayna"].includes(resolveRoleKey(emp.name)),
+    );
+  }
+  if (evaluateeRole === "hafeez") {
+    return employees.filter((emp) =>
+      emp.id !== evaluatee.id &&
+      ["ta", "sumayna"].includes(resolveRoleKey(emp.name)),
+    );
+  }
+  if (evaluateeRole === "sumayna") {
+    return employees.filter((emp) =>
+      emp.id !== evaluatee.id &&
+      ["ta", "hafeez"].includes(resolveRoleKey(emp.name)),
+    );
+  }
+  return employees.filter((emp) => emp.id !== evaluatee.id);
 }
 
 // ─── 9 Form Configs ───────────────────────────────────────────────────────────
@@ -73,59 +110,63 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
   ta: {
 
     self: {
+      note: "ต้าประเมินตัวเองในมิติ Strategic และ Management เป็นหลัก — ไม่มีหัวข้อ Technical",
       sections: [
         {
+          id: "job_performance", title: "Job Performance", weight: "20%",
           key: "job_performance", labelTh: "ผลการปฏิบัติงาน", color: "hsl(191 91% 37%)",
           questions: [
-            { id: "ta_self_j1", labelTh: "คุณภาพของ direction/concept ที่มอบให้ทีม", type: "rate", scoreKey: "quality" },
-            { id: "ta_self_j2", labelTh: "จำนวนโปรเจกต์ที่ปิดได้ในรอบ (ข้อมูลจากระบบ)", type: "auto", autoId: "projects_closed" },
-            { id: "ta_self_j3", labelTh: "ส่ง feedback/approval ให้ทีมทัน D-3 ถึง D-0", type: "rate", scoreKey: "punctuality" },
-            { id: "ta_self_j4", labelTh: "ความถูกต้องของงบประมาณที่ตัดสินใจและรับผิดชอบ", type: "rate", scoreKey: "accountability" },
+            { id: "ta_self_j1", labelTh: "ส่งมอบ feedback / approval ให้ทีมทันตามสัญญาณ D-3 ถึง D-0", type: "rate", scoreKey: "punctuality" },
+            { id: "ta_self_j2", labelTh: "จำนวนโปรเจกต์ที่ปิดได้ในรอบนี้ (ข้อมูลจากระบบ)", type: "auto", autoId: "projects_closed" },
+            { id: "ta_self_j3", labelTh: "ความถูกต้องของงบประมาณที่ตัดสินใจ (overrun / underrun)", type: "rate", scoreKey: "accountability" },
           ],
         },
         {
+          id: "competency", title: "Competency", weight: "20%",
           key: "competency", labelTh: "ความสามารถ / ทักษะ", color: "hsl(262 83% 58%)",
           questions: [
             { id: "ta_self_c1", labelTh: "การวิเคราะห์และตัดสินใจเชิงธุรกิจ", type: "rate", scoreKey: "problem_solving" },
-            { id: "ta_self_c2", labelTh: "การบริหารความเสี่ยงในโปรเจกต์", type: "rate", scoreKey: "technical" },
-            { id: "ta_self_c3", labelTh: "ความคิดสร้างสรรค์ในการพัฒนา creative direction", type: "rate", scoreKey: "creativity" },
-            { id: "ta_self_c4", labelTh: "การติดตามเทรนด์ (AI, creative economy, platform)", type: "rate", scoreKey: "learning" },
+            { id: "ta_self_c2", labelTh: "การบริหารความเสี่ยงในโปรเจกต์", type: "rate", scoreKey: "management" },
+            { id: "ta_self_c3", labelTh: "การติดตามเทรนด์ที่เกี่ยวข้องกับสตูดิโอ (AI, creative economy)", type: "rate", scoreKey: "learning" },
           ],
         },
         {
+          id: "teamwork", title: "Teamwork", weight: "20%",
           key: "teamwork", labelTh: "การทำงานเป็นทีม", color: "hsl(142 71% 45%)",
           questions: [
             { id: "ta_self_t1", labelTh: "ความชัดเจนของ brief ที่มอบให้ทีม", type: "rate", scoreKey: "communication" },
             { id: "ta_self_t2", labelTh: "การรับฟัง feedback จากทีมและ client", type: "rate", scoreKey: "openness" },
-            { id: "ta_self_t3", labelTh: "การสนับสนุนและช่วยเหลือทีม", type: "rate", scoreKey: "support" },
-            { id: "ta_self_t4", labelTh: "การสร้างบรรยากาศที่ทีมทำงานสบายใจ", type: "rate", scoreKey: "collaboration" },
+            { id: "ta_self_t3", labelTh: "การสร้างบรรยากาศที่ทีมทำงานสบายใจ", type: "rate", scoreKey: "collaboration" },
           ],
         },
         {
+          id: "leadership", title: "Leadership / Business", weight: "40%",
           key: "leadership", labelTh: "ภาวะผู้นำ / ธุรกิจ", color: "hsl(38 92% 50%)",
           questions: [
             { id: "ta_self_l1", labelTh: "ทิศทาง WatSUB! ชัดเจนและสื่อสารให้ทีมเข้าใจ", type: "rate", scoreKey: "strategic" },
             { id: "ta_self_l2", labelTh: "การสร้างและรักษาความสัมพันธ์กับ partner/client", type: "rate", scoreKey: "presentation" },
-            { id: "ta_self_l3", labelTh: "การตัดสินใจที่ชัดเจนเมื่อทีมต้องการทิศทาง", type: "rate", scoreKey: "decision_making" },
-            { id: "ta_self_l4", labelTh: "การพัฒนาระบบภายใน (PM, SOP, cashflow)", type: "rate", scoreKey: "management" },
-            { id: "ta_self_l5", labelTh: "เป้าหมายที่ต้องการพัฒนาในรอบถัดไป", type: "text" },
+            { id: "ta_self_l3", labelTh: "การพัฒนาระบบภายใน (PM, SOP, cashflow)", type: "rate", scoreKey: "management" },
+            { id: "ta_self_l4", labelTh: "เป้าหมายที่ต้องการพัฒนาในรอบถัดไป", type: "text" },
           ],
         },
       ],
     },
 
     peer: {
+      note: "Peer ของต้า = ฮาฟีซ + สุไมยนา ประเมินเฉพาะสิ่งที่เห็นในการทำงานร่วมกัน — ไม่ประเมิน strategic / financial",
       sections: [
         {
+          id: "teamwork", title: "Teamwork", weight: "หลัก",
           key: "teamwork", labelTh: "การทำงานร่วมกัน", color: "hsl(142 71% 45%)",
           questions: [
-            { id: "ta_peer_t1", labelTh: "ต้า brief งานชัดเจนและนำไปใช้ได้ทันที", type: "rate", scoreKey: "communication" },
+            { id: "ta_peer_t1", labelTh: "ต้า brief งานชัดเจนและเข้าใจได้", type: "rate", scoreKey: "communication" },
             { id: "ta_peer_t2", labelTh: "ต้าตอบสนองต่อคำถาม / ปัญหาของทีมได้ทันเวลา", type: "rate", scoreKey: "support" },
             { id: "ta_peer_t3", labelTh: "ต้า approve / reject งานพร้อม reason ที่ชัดเจน", type: "rate", scoreKey: "openness" },
             { id: "ta_peer_t4", labelTh: "ต้ารับฟังเมื่อทีมเสนอ idea หรือปัญหา", type: "rate", scoreKey: "collaboration" },
           ],
         },
         {
+          id: "leadership_peer", title: "Leadership (มุมมองทีม)", weight: "รอง",
           key: "leadership_peer", labelTh: "การนำทีม", color: "hsl(38 92% 50%)",
           questions: [
             { id: "ta_peer_l1", labelTh: "รู้สึกว่าต้ามีทิศทางที่ชัดเจนสำหรับสตูดิโอ", type: "rate", scoreKey: "strategic" },
@@ -133,21 +174,32 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
             { id: "ta_peer_l3", labelTh: "สิ่งที่อยากให้ต้าปรับปรุงหรือพัฒนา", type: "text" },
           ],
         },
+        {
+          key: "hidden_peer_only", labelTh: "ซ่อน", color: "transparent",
+          questions: [
+            { id: "ta_peer_h1", labelTh: "Job Performance (ปริมาณงาน, financial)", type: "hidden" },
+            { id: "ta_peer_h2", labelTh: "Competency (business analysis, risk)", type: "hidden" },
+          ],
+        },
       ],
     },
 
     supervisor: {
       uiLabel: "Self-Reflection",
+      note: "ต้าไม่มี supervisor — ส่วนนี้ใช้ Self-Reflection แบบลึก + ดู auto data จากระบบ",
       sections: [
         {
+          id: "auto_data", title: "Auto Data (read-only จากระบบ)", weight: "",
           key: "auto_data", labelTh: "ข้อมูลจากระบบ (อ้างอิง)", color: "hsl(215 14% 50%)",
           questions: [
             { id: "ta_sup_a1", labelTh: "จำนวนโปรเจกต์ที่ close ในรอบ", type: "auto", autoId: "projects_closed" },
+            { id: "ta_sup_a1_2", labelTh: "Revenue รวม vs เป้าหมาย Q", type: "auto", autoId: "revenue_vs_target_q" },
             { id: "ta_sup_a2", labelTh: "Task ที่ approve ภายใน D-1 (%)", type: "auto", autoId: "task_approve_d1" },
-            { id: "ta_sup_a3", labelTh: "งานที่ส่งตรงเวลา (%)", type: "auto", autoId: "tasks_ontime_pct" },
+            { id: "ta_sup_a3", labelTh: "Task ที่ approve ภายใน D-1 (% on-time)", type: "auto", autoId: "tasks_ontime_pct" },
           ],
         },
         {
+          id: "strategic_reflection", title: "Strategic Reflection", weight: "",
           key: "strategic_reflection", labelTh: "Strategic Self-Reflection", color: "hsl(38 92% 50%)",
           questions: [
             { id: "ta_sup_s1", labelTh: "เป้าหมาย Q ที่ตั้งไว้ vs ผลที่ทำได้จริงในรอบนี้", type: "text" },
@@ -165,8 +217,10 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
   hafeez: {
 
     self: {
+      note: "ฮาฟีซประเมินตัวเองในด้าน Production และ Creativity — ไม่มีหัวข้อ Client Management",
       sections: [
         {
+          id: "job_performance", title: "Job Performance", weight: "40%",
           key: "job_performance", labelTh: "ผลการปฏิบัติงาน", color: "hsl(191 91% 37%)",
           questions: [
             { id: "hf_self_j1", labelTh: "Task ที่ submit ก่อน D-0 (ข้อมูลจากระบบ)", type: "auto", autoId: "tasks_ontime_pct" },
@@ -176,6 +230,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "competency", title: "Competency", weight: "35%",
           key: "competency", labelTh: "ความสามารถ / ทักษะ", color: "hsl(262 83% 58%)",
           questions: [
             { id: "hf_self_c1", labelTh: "ทักษะการถ่ายทำ (exposure, framing, movement)", type: "rate", scoreKey: "technical" },
@@ -186,6 +241,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "teamwork", title: "Teamwork", weight: "15%",
           key: "teamwork", labelTh: "การทำงานเป็นทีม", color: "hsl(142 71% 45%)",
           questions: [
             { id: "hf_self_t1", labelTh: "การซัพพอร์ตทีมในกองถ่าย", type: "rate", scoreKey: "support" },
@@ -193,6 +249,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "creativity", title: "Creativity", weight: "10%",
           key: "creativity", labelTh: "Creativity & Initiative", color: "hsl(38 92% 50%)",
           questions: [
             { id: "hf_self_cr1", labelTh: "นำเสนอ shot / visual idea ใหม่นอกเหนือ brief", type: "rate", scoreKey: "collaboration" },
@@ -203,8 +260,10 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
     },
 
     peer: {
+      note: "Peer ของฮาฟีซ = ต้า + สุไมยนา — ประเมินสิ่งที่ทำงานด้วยกันโดยตรง",
       sections: [
         {
+          id: "teamwork_comm", title: "Teamwork & Communication", weight: "หลัก",
           key: "teamwork_comm", labelTh: "การสื่อสารและทีมเวิร์ค", color: "hsl(142 71% 45%)",
           questions: [
             { id: "hf_peer_t1", labelTh: "ฮาฟีซสื่อสารเมื่อมีปัญหาหรือต้องการความช่วยเหลือ", type: "rate", scoreKey: "communication" },
@@ -213,6 +272,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "job_peer", title: "Job Performance (มุมมอง peer)", weight: "รอง",
           key: "job_peer", labelTh: "ผลงาน", color: "hsl(191 91% 37%)",
           questions: [
             { id: "hf_peer_j1", labelTh: "งานของฮาฟีซตรงตามที่ brief ไว้", type: "rate", scoreKey: "quality" },
@@ -231,8 +291,10 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
     },
 
     supervisor: {
+      note: "ต้าประเมินฮาฟีซ — เห็นทุก section รวม auto data",
       sections: [
         {
+          id: "auto_data", title: "Auto Data (read-only จากระบบ)", weight: "",
           key: "auto_data", labelTh: "ข้อมูลจากระบบ (อ้างอิง)", color: "hsl(215 14% 50%)",
           questions: [
             { id: "hf_sup_a1", labelTh: "Task done ก่อน D-0 (%)", type: "auto", autoId: "tasks_ontime_pct" },
@@ -241,6 +303,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "job_performance", title: "Job Performance", weight: "40%",
           key: "job_performance", labelTh: "ผลการปฏิบัติงาน", color: "hsl(191 91% 37%)",
           questions: [
             { id: "hf_sup_j1", labelTh: "คุณภาพงานโดยรวมเทียบกับ brief", type: "rate", scoreKey: "quality" },
@@ -248,6 +311,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "competency", title: "Competency", weight: "35%",
           key: "competency", labelTh: "ความสามารถ / ทักษะ", color: "hsl(262 83% 58%)",
           questions: [
             { id: "hf_sup_c1", labelTh: "ระดับทักษะการถ่ายทำในรอบนี้", type: "rate", scoreKey: "technical" },
@@ -256,6 +320,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "creativity_growth", title: "Creativity & Growth", weight: "10%",
           key: "creativity_growth", labelTh: "Creativity & Growth", color: "hsl(38 92% 50%)",
           questions: [
             { id: "hf_sup_cr1", labelTh: "มี initiative ในงาน creative นอกเหนือ brief", type: "rate", scoreKey: "creativity" },
@@ -272,8 +337,10 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
   sumayna: {
 
     self: {
+      note: "สุไมยนาประเมินตัวเองในด้าน Content และ Client — ไม่มีหัวข้อ Technical Production",
       sections: [
         {
+          id: "job_performance", title: "Job Performance", weight: "35%",
           key: "job_performance", labelTh: "ผลการปฏิบัติงาน", color: "hsl(191 91% 37%)",
           questions: [
             { id: "sy_self_j1", labelTh: "Script / caption ที่ส่งตรง production timeline (%)", type: "auto", autoId: "scripts_ontime_pct" },
@@ -283,6 +350,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "competency", title: "Competency", weight: "30%",
           key: "competency", labelTh: "ความสามารถ / ทักษะ", color: "hsl(262 83% 58%)",
           questions: [
             { id: "sy_self_c1", labelTh: "คุณภาพการเขียน script / caption (tone, clarity)", type: "rate", scoreKey: "technical" },
@@ -293,6 +361,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "teamwork", title: "Teamwork", weight: "25%",
           key: "teamwork", labelTh: "การทำงานเป็นทีม", color: "hsl(142 71% 45%)",
           questions: [
             { id: "sy_self_t1", labelTh: "การส่งต่อ brief ให้ฮาฟีซครบและชัดเจน", type: "rate", scoreKey: "communication" },
@@ -301,6 +370,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "creativity", title: "Creativity", weight: "10%",
           key: "creativity", labelTh: "Creativity & Initiative", color: "hsl(38 92% 50%)",
           questions: [
             { id: "sy_self_cr1", labelTh: "นำเสนอ content angle หรือ format ใหม่ในรอบนี้", type: "rate", scoreKey: "openness" },
@@ -311,8 +381,10 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
     },
 
     peer: {
+      note: "Peer ของสุไมยนา = ต้า + ฮาฟีซ — ประเมินในมุมที่ทำงานร่วมกัน",
       sections: [
         {
+          id: "comm_coord", title: "Communication & Coordination", weight: "หลัก",
           key: "comm_coord", labelTh: "การประสานงานและสื่อสาร", color: "hsl(142 71% 45%)",
           questions: [
             { id: "sy_peer_c1", labelTh: "สุไมยนาส่ง brief ให้ทีมชัดเจนและครบก่อนเริ่มถ่าย", type: "rate", scoreKey: "communication" },
@@ -321,6 +393,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "teamwork_peer", title: "Teamwork (มุมมอง peer)", weight: "รอง",
           key: "teamwork_peer", labelTh: "ทีมเวิร์ค", color: "hsl(191 91% 37%)",
           questions: [
             { id: "sy_peer_t1", labelTh: "สุไมยนาช่วยทีมเมื่อมีปัญหาเฉพาะหน้า", type: "rate", scoreKey: "openness" },
@@ -340,8 +413,10 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
     },
 
     supervisor: {
+      note: "ต้าประเมินสุไมยนา — เห็นทุก section รวม auto data",
       sections: [
         {
+          id: "auto_data", title: "Auto Data (read-only จากระบบ)", weight: "",
           key: "auto_data", labelTh: "ข้อมูลจากระบบ (อ้างอิง)", color: "hsl(215 14% 50%)",
           questions: [
             { id: "sy_sup_a1", labelTh: "Script / caption ที่ on-time (%)", type: "auto", autoId: "scripts_ontime_pct" },
@@ -350,6 +425,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "job_performance", title: "Job Performance", weight: "35%",
           key: "job_performance", labelTh: "ผลการปฏิบัติงาน", color: "hsl(191 91% 37%)",
           questions: [
             { id: "sy_sup_j1", labelTh: "คุณภาพ brief ที่ส่งต่อให้ทีม", type: "rate", scoreKey: "quality" },
@@ -357,6 +433,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "competency", title: "Competency", weight: "30%",
           key: "competency", labelTh: "ความสามารถ / ทักษะ", color: "hsl(262 83% 58%)",
           questions: [
             { id: "sy_sup_c1", labelTh: "ระดับทักษะการเขียน script / caption", type: "rate", scoreKey: "technical" },
@@ -365,6 +442,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           ],
         },
         {
+          id: "teamwork_creativity", title: "Teamwork & Creativity", weight: "25% + 10%",
           key: "teamwork_creativity", labelTh: "ทีมเวิร์คและ Initiative", color: "hsl(38 92% 50%)",
           questions: [
             { id: "sy_sup_tc1", labelTh: "ทำหน้าที่ coordinator ได้ smooth", type: "rate", scoreKey: "collaboration" },
