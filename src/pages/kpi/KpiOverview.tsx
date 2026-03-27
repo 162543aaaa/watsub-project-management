@@ -1,10 +1,14 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { TrendingUp, CheckCircle2, Clock, ChevronRight, ClipboardList, Users } from "lucide-react";
+import {
+  TrendingUp, CheckCircle2, Clock, ChevronRight,
+  Pencil, Trash2, AlertTriangle,
+} from "lucide-react";
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 function getAvatarUrl(path: string | undefined) {
@@ -13,11 +17,10 @@ function getAvatarUrl(path: string | undefined) {
   return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
 }
 
-function Avatar({ emp, size = 8 }: { emp: Employee; size?: number }) {
+function Avatar({ emp }: { emp: Employee }) {
   const url = getAvatarUrl(emp.avatar);
-  const cls = `w-${size} h-${size} rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center`;
   return (
-    <div className={cls}>
+    <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
       {url
         ? <img src={url} alt={emp.name} className="w-full h-full object-cover" />
         : <span className="text-xs font-bold text-primary">{emp.name.charAt(0)}</span>
@@ -28,69 +31,70 @@ function Avatar({ emp, size = 8 }: { emp: Employee; size?: number }) {
 
 export default function KpiOverview() {
   const { periods, loading: periodsLoading } = useKpiPeriods();
-  const { evaluations } = useKpiEvaluations();
+  const { evaluations, refetch } = useKpiEvaluations();
   const { employees } = useEmployees();
   const { isAdmin, user } = useAuthContext();
 
-  // Resolve current user's employee record
   const [meEmp, setMeEmp] = useState<Employee | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ evalId: string; name: string } | null>(null);
+
   useEffect(() => {
     if (!user || employees.length === 0) return;
     supabase.from("employees").select("*").eq("email", user.email ?? "").maybeSingle()
       .then(({ data }) => {
         if (data) { setMeEmp(data as Employee); return; }
-        const displayName = (user.user_metadata?.display_name ?? "").toLowerCase();
-        const matched = employees.find(e => e.name.toLowerCase() === displayName);
-        if (matched) setMeEmp(matched);
+        const dn = (user.user_metadata?.display_name ?? "").toLowerCase();
+        const match = employees.find(e => e.name.toLowerCase() === dn);
+        if (match) setMeEmp(match);
       });
   }, [user, employees]);
 
   const openPeriods = useMemo(() => periods.filter(p => p.status === "open"), [periods]);
 
-  // "ต้องประเมิน" — tasks pending for current user across all open periods
-  const myPendingTasks = useMemo(() => {
-    if (!meEmp) return [];
-    const tasks: { period: typeof openPeriods[number]; evaluatee: Employee; done: boolean }[] = [];
-    for (const period of openPeriods) {
-      const periodEvals = evaluations.filter(e => e.period_id === period.id);
-      // Everyone to evaluate: self + all peers; supervisor evaluates everyone
-      const targets = employees; // simplified: show all
-      for (const emp of targets) {
-        const evalType =
-          emp.id === meEmp.id ? "self"
-          : meEmp.role?.toLowerCase().includes("director") ? "supervisor"
-          : "peer";
-        const done = periodEvals.some(
-          e => e.evaluator_id === meEmp.id && e.evaluatee_id === emp.id && e.submitted_at
-        );
-        tasks.push({ period, evaluatee: emp, done });
-      }
-    }
-    return tasks;
-  }, [meEmp, openPeriods, evaluations, employees]);
-
-  const pendingCount = myPendingTasks.filter(t => !t.done).length;
-
-  // Team status per open period
-  const periodSubmissions = useMemo(() => {
+  // Per-period: merged view of team status + my submission
+  const periodData = useMemo(() => {
     return openPeriods.map(period => {
-      const periodEvals = evaluations.filter(e => e.period_id === period.id);
-      const total = employees.length * 2; // self + supervisor per person (simplified)
-      const submitted = periodEvals.filter(e => e.submitted_at).length;
-      return {
-        period,
-        submitted,
-        memberStatus: employees.map(emp => {
-          const selfDone = periodEvals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === "self" && e.submitted_at);
-          const peersDone = employees.filter(p => p.id !== emp.id)
-            .filter(peer => periodEvals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && e.type === "peer" && e.submitted_at)).length;
-          const peersTotal = employees.length - 1;
-          const supervisorDone = periodEvals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
-          return { emp, selfDone, peersDone, peersTotal, supervisorDone };
-        }),
-      };
+      const pEvals = evaluations.filter(e => e.period_id === period.id);
+      const rows = employees.map(emp => {
+        // Team status badges
+        const selfDone   = pEvals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === "self" && e.submitted_at);
+        const peersDone  = employees.filter(p => p.id !== emp.id)
+          .filter(peer => pEvals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && e.type === "peer" && e.submitted_at)).length;
+        const supDone    = pEvals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
+
+        // My eval for this evaluatee
+        const myEval = meEmp
+          ? pEvals.find(e => e.evaluator_id === meEmp.id && e.evaluatee_id === emp.id)
+          : null;
+        const myEvalType =
+          !meEmp ? null
+          : emp.id === meEmp.id ? "ตนเอง"
+          : meEmp.role?.toLowerCase().includes("director") ? "หัวหน้า"
+          : "เพื่อน";
+
+        return {
+          emp, selfDone, peersDone, peersTotal: employees.length - 1, supDone,
+          myEval, myEvalType,
+        };
+      });
+      const totalSubmitted = pEvals.filter(e => e.submitted_at).length;
+      return { period, rows, totalSubmitted };
     });
-  }, [openPeriods, evaluations, employees]);
+  }, [openPeriods, evaluations, employees, meEmp]);
+
+  const handleDelete = async (evalId: string) => {
+    setDeletingId(evalId);
+    const { error } = await supabase.from("kpi_evaluations").delete().eq("id", evalId);
+    setDeletingId(null);
+    setConfirmDelete(null);
+    if (error) {
+      toast({ title: "ลบไม่สำเร็จ", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "ลบการประเมินแล้ว" });
+      refetch();
+    }
+  };
 
   if (periodsLoading) {
     return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -116,6 +120,38 @@ export default function KpiOverview() {
         )}
       </div>
 
+      {/* Confirm delete dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-xl max-w-sm w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "hsl(0 84% 60% / 0.12)" }}>
+                <AlertTriangle className="w-5 h-5" style={{ color: "hsl(0 84% 60%)" }} />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">ยืนยันการลบ</p>
+                <p className="text-xs text-muted-foreground">การประเมิน: {confirmDelete.name}</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-5">การลบจะไม่สามารถย้อนกลับได้ คะแนนนี้จะถูกลบออกจากระบบถาวร</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleDelete(confirmDelete.evalId)}
+                disabled={!!deletingId}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-60"
+                style={{ background: "hsl(0 84% 60%)" }}>
+                {deletingId ? "กำลังลบ..." : "ลบ"}
+              </button>
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-2 rounded-lg text-sm font-medium border border-border/60 hover:bg-muted/50 transition-colors">
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {openPeriods.length === 0 ? (
         <div className="bg-card border border-border/60 rounded-2xl p-12 text-center">
           <TrendingUp className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
@@ -128,99 +164,78 @@ export default function KpiOverview() {
         </div>
       ) : (
         <div className="space-y-6">
-
-          {/* ── ต้องประเมิน (My Tasks) ── */}
-          {meEmp && (
-            <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-border/40 flex items-center gap-3" style={{ background: "hsl(191 91% 37% / 0.06)" }}>
-                <ClipboardList className="w-4 h-4 text-primary" />
-                <div className="flex-1">
-                  <h2 className="font-semibold text-base">งานที่ต้องประเมิน</h2>
-                  <p className="text-xs text-muted-foreground">ในฐานะ: {meEmp.name}</p>
-                </div>
-                {pendingCount > 0 && (
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                    style={{ background: "hsl(0 84% 60% / 0.12)", color: "hsl(0 84% 50%)" }}>
-                    รอดำเนินการ {pendingCount}
-                  </span>
-                )}
-              </div>
-              <div className="divide-y divide-border/30">
-                {myPendingTasks.map(({ period, evaluatee, done }) => {
-                  const evalType =
-                    evaluatee.id === meEmp.id ? "ตนเอง"
-                    : meEmp.role?.toLowerCase().includes("director") ? "หัวหน้า"
-                    : "เพื่อน";
-                  return (
-                    <div key={`${period.id}-${evaluatee.id}`}
-                      className="px-5 py-3 flex items-center gap-3">
-                      <Avatar emp={evaluatee} size={8} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{evaluatee.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{evaluatee.position} · {period.label}</p>
-                      </div>
-                      <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                        style={{ background: "hsl(215 14% 60% / 0.12)", color: "hsl(215 14% 45%)" }}>
-                        {evalType}
-                      </span>
-                      {done ? (
-                        <span className="flex items-center gap-1 text-xs font-medium flex-shrink-0"
-                          style={{ color: "hsl(142 71% 40%)" }}>
-                          <CheckCircle2 className="w-4 h-4" /> ส่งแล้ว
-                        </span>
-                      ) : (
-                        <Link to={`/kpi/evaluate/${evaluatee.id}/${period.id}`}>
-                          <button className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 transition-all duration-200 hover:scale-105 active:scale-95"
-                            style={{ background: "hsl(191 91% 37% / 0.12)", color: "hsl(191 91% 40%)" }}>
-                            เริ่มประเมิน <ChevronRight className="w-3.5 h-3.5" />
-                          </button>
-                        </Link>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ── สถานะการประเมินของทีม ── */}
-          {periodSubmissions.map(({ period, submitted, memberStatus }) => (
+          {periodData.map(({ period, rows, totalSubmitted }) => (
             <div key={period.id} className="bg-card border border-border/60 rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-border/40 flex items-center gap-3" style={{ background: "hsl(222 47% 11% / 0.04)" }}>
-                <Users className="w-4 h-4 text-muted-foreground" />
-                <div className="flex-1">
+              {/* Period header */}
+              <div className="px-5 py-4 border-b border-border/40 flex items-center justify-between gap-3"
+                style={{ background: "hsl(191 91% 37% / 0.04)" }}>
+                <div>
                   <h2 className="font-semibold text-base">{period.label}</h2>
                   <p className="text-xs text-muted-foreground">
-                    {period.type === "project" ? "ประเมินโปรเจกต์" : "ประเมินรายไตรมาส"} · ส่งแล้ว {submitted} รายการ
+                    {period.type === "project" ? "ประเมินโปรเจกต์" : "ประเมินรายไตรมาส"}
+                    {" · "}ส่งแล้ว {totalSubmitted} รายการ
                   </p>
                 </div>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full"
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0"
                   style={{ background: "hsl(142 71% 45% / 0.12)", color: "hsl(142 71% 35%)" }}>
                   เปิดอยู่
                 </span>
               </div>
 
+              {/* Member rows */}
               <div className="divide-y divide-border/30">
-                {memberStatus.map(({ emp, selfDone, peersDone, peersTotal, supervisorDone }) => (
+                {rows.map(({ emp, selfDone, peersDone, peersTotal, supDone, myEval, myEvalType }) => (
                   <div key={emp.id} className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Avatar emp={emp} size={8} />
+                    {/* Member info */}
+                    <div className="flex items-center gap-3 w-48 flex-shrink-0 min-w-0">
+                      <Avatar emp={emp} />
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{emp.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{emp.position}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+
+                    {/* Team status badges */}
+                    <div className="flex items-center gap-1.5 flex-wrap flex-1">
                       <StatusBadge done={selfDone} label="ตนเอง" />
                       <StatusBadge done={peersDone === peersTotal && peersTotal > 0} label={`เพื่อน ${peersDone}/${peersTotal}`} />
-                      <StatusBadge done={supervisorDone} label="หัวหน้า" />
+                      <StatusBadge done={supDone} label="หัวหน้า" />
                     </div>
-                    <Link to={`/kpi/evaluate/${emp.id}/${period.id}`}>
-                      <button className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0"
-                        style={{ background: "hsl(191 91% 37% / 0.10)", color: "hsl(191 91% 40%)" }}>
-                        ประเมิน <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </Link>
+
+                    {/* My action: submit / edit / delete */}
+                    {myEvalType && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-muted-foreground hidden sm:block">{myEvalType}:</span>
+                        {myEval?.submitted_at ? (
+                          <>
+                            <span className="flex items-center gap-1 text-xs font-medium"
+                              style={{ color: "hsl(142 71% 40%)" }}>
+                              <CheckCircle2 className="w-3.5 h-3.5" /> ส่งแล้ว
+                            </span>
+                            <Link to={`/kpi/evaluate/${emp.id}/${period.id}`}>
+                              <button className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors"
+                                title="แก้ไขการประเมิน">
+                                <Pencil className="w-3 h-3" /> แก้ไข
+                              </button>
+                            </Link>
+                            <button
+                              onClick={() => setConfirmDelete({ evalId: myEval.id, name: emp.name })}
+                              className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
+                              style={{ borderColor: "hsl(0 84% 60% / 0.3)", color: "hsl(0 84% 55%)" }}
+                              title="ลบการประเมิน">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </>
+                        ) : (
+                          <Link to={`/kpi/evaluate/${emp.id}/${period.id}`}>
+                            <button className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+                              style={{ background: "hsl(191 91% 37% / 0.12)", color: "hsl(191 91% 40%)" }}>
+                              เริ่มประเมิน <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </Link>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
