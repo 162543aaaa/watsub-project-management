@@ -18,11 +18,11 @@ const navItems = [
   { label: "On-site Work", icon: MapPin, path: "/onsite-work" },
   { label: "Leave", icon: Plane, path: "/leave" },
   { label: "Budget", icon: Wallet, path: "/budget" },
+  { label: "KPI", icon: TrendingUp, path: "/kpi/overview" },
   { label: "Reports", icon: BarChart3, path: "/reports" },
   { label: "Notifications", icon: Bell, path: "/notifications" },
   { label: "Import", icon: Upload, path: "/import" },
   { label: "Export", icon: Download, path: "/export" },
-  { label: "KPI", icon: TrendingUp, path: "/kpi/overview" },
 ];
 
 export default function AppSidebar() {
