@@ -5,6 +5,13 @@ import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+function getAvatarUrl(path: string | undefined) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
+}
+
 export default function KpiOverview() {
   const { periods, loading: periodsLoading } = useKpiPeriods();
   const { evaluations } = useKpiEvaluations();
@@ -97,8 +104,8 @@ export default function KpiOverview() {
                     {/* Member info */}
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
-                        {emp.avatar
-                          ? <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+                        {getAvatarUrl(emp.avatar)
+                          ? <img src={getAvatarUrl(emp.avatar)!} alt={emp.name} className="w-full h-full object-cover" />
                           : <span className="text-xs font-bold text-primary">{emp.name.charAt(0)}</span>
                         }
                       </div>
