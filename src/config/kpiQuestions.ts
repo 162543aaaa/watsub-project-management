@@ -81,14 +81,6 @@ export function getEligiblePeerReviewers<T extends { id: string; name: string }>
   if (!allowed.length) return employees.filter((emp) => emp.id !== evaluatee.id);
   return employees.filter((emp) => emp.id !== evaluatee.id && allowed.includes(resolveRoleKey(emp.name)));
 }
-
-const q = (id: string, question: string, type: QuestionType, extra: Partial<KPIQuestion> = {}): KPIQuestion => ({
-  id,
-  question,
-  type,
-  ...extra,
-});
-
 const sec = (id: string, title: string, color: string, weight: string, questions: KPIQuestion[]): KPISection => ({
   id,
   title,
@@ -96,7 +88,6 @@ const sec = (id: string, title: string, color: string, weight: string, questions
   weight,
   questions,
 });
-
 
   ]),
 ];
@@ -107,8 +98,6 @@ const TA_PEER: KPISection[] = [
     q("ta_peer_t2", "ต้าตอบสนองต่อคำถาม/ปัญหาได้ทันเวลา", "rate", { scoreKey: "support" }),
     q("ta_peer_t3", "ต้า approve/reject งานพร้อม reason ชัดเจน", "rate", { scoreKey: "openness" }),
     q("ta_peer_t4", "ต้ารับฟังเมื่อทีมเสนอ idea หรือปัญหา", "rate", { scoreKey: "collaboration" }),
-  ]),
-<
     q("hf_self_j3", "ความพิถีพิถันในการจัดไฟล์ตาม naming convention", "rate", { scoreKey: "quality" }),
     q("hf_self_j4", "การดูแลอุปกรณ์กล้องและ hard drive", "rate", { scoreKey: "accountability" }),
   ]),
@@ -124,29 +113,21 @@ const TA_PEER: KPISection[] = [
     q("hf_self_t2", "การสื่อสารเมื่อมีปัญหาหรือ delay", "rate", { scoreKey: "communication" }),
   ]),
   sec("creativity", "Creativity", C.lead, "10%", [
-
   ]),
 ];
 
 const HF_PEER: KPISection[] = [
-หาหรือต้องการความช่วยเหลือ", "rate", { scoreKey: "communication" }),
-    q("hf_peer_t2", "ฮาฟีซพร้อมซัพพอร์ตเมื่อมีงานด่วน", "rate", { scoreKey: "support" }),
-    q("hf_peer_t3", "ฮาฟีซรับ feedback และนำไปปรับงานได้", "rate", { scoreKey: "openness" }),
-  ]),
-
     q("hf_peer_j1", "งานของฮาฟีซตรงตามที่ brief ไว้", "rate", { scoreKey: "quality" }),
     q("hf_peer_j2", "ฮาฟีซส่งงานตรงเวลาที่ตกลงกัน", "rate", { scoreKey: "punctuality" }),
     q("hf_peer_j3", "สิ่งที่ฮาฟีซทำได้ดีมากในรอบนี้", "text"),
     q("hf_peer_j4", "สิ่งที่อยากให้ฮาฟีซพัฒนาเพิ่ม", "text"),
   ]),
-
     q("hf_peer_h1", "Competency technical", "hidden"),
     q("hf_peer_h2", "Creativity score", "hidden"),
   ]),
 ];
 
 const HF_SUP: KPISection[] = [
-<
     q("hf_sup_a1", "Task done ก่อน D-0 (%)", "auto", { autoId: "tasks_ontime_pct" }),
     q("hf_sup_a2", "Revision count เฉลี่ยต่อ task", "auto", { autoId: "revision_avg" }),
     q("hf_sup_a3", "จำนวน task รับผิดชอบในรอบ", "auto", { autoId: "tasks_done_count" }),
@@ -155,47 +136,39 @@ const HF_SUP: KPISection[] = [
     q("hf_sup_j1", "คุณภาพงานโดยรวมเทียบกับ brief", "rate", { scoreKey: "quality" }),
     q("hf_sup_j2", "ความรับผิดชอบต่ออุปกรณ์และไฟล์งาน", "rate", { scoreKey: "accountability" }),
   ]),
-
 ];
 
 const SY_SELF: KPISection[] = [
   sec("job_performance", "Job Performance", C.job, "35%", [
-
   ]),
 ];
 
 const SY_PEER: KPISection[] = [
-
     q("sy_peer_c1", "สุไมยนาส่ง brief ให้ทีมชัดเจนและครบก่อนเริ่มถ่าย", "rate", { scoreKey: "communication" }),
     q("sy_peer_c2", "สุไมยนาแจ้ง change จาก client ได้ทันเวลา", "rate", { scoreKey: "support" }),
     q("sy_peer_c3", "สุไมยนาเป็น buffer ที่ดีระหว่าง client กับทีม", "rate", { scoreKey: "collaboration" }),
   ]),
-
     q("sy_peer_t1", "สุไมยนาช่วยทีมเมื่อมีปัญหาเฉพาะหน้า", "rate", { scoreKey: "openness" }),
     q("sy_peer_t2", "สุไมยนารับ feedback และนำไปปรับได้", "rate", { scoreKey: "quality" }),
     q("sy_peer_t3", "สิ่งที่สุไมยนาทำได้ดีมากในรอบนี้", "text"),
     q("sy_peer_t4", "สิ่งที่อยากให้สุไมยนาพัฒนาเพิ่ม", "text"),
   ]),
-
     q("sy_peer_h1", "Competency การเขียน", "hidden"),
     q("sy_peer_h2", "Creativity score", "hidden"),
   ]),
 ];
 
 const SY_SUP: KPISection[] = [
-
     q("sy_sup_a3", "จำนวน client ที่ดูแลในรอบ", "auto", { autoId: "client_count" }),
   ]),
   sec("job_performance", "Job Performance", C.job, "35%", [
     q("sy_sup_j1", "คุณภาพ brief ที่ส่งต่อให้ทีม", "rate", { scoreKey: "quality" }),
     q("sy_sup_j2", "การจัดการ client relationship โดยรวม", "rate", { scoreKey: "accountability" }),
   ]),
-
 };
 
 export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>> = {
   ta: {
-
   },
   default: DEFAULT_CONFIG,
 };

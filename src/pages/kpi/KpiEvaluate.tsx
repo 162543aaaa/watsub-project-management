@@ -67,7 +67,6 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 }
 
-
 }
 
 const SCORE_LABELS = ["", "ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"];
@@ -284,7 +283,6 @@ export default function KpiEvaluate() {
       evaluator_id: evaluator.id,
       evaluatee_id: evaluateeId!,
       type: evalType,
-
       notes_strength: null,
       notes_improve: null,
       submitted_at: new Date().toISOString(),
