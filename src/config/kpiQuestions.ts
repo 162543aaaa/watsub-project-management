@@ -53,6 +53,7 @@ export const ROLE_WEIGHTS: Record<RoleKey, Record<string, number>> = Object.from
 
 export const REVIEWER_WEIGHTS = { auto: 0.3, self: 0.1, peer: 0.2, supervisor: 0.4 };
 
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
 const ROLE_ALIASES: Record<RoleKey, string[]> = {
   ta: ["tarmisi", "ต้า"],
   hafeez: ["hafeez", "ฮาฟีซ"],
@@ -66,6 +67,14 @@ export function resolveRoleKey(name?: string | null): RoleKey {
   for (const role of ["ta", "hafeez", "sumayna"] as const) {
     if (ROLE_ALIASES[role].some((alias) => n.includes(alias))) return role;
   }
+=======
+export function resolveRoleKey(name?: string | null): RoleKey {
+  const n = (name ?? "").trim().toLowerCase();
+  if (!n) return "default";
+  if (n.includes("tarmisi") || n.includes("ต้า")) return "ta";
+  if (n.includes("hafeez") || n.includes("ฮาฟีซ")) return "hafeez";
+  if (n.includes("sumayna") || n.includes("สุไมยนา")) return "sumayna";
+ main
   return "default";
 }
 
@@ -88,6 +97,7 @@ export function getEligiblePeerReviewers<T extends { id: string; name: string }>
   if (!allowed.length) return employees.filter((emp) => emp.id !== evaluatee.id);
   return employees.filter((emp) => emp.id !== evaluatee.id && allowed.includes(resolveRoleKey(emp.name)));
 }
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
 
 export function canSeePeerIdentity(viewer: { role?: string | null }): boolean {
   if (viewer.role?.toLowerCase().includes("admin")) return true;
@@ -140,6 +150,16 @@ const TA_SELF: KPISection[] = [
     q("ta_self_l2", "การสร้างและรักษาความสัมพันธ์กับ partner/client", "rate", { scoreKey: "presentation" }),
     q("ta_self_l3", "การพัฒนาระบบภายใน (PM, SOP, cashflow)", "rate", { scoreKey: "management" }),
     q("ta_self_l4", "เป้าหมายที่ต้องการพัฒนาในรอบถัดไป", "text"),
+=======
+const sec = (id: string, title: string, color: string, weight: string, questions: KPIQuestion[]): KPISection => ({
+  id,
+  title,
+  color,
+  weight,
+  questions,
+});
+
+ main
   ]),
 ];
 
@@ -149,6 +169,7 @@ const TA_PEER: KPISection[] = [
     q("ta_peer_t2", "ต้าตอบสนองต่อคำถาม/ปัญหาได้ทันเวลา", "rate", { scoreKey: "support" }),
     q("ta_peer_t3", "ต้า approve/reject งานพร้อม reason ชัดเจน", "rate", { scoreKey: "openness" }),
     q("ta_peer_t4", "ต้ารับฟังเมื่อทีมเสนอ idea หรือปัญหา", "rate", { scoreKey: "collaboration" }),
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   ]),
   sec("leadership", "Leadership", C.lead, "รอง", [
     q("ta_peer_l1", "ทิศทางสตูดิโอชัด", "rate", { scoreKey: "strategic" }),
@@ -175,6 +196,8 @@ const HF_SELF: KPISection[] = [
   sec("job_performance", "Job Performance", C.job, "40%", [
     q("hf_self_j1", "Task ที่ submit ก่อน D-0", "auto", { autoId: "tasks_ontime_pct" }),
     q("hf_self_j2", "จำนวน revision หลัง waiting-approval", "auto", { autoId: "revision_avg" }),
+=======
+ main
     q("hf_self_j3", "ความพิถีพิถันในการจัดไฟล์ตาม naming convention", "rate", { scoreKey: "quality" }),
     q("hf_self_j4", "การดูแลอุปกรณ์กล้องและ hard drive", "rate", { scoreKey: "accountability" }),
   ]),
@@ -190,31 +213,43 @@ const HF_SELF: KPISection[] = [
     q("hf_self_t2", "การสื่อสารเมื่อมีปัญหาหรือ delay", "rate", { scoreKey: "communication" }),
   ]),
   sec("creativity", "Creativity", C.lead, "10%", [
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
     q("hf_self_cr1", "นำเสนอ shot/visual idea ใหม่นอกเหนือ brief", "rate", { scoreKey: "collaboration" }),
     q("hf_self_cr2", "ผลงานชิ้นที่ภูมิใจสุดในรอบนี้ (ลิงก์หรืออธิบาย)", "text"),
+=======
+ main
   ]),
 ];
 
 const HF_PEER: KPISection[] = [
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("teamwork", "Teamwork", C.team, "หลัก", [
     q("hf_peer_t1", "ฮาฟีซสื่อสารเมื่อมีปัญหาหรือต้องการความช่วยเหลือ", "rate", { scoreKey: "communication" }),
     q("hf_peer_t2", "ฮาฟีซพร้อมซัพพอร์ตเมื่อมีงานด่วน", "rate", { scoreKey: "support" }),
     q("hf_peer_t3", "ฮาฟีซรับ feedback และนำไปปรับงานได้", "rate", { scoreKey: "openness" }),
   ]),
   sec("job_peer", "Job (peer view)", C.job, "รอง", [
+=======
+ main
     q("hf_peer_j1", "งานของฮาฟีซตรงตามที่ brief ไว้", "rate", { scoreKey: "quality" }),
     q("hf_peer_j2", "ฮาฟีซส่งงานตรงเวลาที่ตกลงกัน", "rate", { scoreKey: "punctuality" }),
     q("hf_peer_j3", "สิ่งที่ฮาฟีซทำได้ดีมากในรอบนี้", "text"),
     q("hf_peer_j4", "สิ่งที่อยากให้ฮาฟีซพัฒนาเพิ่ม", "text"),
   ]),
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("hidden", "Hidden", "transparent", "hidden", [
+=======
+ main
     q("hf_peer_h1", "Competency technical", "hidden"),
     q("hf_peer_h2", "Creativity score", "hidden"),
   ]),
 ];
 
 const HF_SUP: KPISection[] = [
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("auto_data", "Auto Data", C.auto, "Read-only", [
+=======
+ main
     q("hf_sup_a1", "Task done ก่อน D-0 (%)", "auto", { autoId: "tasks_ontime_pct" }),
     q("hf_sup_a2", "Revision count เฉลี่ยต่อ task", "auto", { autoId: "revision_avg" }),
     q("hf_sup_a3", "จำนวน task รับผิดชอบในรอบ", "auto", { autoId: "tasks_done_count" }),
@@ -223,6 +258,7 @@ const HF_SUP: KPISection[] = [
     q("hf_sup_j1", "คุณภาพงานโดยรวมเทียบกับ brief", "rate", { scoreKey: "quality" }),
     q("hf_sup_j2", "ความรับผิดชอบต่ออุปกรณ์และไฟล์งาน", "rate", { scoreKey: "accountability" }),
   ]),
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("competency", "Competency", C.comp, "35%", [
     q("hf_sup_c1", "ระดับทักษะการถ่ายทำในรอบนี้", "rate", { scoreKey: "technical" }),
     q("hf_sup_c2", "ระดับทักษะการตัดต่อ/graphic", "rate", { scoreKey: "problem_solving" }),
@@ -232,10 +268,13 @@ const HF_SUP: KPISection[] = [
     q("hf_sup_cr1", "มี initiative ในงาน creative", "rate", { scoreKey: "creativity" }),
     q("hf_sup_cr2", "เป้าหมายที่ต้องการเห็นในรอบถัดไป", "text"),
   ]),
+=======
+ main
 ];
 
 const SY_SELF: KPISection[] = [
   sec("job_performance", "Job Performance", C.job, "35%", [
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
     q("sy_self_j1", "Script/caption ที่ส่งตรงเวลาตาม production timeline", "auto", { autoId: "scripts_ontime_pct" }),
     q("sy_self_j2", "จำนวน revision ที่ client ขอหลัง submit", "auto", { autoId: "revision_avg" }),
     q("sy_self_j3", "ความครบถ้วนของ client brief ที่รับมาและสรุปให้ทีม", "rate", { scoreKey: "quality" }),
@@ -256,37 +295,52 @@ const SY_SELF: KPISection[] = [
   sec("creativity", "Creativity", C.lead, "10%", [
     q("sy_self_cr1", "นำเสนอ content angle หรือ format ใหม่ในรอบนี้", "rate", { scoreKey: "openness" }),
     q("sy_self_cr2", "content ชิ้นที่ภูมิใจสุด (ลิงก์หรืออธิบาย)", "text"),
+=======
+ main
   ]),
 ];
 
 const SY_PEER: KPISection[] = [
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("coordination", "Coordination", C.team, "หลัก", [
+=======
+ main
     q("sy_peer_c1", "สุไมยนาส่ง brief ให้ทีมชัดเจนและครบก่อนเริ่มถ่าย", "rate", { scoreKey: "communication" }),
     q("sy_peer_c2", "สุไมยนาแจ้ง change จาก client ได้ทันเวลา", "rate", { scoreKey: "support" }),
     q("sy_peer_c3", "สุไมยนาเป็น buffer ที่ดีระหว่าง client กับทีม", "rate", { scoreKey: "collaboration" }),
   ]),
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("teamwork", "Teamwork", C.job, "รอง", [
+=======
+ main
     q("sy_peer_t1", "สุไมยนาช่วยทีมเมื่อมีปัญหาเฉพาะหน้า", "rate", { scoreKey: "openness" }),
     q("sy_peer_t2", "สุไมยนารับ feedback และนำไปปรับได้", "rate", { scoreKey: "quality" }),
     q("sy_peer_t3", "สิ่งที่สุไมยนาทำได้ดีมากในรอบนี้", "text"),
     q("sy_peer_t4", "สิ่งที่อยากให้สุไมยนาพัฒนาเพิ่ม", "text"),
   ]),
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("hidden", "Hidden", "transparent", "hidden", [
+=======
+ main
     q("sy_peer_h1", "Competency การเขียน", "hidden"),
     q("sy_peer_h2", "Creativity score", "hidden"),
   ]),
 ];
 
 const SY_SUP: KPISection[] = [
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("auto_data", "Auto Data", C.auto, "Read-only", [
     q("sy_sup_a1", "Script/caption ที่ on-time (%)", "auto", { autoId: "scripts_ontime_pct" }),
     q("sy_sup_a2", "Revision จาก client เฉลี่ย", "auto", { autoId: "revision_avg" }),
+=======
+ main
     q("sy_sup_a3", "จำนวน client ที่ดูแลในรอบ", "auto", { autoId: "client_count" }),
   ]),
   sec("job_performance", "Job Performance", C.job, "35%", [
     q("sy_sup_j1", "คุณภาพ brief ที่ส่งต่อให้ทีม", "rate", { scoreKey: "quality" }),
     q("sy_sup_j2", "การจัดการ client relationship โดยรวม", "rate", { scoreKey: "accountability" }),
   ]),
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
   sec("competency", "Competency", C.comp, "30%", [
     q("sy_sup_c1", "ระดับทักษะการเขียน script/caption", "rate", { scoreKey: "technical" }),
     q("sy_sup_c2", "ความเข้าใจ brand และ target audience ของ client", "rate", { scoreKey: "problem_solving" }),
@@ -324,10 +378,13 @@ const DEFAULT_CONFIG: Record<ReviewerType, KPIFormConfig> = {
       ]),
     ],
   },
+=======
+ main
 };
 
 export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>> = {
   ta: {
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
     self: { note: "Director self evaluation", sections: TA_SELF },
     peer: { note: "ฮาฟีซ + สุไมยนา ประเมินแบบ peer", sections: TA_PEER },
     supervisor: { note: "ใช้ key supervisor แต่แสดงเป็น Self-Reflection", uiLabel: "Self-Reflection", sections: TA_SUP },
@@ -341,6 +398,8 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
     self: { note: "Strategy self evaluation", sections: SY_SELF },
     peer: { note: "ต้า + ฮาฟีซ ประเมินสุไมยนา", sections: SY_PEER },
     supervisor: { note: "Supervisor review ของสุไมยนา", sections: SY_SUP },
+=======
+ main
   },
   default: DEFAULT_CONFIG,
 };
