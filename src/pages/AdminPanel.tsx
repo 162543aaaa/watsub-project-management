@@ -17,6 +17,7 @@ const ALL_PAGES = [
   { path: "/team", label: "Team" },
   { path: "/leave", label: "Leave" },
   { path: "/budget", label: "Budget" },
+  { path: "/kpi/overview", label: "KPI" },
   { path: "/reports", label: "Reports" },
   { path: "/notifications", label: "Notifications" },
   { path: "/import", label: "Import" },
