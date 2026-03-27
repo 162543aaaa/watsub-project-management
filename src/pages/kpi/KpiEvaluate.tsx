@@ -218,13 +218,13 @@ export default function KpiEvaluate() {
     return "peer";
   }, [evaluator, evaluatee]);
 
-  // Get the form config
-  const roleKey: RoleKey | null = useMemo(
-    () => evaluatee ? resolveRoleKey(evaluatee.name) : null,
+  // Get the form config — resolveRoleKey always returns a value ("default" as fallback)
+  const roleKey = useMemo(
+    () => evaluatee ? resolveRoleKey(evaluatee.name) : "default" as RoleKey,
     [evaluatee],
   );
   const formConfig = useMemo(
-    () => roleKey ? KPI_QUESTIONS[roleKey][evalType] : null,
+    () => KPI_QUESTIONS[roleKey][evalType],
     [roleKey, evalType],
   );
 
@@ -306,22 +306,6 @@ export default function KpiEvaluate() {
   if (!evaluatee || !period) return (
     <div className="p-6 flex items-center justify-center h-64">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-    </div>
-  );
-
-  // ── No form config fallback ──
-  if (!formConfig || !roleKey) return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <button onClick={() => navigate("/kpi/overview")}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> กลับ
-      </button>
-      <div className="bg-card border border-border/60 rounded-2xl p-10 text-center">
-        <p className="font-medium mb-1">ไม่พบชุดคำถามสำหรับ: {evaluatee.name}</p>
-        <p className="text-sm text-muted-foreground">
-          ระบบรองรับเฉพาะ ta / hafeez / sumayna — กรุณาแจ้ง admin
-        </p>
-      </div>
     </div>
   );
 

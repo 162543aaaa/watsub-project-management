@@ -2,7 +2,7 @@ import type { KpiSubScoreKey } from "@/hooks/useKpi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type RoleKey = "ta" | "hafeez" | "sumayna";
+export type RoleKey = "ta" | "hafeez" | "sumayna" | "default";
 export type ReviewerType = "self" | "peer" | "supervisor";
 export type QuestionType = "auto" | "rate" | "text" | "hidden";
 
@@ -48,6 +48,7 @@ export const ROLE_WEIGHTS: Record<RoleKey, Record<string, number>> = {
   ta:      { job_performance: 20, competency: 20, teamwork: 20, leadership: 40 },
   hafeez:  { job_performance: 40, competency: 35, teamwork: 15, leadership: 10 },
   sumayna: { job_performance: 35, competency: 30, teamwork: 25, leadership: 10 },
+  default: { job_performance: 30, competency: 30, teamwork: 20, leadership: 20 },
 };
 
 /** Reviewer contribution weights for final score */
@@ -55,12 +56,12 @@ export const REVIEWER_WEIGHTS = { auto: 0.30, self: 0.10, peer: 0.20, supervisor
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-export function resolveRoleKey(name: string): RoleKey | null {
+export function resolveRoleKey(name: string): RoleKey {
   const n = name.toLowerCase().trim();
   if (n === "ta" || n.startsWith("ta ") || n.endsWith(" ta") || n.includes("tarmisi")) return "ta";
   if (n.includes("hafeez")) return "hafeez";
   if (n.includes("sumayna")) return "sumayna";
-  return null;
+  return "default";
 }
 
 // ─── 9 Form Configs ───────────────────────────────────────────────────────────
@@ -369,6 +370,109 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
             { id: "sy_sup_tc1", labelTh: "ทำหน้าที่ coordinator ได้ smooth", type: "rate", scoreKey: "collaboration" },
             { id: "sy_sup_tc2", labelTh: "มี initiative ในงาน content strategy", type: "rate", scoreKey: "creativity" },
             { id: "sy_sup_tc3", labelTh: "เป้าหมายที่ต้องการเห็นในรอบถัดไป", type: "text" },
+          ],
+        },
+      ],
+    },
+
+  },
+
+  // ─────────────────── default (พนักงานทั่วไป / fallback) ─────────────────────
+
+  default: {
+
+    self: {
+      sections: [
+        {
+          key: "job_performance", labelTh: "ผลการปฏิบัติงาน", color: "hsl(191 91% 37%)",
+          questions: [
+            { id: "df_self_j1", labelTh: "คุณภาพงานโดยรวมเทียบกับ brief / เป้าหมาย", type: "rate", scoreKey: "quality" },
+            { id: "df_self_j2", labelTh: "ปริมาณงานที่ทำได้ในรอบ (ข้อมูลจากระบบ)", type: "auto", autoId: "tasks_done_count" },
+            { id: "df_self_j3", labelTh: "ส่งงานตรงเวลาตาม timeline ที่กำหนด", type: "rate", scoreKey: "punctuality" },
+            { id: "df_self_j4", labelTh: "ความรับผิดชอบต่องาน อุปกรณ์ และไฟล์", type: "rate", scoreKey: "accountability" },
+          ],
+        },
+        {
+          key: "competency", labelTh: "ความสามารถ / ทักษะ", color: "hsl(262 83% 58%)",
+          questions: [
+            { id: "df_self_c1", labelTh: "ทักษะเฉพาะทางในงานที่รับผิดชอบ", type: "rate", scoreKey: "technical" },
+            { id: "df_self_c2", labelTh: "การแก้ปัญหาเฉพาะหน้าและการจัดการสถานการณ์", type: "rate", scoreKey: "problem_solving" },
+            { id: "df_self_c3", labelTh: "ความคิดสร้างสรรค์และการนำเสนอ idea ใหม่", type: "rate", scoreKey: "creativity" },
+            { id: "df_self_c4", labelTh: "การเรียนรู้ทักษะหรือเครื่องมือใหม่ในรอบนี้", type: "rate", scoreKey: "learning" },
+          ],
+        },
+        {
+          key: "teamwork", labelTh: "การทำงานเป็นทีม", color: "hsl(142 71% 45%)",
+          questions: [
+            { id: "df_self_t1", labelTh: "การสื่อสารกับทีมและผู้เกี่ยวข้อง", type: "rate", scoreKey: "communication" },
+            { id: "df_self_t2", labelTh: "การช่วยเหลือและซัพพอร์ตเพื่อนร่วมทีม", type: "rate", scoreKey: "support" },
+            { id: "df_self_t3", labelTh: "การรับฟัง feedback และนำไปปรับปรุง", type: "rate", scoreKey: "openness" },
+            { id: "df_self_t4", labelTh: "ความร่วมมือเพื่อเป้าหมายของทีมโดยรวม", type: "rate", scoreKey: "collaboration" },
+          ],
+        },
+        {
+          key: "leadership", labelTh: "ภาวะผู้นำ / ธุรกิจ", color: "hsl(38 92% 50%)",
+          questions: [
+            { id: "df_self_l1", labelTh: "การนำเสนองานหรือ idea ต่อทีมและลูกค้า", type: "rate", scoreKey: "presentation" },
+            { id: "df_self_l2", labelTh: "การตัดสินใจเมื่อต้องเลือกแนวทางการทำงาน", type: "rate", scoreKey: "decision_making" },
+            { id: "df_self_l3", labelTh: "การจัดลำดับความสำคัญและบริหารเวลา", type: "rate", scoreKey: "management" },
+            { id: "df_self_l4", labelTh: "เป้าหมายที่ต้องการพัฒนาในรอบถัดไป", type: "text" },
+          ],
+        },
+      ],
+    },
+
+    peer: {
+      sections: [
+        {
+          key: "job_teamwork", labelTh: "ผลงานและการทำงานร่วมกัน", color: "hsl(191 91% 37%)",
+          questions: [
+            { id: "df_peer_j1", labelTh: "งานที่ทำออกมาตรงตามที่ตกลงและตรงเวลา", type: "rate", scoreKey: "quality" },
+            { id: "df_peer_j2", labelTh: "การสื่อสารเมื่อมีปัญหาหรือต้องการความช่วยเหลือ", type: "rate", scoreKey: "communication" },
+            { id: "df_peer_j3", labelTh: "พร้อมช่วยซัพพอร์ตทีมเมื่อมีงานเร่ง", type: "rate", scoreKey: "support" },
+            { id: "df_peer_j4", labelTh: "รับ feedback และนำไปปรับงานได้จริง", type: "rate", scoreKey: "openness" },
+          ],
+        },
+        {
+          key: "feedback_peer", labelTh: "ความคิดเห็น", color: "hsl(142 71% 45%)",
+          questions: [
+            { id: "df_peer_f1", labelTh: "สิ่งที่เพื่อนร่วมทีมคนนี้ทำได้ดีมากในรอบนี้", type: "text" },
+            { id: "df_peer_f2", labelTh: "สิ่งที่อยากให้พัฒนาหรือปรับปรุง", type: "text" },
+          ],
+        },
+      ],
+    },
+
+    supervisor: {
+      sections: [
+        {
+          key: "auto_data", labelTh: "ข้อมูลจากระบบ (อ้างอิง)", color: "hsl(215 14% 50%)",
+          questions: [
+            { id: "df_sup_a1", labelTh: "งานที่ส่งตรงเวลา (%)", type: "auto", autoId: "tasks_ontime_pct" },
+            { id: "df_sup_a2", labelTh: "จำนวน task ที่ทำเสร็จในรอบ", type: "auto", autoId: "tasks_done_count" },
+            { id: "df_sup_a3", labelTh: "Revision เฉลี่ยต่องาน", type: "auto", autoId: "revision_avg" },
+          ],
+        },
+        {
+          key: "job_performance", labelTh: "ผลการปฏิบัติงาน", color: "hsl(191 91% 37%)",
+          questions: [
+            { id: "df_sup_j1", labelTh: "คุณภาพงานโดยรวมเทียบกับ brief", type: "rate", scoreKey: "quality" },
+            { id: "df_sup_j2", labelTh: "ส่งงานตรงเวลาตาม deadline", type: "rate", scoreKey: "punctuality" },
+            { id: "df_sup_j3", labelTh: "ความรับผิดชอบต่องานและอุปกรณ์", type: "rate", scoreKey: "accountability" },
+          ],
+        },
+        {
+          key: "competency", labelTh: "ความสามารถ / ทักษะ", color: "hsl(262 83% 58%)",
+          questions: [
+            { id: "df_sup_c1", labelTh: "ระดับทักษะเฉพาะทางในรอบนี้", type: "rate", scoreKey: "technical" },
+            { id: "df_sup_c2", labelTh: "การพัฒนาฝีมือและการเรียนรู้จากรอบที่แล้ว", type: "rate", scoreKey: "learning" },
+          ],
+        },
+        {
+          key: "overall", labelTh: "ภาพรวมและเป้าหมาย", color: "hsl(38 92% 50%)",
+          questions: [
+            { id: "df_sup_o1", labelTh: "การทำงานเป็นทีมและการสื่อสาร", type: "rate", scoreKey: "collaboration" },
+            { id: "df_sup_o2", labelTh: "เป้าหมายที่ต้องการเห็นในรอบถัดไป", type: "text" },
           ],
         },
       ],
