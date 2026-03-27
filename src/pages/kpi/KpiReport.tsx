@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, BarChart2, TrendingUp, Star } from "lucide-react";
+import { ArrowLeft, BarChart2, TrendingUp, Star, AlertTriangle } from "lucide-react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -14,13 +14,12 @@ import {
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { canSeePeerIdentity, resolveRoleKey, ROLE_WEIGHTS, REVIEWER_WEIGHTS } from "@/config/kpiQuestions";
+import { canSeePeerIdentity, resolveRoleKey, getEligiblePeerReviewers, ROLE_WEIGHTS, REVIEWER_WEIGHTS } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
   !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
 
-// Average sub-scores across evaluations
 function avgScores(evals: KpiEvaluation[]): KpiSubScores | null {
   if (!evals.length) return null;
   const acc: Record<string, number> = {};
@@ -34,7 +33,6 @@ function avgScores(evals: KpiEvaluation[]): KpiSubScores | null {
   return acc as KpiSubScores;
 }
 
-// Weighted average for a set of evaluations, using role weights when available
 function avgWeighted(evals: KpiEvaluation[], memberName?: string): number | null {
   if (!evals.length) return null;
   const roleKey = memberName ? resolveRoleKey(memberName) : null;
@@ -73,11 +71,13 @@ export default function KpiReport() {
     return employees.find((e) => (e.email ?? "").toLowerCase() === email) ?? null;
   }, [employees, user?.email]);
 
-
   const closedPeriods = useMemo(() =>
     periods.filter(p => p.status === "closed").sort((a, b) => a.created_at.localeCompare(b.created_at)),
     [periods]);
   const latest = closedPeriods[closedPeriods.length - 1];
+
+  // Check if there's an open period selected (for status-only view)
+  const openPeriods = useMemo(() => periods.filter(p => p.status === "open"), [periods]);
 
   function getBreakdown(periodId: string) {
     const evals = allEvals.filter(e => e.period_id === periodId && e.evaluatee_id === memberId && e.submitted_at);
@@ -92,38 +92,41 @@ export default function KpiReport() {
   }
 
   const breakdown = latest ? getBreakdown(latest.id) : null;
-codex/refactor-kpi-questions-and-evaluations-nq11eu
   const showPeerIdentity = Boolean(me && canSeePeerIdentity(me));
-=======
-  const showPeerIdentity = !!(me && canSeePeerIdentity(me));
- main
 
-  // Auto score from tasks
-  const [autoScore, setAutoScore] = useState(0);
+  // Check peer count requirement (need 2 peers to generate report)
+  const eligiblePeerCount = useMemo(() => {
+    if (!member) return 0;
+    return getEligiblePeerReviewers(member, employees).length;
+  }, [member, employees]);
+
+  const peerComplete = (breakdown?.peerCount ?? 0) >= Math.min(2, eligiblePeerCount);
+
+  // Auto score from tasks — null when no data
+  const [autoScore, setAutoScore] = useState<number | null>(null);
   useEffect(() => {
     if (!memberId) return;
     supabase.from("tasks").select("status,due_date,comments").contains("assigned_to", [memberId])
       .then(({ data }) => {
-        if (!data?.length) { setAutoScore(0); return; }
+        if (!data?.length) { setAutoScore(null); return; }
         const done = data.filter(t => t.status === "Done");
+        if (!done.length) { setAutoScore(null); return; }
         const onTime = done.filter(t => t.due_date && new Date(t.due_date) >= new Date()).length;
         const fp = done.filter(t =>
           !t.comments?.toLowerCase().includes("revision") &&
           !t.comments?.toLowerCase().includes("แก้ไข")).length;
-        const rate = done.length
-          ? ((onTime / done.length) + (fp / done.length)) / 2
-          : 0;
+        const rate = ((onTime / done.length) + (fp / done.length)) / 2;
         setAutoScore(rate * 5);
       });
   }, [memberId]);
 
-  const finalScore = breakdown
-    ? calcFinalScore(autoScore, breakdown.self, breakdown.peer, breakdown.supervisor)
+  const finalScore = breakdown && peerComplete
+    ? calcFinalScore(autoScore ?? 0, breakdown.self, breakdown.peer, breakdown.supervisor)
     : null;
 
   // Radar data
   const radarData = useMemo(() => {
-    if (!latest || !memberId) return [];
+    if (!latest || !memberId || !peerComplete) return [];
     const evals = allEvals.filter(e => e.period_id === latest.id && e.evaluatee_id === memberId && e.submitted_at);
     const merged = avgScores(evals);
     if (!merged) return [];
@@ -132,17 +135,19 @@ codex/refactor-kpi-questions-and-evaluations-nq11eu
       คะแนน: parseFloat(calcCategoryScore(merged, cat.key).toFixed(2)),
       fullMark: 5,
     }));
-  }, [latest, allEvals, memberId]);
+  }, [latest, allEvals, memberId, peerComplete]);
 
   // Trend data
   const trendData = useMemo(() =>
     closedPeriods.slice(-5).map(p => {
       const b = getBreakdown(p.id);
-      const f = b ? calcFinalScore(autoScore, b.self, b.peer, b.supervisor) : null;
+      const pCount = allEvals.filter(e => e.period_id === p.id && e.evaluatee_id === memberId && e.type === "peer" && e.submitted_at).length;
+      if (pCount < Math.min(2, eligiblePeerCount)) return { period: p.label, คะแนนรวม: null };
+      const f = b ? calcFinalScore(autoScore ?? 0, b.self, b.peer, b.supervisor) : null;
       return { period: p.label, คะแนนรวม: f !== null ? parseFloat(f.toFixed(2)) : null };
     }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [closedPeriods, allEvals, autoScore]);
+  [closedPeriods, allEvals, autoScore, eligiblePeerCount]);
 
   // Action plan (localStorage)
   const actionKey = `kpi_action_${memberId}_${latest?.id ?? ""}`;
@@ -156,6 +161,9 @@ codex/refactor-kpi-questions-and-evaluations-nq11eu
   );
 
   const url = avatarUrl(member.avatar);
+
+  // Check if only open periods exist (no closed)
+  const hasOnlyOpenPeriods = !latest && openPeriods.length > 0;
 
   return (
     <div className="p-4 md:p-6 page-enter max-w-3xl mx-auto">
@@ -179,7 +187,7 @@ codex/refactor-kpi-questions-and-evaluations-nq11eu
           <p className="text-sm text-muted-foreground">{member.position}</p>
           {latest && <p className="text-xs text-muted-foreground mt-0.5">รอบล่าสุด: {latest.label}</p>}
         </div>
-        {finalScore !== null && (
+        {finalScore !== null && peerComplete && (
           <div className="text-center flex-shrink-0">
             <p className="text-[10px] text-muted-foreground mb-0.5">คะแนนรวม</p>
             <p className="text-2xl font-bold" style={{ color: "hsl(191 91% 37%)" }}>{finalScore.toFixed(2)}</p>
@@ -188,11 +196,32 @@ codex/refactor-kpi-questions-and-evaluations-nq11eu
         )}
       </div>
 
-      {!latest ? (
+      {/* Period not closed — show status only */}
+      {hasOnlyOpenPeriods && (
+        <div className="bg-card border border-amber-300/50 rounded-2xl p-6 text-center">
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <p className="font-semibold text-sm mb-1">รอบประเมินยังเปิดอยู่</p>
+          <p className="text-sm text-muted-foreground">ผลคะแนนจะแสดงเมื่อรอบประเมินปิดแล้วเท่านั้น ดูได้เฉพาะสถานะ submitted / pending</p>
+        </div>
+      )}
+
+      {!latest && !hasOnlyOpenPeriods && (
         <div className="bg-card border border-border/60 rounded-2xl p-10 text-center text-muted-foreground">
           ยังไม่มีรอบการประเมินที่ปิดแล้ว
         </div>
-      ) : (
+      )}
+
+      {latest && !peerComplete && (
+        <div className="bg-card border border-amber-300/50 rounded-2xl p-6 text-center mb-5">
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <p className="font-semibold text-sm mb-1">ยังไม่สามารถแสดงรายงานได้</p>
+          <p className="text-sm text-muted-foreground">
+            Peer ส่งแล้ว {breakdown?.peerCount ?? 0} คน จากที่ต้องการอย่างน้อย {Math.min(2, eligiblePeerCount)} คน
+          </p>
+        </div>
+      )}
+
+      {latest && peerComplete && (
         <div className="space-y-5">
           {/* Score breakdown */}
           <div className="bg-card border border-border/60 rounded-2xl p-5">
@@ -209,9 +238,9 @@ codex/refactor-kpi-questions-and-evaluations-nq11eu
                 <div key={s.label} className="bg-muted/50 rounded-xl p-3 text-center">
                   <p className="text-[10px] text-muted-foreground mb-1 leading-tight">{s.label}</p>
                   <p className="text-xl font-bold" style={{ color: s.color }}>
-                    {s.value !== null && s.value !== undefined ? s.value.toFixed(2) : "—"}
+                    {s.value !== null && s.value !== undefined ? s.value.toFixed(2) : "ไม่มีข้อมูล"}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">/ 5</p>
+                  {s.value !== null && s.value !== undefined && <p className="text-[10px] text-muted-foreground">/ 5</p>}
                   <p className="text-[9px] text-muted-foreground/60 mt-0.5">น้ำหนัก {(s.w * 100).toFixed(0)}%</p>
                 </div>
               ))}
@@ -225,9 +254,7 @@ codex/refactor-kpi-questions-and-evaluations-nq11eu
               </p>
             )}
 
-codex/refactor-kpi-questions-and-evaluations-nq11eu
             {(isAdmin || showPeerIdentity) && (breakdown?.peerEvaluators?.length ?? 0) > 0 && (
- main
               <p className="text-xs text-muted-foreground mb-3">
                 Peer evaluators: {breakdown?.peerEvaluators.join(", ")}
               </p>
@@ -243,7 +270,7 @@ codex/refactor-kpi-questions-and-evaluations-nq11eu
                     <div key={cat.key}>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="font-medium">{cat.labelTh}</span>
-                        <span className="font-bold" style={{ color: cat.color }}>{score > 0 ? score.toFixed(2) : "—"}</span>
+                        <span className="font-bold" style={{ color: cat.color }}>{score > 0 ? score.toFixed(2) : "ไม่มีข้อมูล"}</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-500"
