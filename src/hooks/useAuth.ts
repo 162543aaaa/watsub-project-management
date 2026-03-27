@@ -92,7 +92,12 @@ export function useAuth() {
     if (!isApproved) return false;
     const pages = profile?.allowed_pages ?? [];
     if (pages.length === 0) return true; // no restrictions = all access
-    return pages.includes(path);
+    return pages.some(p => {
+      if (path === p) return true;
+      // Allow sub-routes: if user has /kpi/overview, also allow /kpi/evaluate/... /kpi/report/...
+      const topSection = "/" + p.split("/").filter(Boolean)[0];
+      return path.startsWith(topSection + "/");
+    });
   };
 
   return {
