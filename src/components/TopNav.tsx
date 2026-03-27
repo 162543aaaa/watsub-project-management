@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Menu, X, ChevronDown, Shield, LogOut
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Menu, X, ChevronDown, Shield, LogOut, TrendingUp
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ const secondaryNav = [
   { label: "Team", icon: Users, path: "/team" },
   { label: "Leave", icon: Plane, path: "/leave" },
   { label: "Budget", icon: Wallet, path: "/budget" },
+  { label: "KPI", icon: TrendingUp, path: "/kpi/overview" },
   { label: "Reports", icon: BarChart3, path: "/reports" },
   { label: "Notifications", icon: Bell, path: "/notifications" },
   { label: "Import", icon: Upload, path: "/import" },
@@ -46,7 +47,9 @@ export default function TopNav() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isSecondaryActive = secondaryNav.some(n => location.pathname === n.path);
+  const isSecondaryActive = secondaryNav.some(n =>
+    n.path === "/" ? location.pathname === "/" : location.pathname === n.path || location.pathname.startsWith(n.path + "/")
+  );
 
   return (
     <>
@@ -110,7 +113,7 @@ export default function TopNav() {
               >
                 <div className="p-1.5">
                   {secondaryNav.map((item) => {
-                    const active = location.pathname === item.path;
+                    const active = item.path === "/" ? location.pathname === "/" : location.pathname === item.path || location.pathname.startsWith(item.path + "/");
                     const isNotif = item.path === "/notifications";
                     return (
                       <Link key={item.path} to={item.path} onClick={() => setMoreOpen(false)}>
