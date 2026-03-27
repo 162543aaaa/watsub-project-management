@@ -1,10 +1,10 @@
+import { TEAM_ROSTER } from "@/config/teamRoster";
+
 export type TaskStatus = "To Do" | "In Progress" | "Done";
 export type TaskPriority = "High" | "Medium" | "Low";
 export type LeaveStatus = "Pending" | "Approved" | "Rejected";
 export type GoalType = "individual" | "team";
 export type NotifType = "success" | "error" | "info";
-
-import { TEAM_ROSTER } from "@/config/teamRoster";
 
 export interface Employee {
   id: string;

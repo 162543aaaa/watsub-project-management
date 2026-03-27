@@ -92,7 +92,7 @@ export default function KpiReport() {
   }
 
   const breakdown = latest ? getBreakdown(latest.id) : null;
-  const showPeerIdentity = !!(me && canSeePeerIdentity(me));
+  const showPeerIdentity = Boolean(me && canSeePeerIdentity(me));
 
   // Auto score from tasks
   const [autoScore, setAutoScore] = useState(0);

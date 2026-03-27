@@ -53,12 +53,19 @@ export const ROLE_WEIGHTS: Record<RoleKey, Record<string, number>> = Object.from
 
 export const REVIEWER_WEIGHTS = { auto: 0.3, self: 0.1, peer: 0.2, supervisor: 0.4 };
 
+const ROLE_ALIASES: Record<RoleKey, string[]> = {
+  ta: ["tarmisi", "ต้า"],
+  hafeez: ["hafeez", "ฮาฟีซ"],
+  sumayna: ["sumayna", "สุไมยนา"],
+  default: [],
+};
+
 export function resolveRoleKey(name?: string | null): RoleKey {
   const n = (name ?? "").trim().toLowerCase();
   if (!n) return "default";
-  if (n.includes("tarmisi") || n.includes("ต้า")) return "ta";
-  if (n.includes("hafeez") || n.includes("ฮาฟีซ")) return "hafeez";
-  if (n.includes("sumayna") || n.includes("สุไมยนา")) return "sumayna";
+  for (const role of ["ta", "hafeez", "sumayna"] as const) {
+    if (ROLE_ALIASES[role].some((alias) => n.includes(alias))) return role;
+  }
   return "default";
 }
 

@@ -28,6 +28,7 @@ const avatarUrl = (p?: string) =>
 type AutoValues = Record<AutoValueId, string>;
 
 async function computeAutoValues(empId: string, periodId: string): Promise<AutoValues> {
+  // Prefer period-scoped queries; gracefully fallback for older schemas.
   const fetchTasks = async () => {
     const withPeriod = await supabase
       .from("tasks")
