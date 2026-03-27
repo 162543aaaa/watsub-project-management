@@ -1,30 +1,43 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, BarChart2, TrendingUp } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, BarChart2, TrendingUp, Star } from "lucide-react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  useKpiPeriods, useKpiEvaluations, useKpiRoleWeights,
-  calcWeightedScore, calcFinalScore, type KpiEvaluation,
+  KPI_CATEGORIES,
+  useKpiPeriods, useKpiEvaluations,
+  calcCategoryScore, calcWeightedScore, calcFinalScore,
+  type KpiEvaluation, type KpiSubScores,
 } from "@/hooks/useKpi";
-import { useEmployees, type Employee } from "@/hooks/useEmployees";
+import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
-const RADAR_KEYS = ["job_performance", "competency", "teamwork", "leadership"] as const;
-const RADAR_LABELS: Record<string, string> = {
-  job_performance: "ผลงาน",
-  competency: "ความสามารถ",
-  teamwork: "ทีม",
-  leadership: "ผู้นำ",
-};
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+function getAvatarUrl(path: string | undefined) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
+}
 
-function avg(evals: KpiEvaluation[], weights: ReturnType<ReturnType<typeof useKpiRoleWeights>["getWeightForRole"]>): number | null {
+function avgScores(evals: KpiEvaluation[]): KpiSubScores | null {
   if (evals.length === 0) return null;
-  const scores = evals.map(e => calcWeightedScore(e.scores, weights));
+  const result: Record<string, number> = {};
+  for (const ev of evals) {
+    for (const [k, v] of Object.entries(ev.scores as Record<string, number>)) {
+      result[k] = (result[k] ?? 0) + v;
+    }
+  }
+  for (const k in result) result[k] /= evals.length;
+  return result as KpiSubScores;
+}
+
+function avgWeighted(evals: KpiEvaluation[]): number | null {
+  if (evals.length === 0) return null;
+  const scores = evals.map(e => calcWeightedScore(e.scores as KpiSubScores));
   return scores.reduce((a, b) => a + b, 0) / scores.length;
 }
 
@@ -36,38 +49,29 @@ export default function KpiReport() {
   const { periods } = useKpiPeriods();
   const { evaluations: allEvals } = useKpiEvaluations();
   const { employees } = useEmployees();
-  const { getWeightForRole } = useKpiRoleWeights();
 
   const member = useMemo(() => employees.find(e => e.id === memberId), [employees, memberId]);
-  const weights = useMemo(() => member ? getWeightForRole(member.role ?? "") : null, [member, getWeightForRole]);
 
-  // Latest closed period + previous for trend
   const closedPeriods = useMemo(() =>
     periods.filter(p => p.status === "closed").sort((a, b) => a.created_at.localeCompare(b.created_at)),
     [periods]
   );
   const latestPeriod = closedPeriods[closedPeriods.length - 1];
-  const prevPeriod = closedPeriods[closedPeriods.length - 2];
 
-  // Per-period score breakdown for the member
-  function getMemberScores(periodId: string) {
-    if (!memberId || !weights) return null;
+  function getBreakdown(periodId: string) {
     const evals = allEvals.filter(e => e.period_id === periodId && e.evaluatee_id === memberId && e.submitted_at);
-    const selfEvals = evals.filter(e => e.type === "self");
-    const peerEvals = evals.filter(e => e.type === "peer");
-    const supEvals = evals.filter(e => e.type === "supervisor");
     return {
-      self: avg(selfEvals, weights),
-      peer: avg(peerEvals, weights),
-      supervisor: avg(supEvals, weights),
+      self: avgWeighted(evals.filter(e => e.type === "self")),
+      peer: avgWeighted(evals.filter(e => e.type === "peer")),
+      supervisor: avgWeighted(evals.filter(e => e.type === "supervisor")),
+      allScores: avgScores(evals),
     };
   }
 
-  const latestScores = latestPeriod ? getMemberScores(latestPeriod.id) : null;
-  const prevScores = prevPeriod ? getMemberScores(prevPeriod.id) : null;
+  const latestBreakdown = latestPeriod ? getBreakdown(latestPeriod.id) : null;
 
   // Auto score from tasks
-  const [autoScore, setAutoScore] = useState<number>(0);
+  const [autoScore, setAutoScore] = useState(0);
   useEffect(() => {
     if (!memberId) return;
     supabase.from("tasks").select("status, due_date, comments").contains("assigned_to", [memberId])
@@ -75,39 +79,39 @@ export default function KpiReport() {
         if (!data || data.length === 0) { setAutoScore(0); return; }
         const done = data.filter(t => t.status === "Done");
         const onTime = done.filter(t => t.due_date && new Date(t.due_date) >= new Date());
-        const punctuality = done.length > 0 ? (onTime.length / done.length) : 0;
         const firstPass = done.filter(t => !t.comments?.toLowerCase().includes("revision") && !t.comments?.toLowerCase().includes("แก้ไข"));
-        const quality = done.length > 0 ? (firstPass.length / done.length) : 0;
-        setAutoScore(((punctuality + quality) / 2) * 5);
+        setAutoScore(((done.length > 0 ? onTime.length / done.length : 0) + (done.length > 0 ? firstPass.length / done.length : 0)) / 2 * 5);
       });
   }, [memberId]);
 
-  const finalScore = latestScores
-    ? calcFinalScore(autoScore, latestScores.self, latestScores.peer, latestScores.supervisor)
+  const finalScore = latestBreakdown
+    ? calcFinalScore(autoScore, latestBreakdown.self, latestBreakdown.peer, latestBreakdown.supervisor)
     : null;
 
-  // Radar data: per-axis averages from all submitted evals for latest period
+  // Radar: category averages from all submitted evals of latest period
   const radarData = useMemo(() => {
     if (!latestPeriod || !memberId) return [];
     const evals = allEvals.filter(e => e.period_id === latestPeriod.id && e.evaluatee_id === memberId && e.submitted_at);
-    return RADAR_KEYS.map(key => {
-      const vals = evals.map(e => (e.scores as Record<string, number>)[key] ?? 0).filter(v => v > 0);
-      const value = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-      return { axis: RADAR_LABELS[key], value: parseFloat(value.toFixed(2)) };
-    });
+    const merged = avgScores(evals);
+    if (!merged) return [];
+    return KPI_CATEGORIES.map(cat => ({
+      category: cat.labelTh.replace(" / ", "\n/ "),
+      คะแนน: parseFloat(calcCategoryScore(merged, cat.key).toFixed(2)),
+      fullMark: 5,
+    }));
   }, [latestPeriod, allEvals, memberId]);
 
-  // Trend line data
+  // Trend line — last 5 closed periods
   const trendData = useMemo(() => {
     return closedPeriods.slice(-5).map(p => {
-      const s = getMemberScores(p.id);
-      const final = s ? calcFinalScore(autoScore, s.self, s.peer, s.supervisor) : null;
-      return { period: p.label, คะแนนรวม: final ? parseFloat(final.toFixed(2)) : null };
+      const b = getBreakdown(p.id);
+      const final = b ? calcFinalScore(autoScore, b.self, b.peer, b.supervisor) : null;
+      return { period: p.label, คะแนนรวม: final !== null ? parseFloat(final.toFixed(2)) : null };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [closedPeriods, allEvals, autoScore]);
 
-  // Action plan (saved per period, stored in localStorage for now — lightweight)
+  // Action plan (per member per period, persisted in localStorage)
   const actionKey = `kpi_action_${memberId}_${latestPeriod?.id ?? ""}`;
   const [actionPlan, setActionPlan] = useState(() => localStorage.getItem(actionKey) ?? "");
   const saveActionPlan = () => {
@@ -116,12 +120,10 @@ export default function KpiReport() {
   };
 
   if (!member) {
-    return (
-      <div className="p-6 flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   }
+
+  const avatarUrl = getAvatarUrl(member.avatar);
 
   return (
     <div className="p-4 md:p-6 page-enter max-w-3xl mx-auto">
@@ -131,14 +133,28 @@ export default function KpiReport() {
       </button>
 
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <BarChart2 className="w-5 h-5 text-primary" />
+      <div className="bg-card border border-border/60 rounded-2xl p-5 mb-5 flex items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
+          {avatarUrl
+            ? <img src={avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+            : <span className="text-xl font-bold text-primary">{member.name.charAt(0)}</span>
+          }
         </div>
-        <div>
-          <h1 className="text-xl font-bold">รายงาน KPI: {member.name}</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <BarChart2 className="w-4 h-4 text-primary flex-shrink-0" />
+            <h1 className="text-xl font-bold truncate">{member.name}</h1>
+          </div>
           <p className="text-sm text-muted-foreground">{member.position}</p>
+          {latestPeriod && <p className="text-xs text-muted-foreground mt-0.5">รอบล่าสุด: {latestPeriod.label}</p>}
         </div>
+        {finalScore !== null && (
+          <div className="text-center flex-shrink-0">
+            <p className="text-[10px] text-muted-foreground mb-0.5">คะแนนรวม</p>
+            <p className="text-2xl font-bold" style={{ color: "hsl(191 91% 37%)" }}>{finalScore.toFixed(2)}</p>
+            <p className="text-[10px] text-muted-foreground">/ 5</p>
+          </div>
+        )}
       </div>
 
       {!latestPeriod ? (
@@ -147,86 +163,107 @@ export default function KpiReport() {
         </div>
       ) : (
         <div className="space-y-5">
-          {/* Score breakdown */}
+
+          {/* ── Score Breakdown ── */}
           <div className="bg-card border border-border/60 rounded-2xl p-5">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-              คะแนน — {latestPeriod.label}
+              คะแนนแยกประเภท — {latestPeriod.label}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
-                { label: "Auto (งาน)", value: autoScore },
-                { label: "ตนเอง", value: latestScores?.self },
-                { label: "เพื่อน", value: isAdmin ? latestScores?.peer : null, hidden: !isAdmin },
-                { label: "หัวหน้า", value: latestScores?.supervisor },
-              ].filter(s => !s.hidden).map(s => (
+                { label: "Auto (งาน)", value: autoScore, color: "hsl(215 14% 50%)" },
+                { label: "ตนเอง (Self)", value: latestBreakdown?.self ?? null, color: "hsl(191 91% 37%)" },
+                { label: "เพื่อน (Peer)", value: isAdmin ? (latestBreakdown?.peer ?? null) : null, color: "hsl(262 83% 58%)", adminOnly: true },
+                { label: "หัวหน้า (Supervisor)", value: latestBreakdown?.supervisor ?? null, color: "hsl(38 92% 50%)" },
+              ].filter(s => !s.adminOnly || isAdmin).map(s => (
                 <div key={s.label} className="bg-muted/50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
-                  <p className="text-xl font-bold">{s.value !== null && s.value !== undefined ? s.value.toFixed(2) : "—"}</p>
+                  <p className="text-[10px] text-muted-foreground mb-1 leading-tight">{s.label}</p>
+                  <p className="text-xl font-bold" style={{ color: s.color }}>
+                    {s.value !== null && s.value !== undefined ? s.value.toFixed(2) : "—"}
+                  </p>
                   <p className="text-[10px] text-muted-foreground">/ 5</p>
                 </div>
               ))}
             </div>
-            {finalScore !== null && (
-              <div className="rounded-xl p-3 text-center" style={{ background: "hsl(191 91% 37% / 0.08)" }}>
-                <p className="text-xs text-muted-foreground mb-0.5">คะแนนรวมสุดท้าย</p>
-                <p className="text-2xl font-bold" style={{ color: "hsl(191 91% 37%)" }}>{finalScore.toFixed(2)}</p>
-                <p className="text-[10px] text-muted-foreground">/ 5</p>
+
+            {/* Per-category breakdown */}
+            {latestBreakdown?.allScores && (
+              <div className="space-y-2 pt-3 border-t border-border/40">
+                <p className="text-xs font-medium text-muted-foreground mb-3">คะแนนรายหมวด (ค่าเฉลี่ยทุกประเภท)</p>
+                {KPI_CATEGORIES.map(cat => {
+                  const score = calcCategoryScore(latestBreakdown.allScores!, cat.key);
+                  const pct = (score / 5) * 100;
+                  return (
+                    <div key={cat.key}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-medium">{cat.labelTh}</span>
+                        <span className="font-bold" style={{ color: cat.color }}>{score > 0 ? score.toFixed(2) : "—"}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, background: cat.color }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* Radar chart */}
+          {/* ── Radar Chart ── */}
           {radarData.length > 0 && (
             <div className="bg-card border border-border/60 rounded-2xl p-5">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Radar Chart</h2>
-              <ResponsiveContainer width="100%" height={280}>
-                <RadarChart data={radarData}>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">Radar Chart</h2>
+              <p className="text-xs text-muted-foreground mb-4">สมดุลทักษะทั้ง 4 ด้าน</p>
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
                   <PolarGrid stroke="hsl(220 13% 88%)" />
-                  <PolarAngleAxis dataKey="axis" tick={{ fontSize: 12, fill: "hsl(222 47% 40%)" }} />
-                  <PolarRadiusAxis domain={[0, 5]} tick={{ fontSize: 10 }} tickCount={6} />
+                  <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: "hsl(222 47% 40%)" }} />
+                  <PolarRadiusAxis domain={[0, 5]} tick={{ fontSize: 9 }} tickCount={6} />
                   <Radar
                     name={member.name}
-                    dataKey="value"
+                    dataKey="คะแนน"
                     stroke="hsl(191 91% 37%)"
                     fill="hsl(191 91% 37%)"
                     fillOpacity={0.25}
                     strokeWidth={2}
+                    dot={{ fill: "hsl(191 91% 37%)", r: 4 }}
                   />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* Trend line */}
+          {/* ── Trend Line ── */}
           {trendData.length >= 2 && (
             <div className="bg-card border border-border/60 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="w-4 h-4 text-primary" />
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">แนวโน้มคะแนน</h2>
               </div>
+              <p className="text-xs text-muted-foreground mb-4">เปรียบเทียบรอบที่ผ่านมา</p>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 13% 88%)" />
                   <XAxis dataKey="period" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 5]} tick={{ fontSize: 11 }} />
-                  <Tooltip />
+                  <Tooltip formatter={(v: number) => v?.toFixed(2)} />
                   <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="คะแนนรวม"
-                    stroke="hsl(191 91% 37%)"
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(191 91% 37%)", r: 4 }}
-                    connectNulls
-                  />
+                  <Line type="monotone" dataKey="คะแนนรวม"
+                    stroke="hsl(191 91% 37%)" strokeWidth={2}
+                    dot={{ fill: "hsl(191 91% 37%)", r: 4 }} connectNulls />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* Action plan */}
+          {/* ── Action Plan ── */}
           <div className="bg-card border border-border/60 rounded-2xl p-5">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Action Plan</h2>
+            <div className="flex items-center gap-2 mb-3">
+              <Star className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Action Plan</h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">เป้าหมายที่ต้องการพัฒนาในโปรเจกต์ถัดไป</p>
             <textarea
               value={actionPlan}
               onChange={e => setActionPlan(e.target.value)}
@@ -234,10 +271,7 @@ export default function KpiReport() {
               placeholder="กำหนดแผนพัฒนาตนเองสำหรับรอบถัดไป..."
               className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 mb-3"
             />
-            <button
-              onClick={saveActionPlan}
-              className="btn-primary text-sm px-4 py-2 rounded-lg"
-            >
+            <button onClick={saveActionPlan} className="btn-primary text-sm px-4 py-2 rounded-lg">
               บันทึก
             </button>
           </div>

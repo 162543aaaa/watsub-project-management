@@ -2,6 +2,111 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+// ─── Assessment Framework ───────────────────────────────────────────────────
+
+export const KPI_CATEGORIES = [
+  {
+    key: "job_performance",
+    label: "Job Performance",
+    labelTh: "ผลการปฏิบัติงาน",
+    weight: 30,
+    color: "hsl(191 91% 37%)",
+    items: [
+      { key: "quality",        labelTh: "คุณภาพงาน",        desc: "งานตัดต่อ / กราฟิกได้มาตรฐานตามบรีฟ" },
+      { key: "quantity",       labelTh: "ปริมาณงาน",        desc: "จัดการจำนวนโปรเจกต์ได้ตามเป้าหมาย" },
+      { key: "punctuality",    labelTh: "การตรงต่อเวลา",    desc: "ส่งงานตามตารางผลิต (Production Timeline)" },
+      { key: "accountability", labelTh: "ความรับผิดชอบ",    desc: "การดูแลอุปกรณ์และการจัดการไฟล์งาน" },
+    ],
+  },
+  {
+    key: "competency",
+    label: "Competency",
+    labelTh: "ความสามารถ / ทักษะ",
+    weight: 30,
+    color: "hsl(262 83% 58%)",
+    items: [
+      { key: "technical",       labelTh: "ทักษะเฉพาะทาง",       desc: "การใช้กล้อง, โปรแกรมตัดต่อ, การเขียนสคริปต์" },
+      { key: "problem_solving", labelTh: "การแก้ปัญหา",         desc: "การจัดการปัญหาเฉพาะหน้าในกองถ่ายหรือกับลูกค้า" },
+      { key: "creativity",      labelTh: "ความคิดสร้างสรรค์",   desc: "การนำเสนอไอเดียคอนเทนต์ใหม่ๆ" },
+      { key: "learning",        labelTh: "การเรียนรู้",          desc: "การอัปเดตเทรนด์วิดีโอหรือเครื่องมือ AI ใหม่ๆ" },
+    ],
+  },
+  {
+    key: "teamwork",
+    label: "Teamwork",
+    labelTh: "การทำงานเป็นทีม",
+    weight: 20,
+    color: "hsl(142 71% 45%)",
+    items: [
+      { key: "communication", labelTh: "การสื่อสาร",   desc: "การประสานงานระหว่างลูกค้าและทีมภายใน" },
+      { key: "support",       labelTh: "การช่วยเหลือ", desc: "การซัพพอร์ตเพื่อนร่วมทีมในกองถ่าย" },
+      { key: "openness",      labelTh: "การรับฟัง",    desc: "การยอมรับคำวิจารณ์งานจากลูกค้า / หัวหน้า" },
+      { key: "collaboration", labelTh: "ความร่วมมือ",  desc: "ทำงานร่วมกันเพื่อให้ได้วิสัยทัศน์ตามที่ลูกค้าต้องการ" },
+    ],
+  },
+  {
+    key: "leadership",
+    label: "Leadership / Business",
+    labelTh: "ภาวะผู้นำ / ธุรกิจ",
+    weight: 20,
+    color: "hsl(38 92% 50%)",
+    items: [
+      { key: "presentation",   labelTh: "การนำเสนอ",       desc: "การขายไอเดียหรือบรีฟงานให้ลูกค้าเข้าใจ" },
+      { key: "decision_making",labelTh: "การตัดสินใจ",     desc: "การตัดสินใจด้านกลยุทธ์และการดำเนินงานรายวัน" },
+      { key: "management",     labelTh: "การจัดการ",       desc: "การจัดตารางงานและการคุมงบประมาณการเงิน" },
+      { key: "strategic",      labelTh: "ทิศทางธุรกิจ",   desc: "การสร้างความสัมพันธ์กับพาร์ทเนอร์ภายนอก" },
+    ],
+  },
+] as const;
+
+export type KpiCategoryKey = typeof KPI_CATEGORIES[number]["key"];
+export type KpiSubScoreKey =
+  | "quality" | "quantity" | "punctuality" | "accountability"
+  | "technical" | "problem_solving" | "creativity" | "learning"
+  | "communication" | "support" | "openness" | "collaboration"
+  | "presentation" | "decision_making" | "management" | "strategic";
+
+export type KpiSubScores = Partial<Record<KpiSubScoreKey, number>>;
+
+/** Average of sub-items for one category */
+export function calcCategoryScore(scores: KpiSubScores, categoryKey: KpiCategoryKey): number {
+  const cat = KPI_CATEGORIES.find(c => c.key === categoryKey);
+  if (!cat) return 0;
+  const vals = cat.items.map(item => scores[item.key as KpiSubScoreKey] ?? 0);
+  const filled = vals.filter(v => v > 0);
+  if (filled.length === 0) return 0;
+  return filled.reduce((a, b) => a + b, 0) / filled.length;
+}
+
+/** Overall weighted score across all 4 categories */
+export function calcWeightedScore(scores: KpiSubScores): number {
+  let total = 0;
+  let weightSum = 0;
+  for (const cat of KPI_CATEGORIES) {
+    const avg = calcCategoryScore(scores, cat.key);
+    if (avg === 0) continue;
+    total += avg * cat.weight;
+    weightSum += cat.weight;
+  }
+  return weightSum === 0 ? 0 : total / weightSum;
+}
+
+/** Final combined score: auto×0.30 + self×0.10 + peer×0.20 + supervisor×0.40 */
+export function calcFinalScore(
+  autoScore: number,
+  selfScore: number | null,
+  peerScore: number | null,
+  supervisorScore: number | null
+): number {
+  let score = autoScore * 0.3;
+  if (selfScore !== null) score += selfScore * 0.1;
+  if (peerScore !== null) score += peerScore * 0.2;
+  if (supervisorScore !== null) score += supervisorScore * 0.4;
+  return score;
+}
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
 export interface KpiPeriod {
   id: string;
   label: string;
@@ -17,13 +122,7 @@ export interface KpiEvaluation {
   evaluator_id: string;
   evaluatee_id: string;
   type: "self" | "peer" | "supervisor";
-  scores: {
-    job_performance?: number;
-    competency?: number;
-    teamwork?: number;
-    leadership?: number;
-    creativity?: number;
-  };
+  scores: KpiSubScores;
   notes_strength: string | null;
   notes_improve: string | null;
   submitted_at: string | null;
@@ -39,36 +138,7 @@ export interface KpiRoleWeight {
   creativity: number;
 }
 
-export type KpiScoreKey = "job_performance" | "competency" | "teamwork" | "leadership" | "creativity";
-
-/** Weighted average of scores using role weights (skips keys with weight=0) */
-export function calcWeightedScore(scores: KpiEvaluation["scores"], weights: KpiRoleWeight): number {
-  const keys: KpiScoreKey[] = ["job_performance", "competency", "teamwork", "leadership", "creativity"];
-  let total = 0;
-  let weightSum = 0;
-  for (const key of keys) {
-    const w = weights[key];
-    if (w === 0) continue;
-    const v = scores[key] ?? 0;
-    total += v * w;
-    weightSum += w;
-  }
-  return weightSum === 0 ? 0 : total / weightSum;
-}
-
-/** Final combined score from all evaluation types */
-export function calcFinalScore(
-  autoScore: number,
-  selfScore: number | null,
-  peerScore: number | null,
-  supervisorScore: number | null
-): number {
-  let score = autoScore * 0.3;
-  if (selfScore !== null) score += selfScore * 0.1;
-  if (peerScore !== null) score += peerScore * 0.2;
-  if (supervisorScore !== null) score += supervisorScore * 0.4;
-  return score;
-}
+// ─── Hooks ──────────────────────────────────────────────────────────────────
 
 export function useKpiPeriods() {
   const [periods, setPeriods] = useState<KpiPeriod[]>([]);
@@ -119,7 +189,6 @@ export function useKpiEvaluations(periodId?: string) {
   useEffect(() => { fetchEvaluations(); }, [fetchEvaluations]);
 
   const upsertEvaluation = async (ev: Omit<KpiEvaluation, "id" | "created_at">) => {
-    // Check if a draft already exists for this evaluator/evaluatee/period
     const { data: existing } = await supabase
       .from("kpi_evaluations")
       .select("id")
@@ -131,11 +200,7 @@ export function useKpiEvaluations(periodId?: string) {
 
     if (existing?.id) {
       const { data, error } = await supabase
-        .from("kpi_evaluations")
-        .update(ev)
-        .eq("id", existing.id)
-        .select()
-        .single();
+        .from("kpi_evaluations").update(ev).eq("id", existing.id).select().single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setEvaluations(prev => prev.map(e => e.id === existing.id ? data as KpiEvaluation : e));
       return data as KpiEvaluation;
@@ -152,19 +217,12 @@ export function useKpiEvaluations(periodId?: string) {
 
 export function useKpiRoleWeights() {
   const [weights, setWeights] = useState<KpiRoleWeight[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("kpi_role_weights").select("*").then(({ data, error }) => {
-      if (!error) setWeights((data ?? []) as KpiRoleWeight[]);
-      setLoading(false);
+    supabase.from("kpi_role_weights").select("*").then(({ data }) => {
+      if (data) setWeights(data as KpiRoleWeight[]);
     });
   }, []);
 
-  const getWeightForRole = (role: string): KpiRoleWeight => {
-    const found = weights.find(w => role.toLowerCase().includes(w.role));
-    return found ?? { role: "default", job_performance: 25, competency: 25, teamwork: 25, leadership: 25, creativity: 0 };
-  };
-
-  return { weights, loading, getWeightForRole };
+  return { weights };
 }
