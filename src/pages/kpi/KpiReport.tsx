@@ -7,57 +7,53 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  KPI_CATEGORIES,
-  useKpiPeriods, useKpiEvaluations,
+  KPI_CATEGORIES, useKpiPeriods, useKpiEvaluations,
   calcCategoryScore, calcWeightedScore, calcFinalScore,
   type KpiEvaluation, type KpiSubScores,
 } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { resolveRoleKey, ROLE_SECTION_WEIGHTS, REVIEWER_WEIGHTS } from "@/config/kpiQuestions";
+import { resolveRoleKey, ROLE_WEIGHTS, REVIEWER_WEIGHTS } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-function getAvatarUrl(path: string | undefined) {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
-}
+const avatarUrl = (p?: string) =>
+  !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
 
+// Average sub-scores across evaluations
 function avgScores(evals: KpiEvaluation[]): KpiSubScores | null {
-  if (evals.length === 0) return null;
-  const result: Record<string, number> = {};
+  if (!evals.length) return null;
+  const acc: Record<string, number> = {};
   for (const ev of evals) {
     for (const [k, v] of Object.entries(ev.scores as Record<string, number>)) {
-      result[k] = (result[k] ?? 0) + v;
+      acc[k] = (acc[k] ?? 0) + v;
     }
   }
-  for (const k in result) result[k] /= evals.length;
-  return result as KpiSubScores;
+  for (const k in acc) acc[k] /= evals.length;
+  return acc as KpiSubScores;
 }
 
-function avgWeightedForRole(evals: KpiEvaluation[], memberName?: string): number | null {
-  if (evals.length === 0) return null;
+// Weighted average for a set of evaluations, using role weights when available
+function avgWeighted(evals: KpiEvaluation[], memberName?: string): number | null {
+  if (!evals.length) return null;
   const roleKey = memberName ? resolveRoleKey(memberName) : null;
-  const roleWeights = roleKey ? ROLE_SECTION_WEIGHTS[roleKey] : null;
+  const roleW = roleKey ? ROLE_WEIGHTS[roleKey] : null;
 
-  const scores = evals.map(e => {
-    if (!roleWeights) return calcWeightedScore(e.scores as KpiSubScores);
-    // Use role-specific section weights
-    const s = e.scores as KpiSubScores;
-    let total = 0;
-    let weightSum = 0;
+  const vals = evals.map(ev => {
+    if (!roleW) return calcWeightedScore(ev.scores as KpiSubScores);
+    const s = ev.scores as KpiSubScores;
+    let total = 0, wSum = 0;
     for (const cat of KPI_CATEGORIES) {
-      const w = roleWeights[cat.key] ?? 0;
+      const w = roleW[cat.key] ?? 0;
       if (w === 0) continue;
       const avg = calcCategoryScore(s, cat.key);
       if (avg === 0) continue;
       total += avg * w;
-      weightSum += w;
+      wSum += w;
     }
-    return weightSum === 0 ? 0 : total / weightSum;
+    return wSum === 0 ? 0 : total / wSum;
   });
-  return scores.reduce((a, b) => a + b, 0) / scores.length;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
 export default function KpiReport() {
@@ -73,97 +69,94 @@ export default function KpiReport() {
 
   const closedPeriods = useMemo(() =>
     periods.filter(p => p.status === "closed").sort((a, b) => a.created_at.localeCompare(b.created_at)),
-    [periods]
-  );
-  const latestPeriod = closedPeriods[closedPeriods.length - 1];
+    [periods]);
+  const latest = closedPeriods[closedPeriods.length - 1];
 
   function getBreakdown(periodId: string) {
     const evals = allEvals.filter(e => e.period_id === periodId && e.evaluatee_id === memberId && e.submitted_at);
     return {
-      self: avgWeightedForRole(evals.filter(e => e.type === "self"), member?.name),
-      peer: avgWeightedForRole(evals.filter(e => e.type === "peer"), member?.name),
-      supervisor: avgWeightedForRole(evals.filter(e => e.type === "supervisor"), member?.name),
+      self: avgWeighted(evals.filter(e => e.type === "self"), member?.name),
+      peer: avgWeighted(evals.filter(e => e.type === "peer"), member?.name),
+      supervisor: avgWeighted(evals.filter(e => e.type === "supervisor"), member?.name),
       allScores: avgScores(evals),
       peerCount: evals.filter(e => e.type === "peer").length,
     };
   }
 
-  const latestBreakdown = latestPeriod ? getBreakdown(latestPeriod.id) : null;
+  const breakdown = latest ? getBreakdown(latest.id) : null;
 
   // Auto score from tasks
   const [autoScore, setAutoScore] = useState(0);
   useEffect(() => {
     if (!memberId) return;
-    supabase.from("tasks").select("status, due_date, comments").contains("assigned_to", [memberId])
+    supabase.from("tasks").select("status,due_date,comments").contains("assigned_to", [memberId])
       .then(({ data }) => {
-        if (!data || data.length === 0) { setAutoScore(0); return; }
+        if (!data?.length) { setAutoScore(0); return; }
         const done = data.filter(t => t.status === "Done");
-        const onTime = done.filter(t => t.due_date && new Date(t.due_date) >= new Date());
-        const firstPass = done.filter(t => !t.comments?.toLowerCase().includes("revision") && !t.comments?.toLowerCase().includes("แก้ไข"));
-        setAutoScore(((done.length > 0 ? onTime.length / done.length : 0) + (done.length > 0 ? firstPass.length / done.length : 0)) / 2 * 5);
+        const onTime = done.filter(t => t.due_date && new Date(t.due_date) >= new Date()).length;
+        const fp = done.filter(t =>
+          !t.comments?.toLowerCase().includes("revision") &&
+          !t.comments?.toLowerCase().includes("แก้ไข")).length;
+        const rate = done.length
+          ? ((onTime / done.length) + (fp / done.length)) / 2
+          : 0;
+        setAutoScore(rate * 5);
       });
   }, [memberId]);
 
-  const finalScore = latestBreakdown
-    ? calcFinalScore(
-        autoScore,
-        latestBreakdown.self,
-        latestBreakdown.peer,
-        latestBreakdown.supervisor,
-      )
+  const finalScore = breakdown
+    ? calcFinalScore(autoScore, breakdown.self, breakdown.peer, breakdown.supervisor)
     : null;
 
-  // Radar: category averages from all submitted evals of latest period
+  // Radar data
   const radarData = useMemo(() => {
-    if (!latestPeriod || !memberId) return [];
-    const evals = allEvals.filter(e => e.period_id === latestPeriod.id && e.evaluatee_id === memberId && e.submitted_at);
+    if (!latest || !memberId) return [];
+    const evals = allEvals.filter(e => e.period_id === latest.id && e.evaluatee_id === memberId && e.submitted_at);
     const merged = avgScores(evals);
     if (!merged) return [];
     return KPI_CATEGORIES.map(cat => ({
-      category: cat.labelTh.replace(" / ", "\n/ "),
+      category: cat.labelTh,
       คะแนน: parseFloat(calcCategoryScore(merged, cat.key).toFixed(2)),
       fullMark: 5,
     }));
-  }, [latestPeriod, allEvals, memberId]);
+  }, [latest, allEvals, memberId]);
 
-  // Trend line — last 5 closed periods
-  const trendData = useMemo(() => {
-    return closedPeriods.slice(-5).map(p => {
+  // Trend data
+  const trendData = useMemo(() =>
+    closedPeriods.slice(-5).map(p => {
       const b = getBreakdown(p.id);
-      const final = b ? calcFinalScore(autoScore, b.self, b.peer, b.supervisor) : null;
-      return { period: p.label, คะแนนรวม: final !== null ? parseFloat(final.toFixed(2)) : null };
-    });
+      const f = b ? calcFinalScore(autoScore, b.self, b.peer, b.supervisor) : null;
+      return { period: p.label, คะแนนรวม: f !== null ? parseFloat(f.toFixed(2)) : null };
+    }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [closedPeriods, allEvals, autoScore]);
+  [closedPeriods, allEvals, autoScore]);
 
-  // Action plan (per member per period, persisted in localStorage)
-  const actionKey = `kpi_action_${memberId}_${latestPeriod?.id ?? ""}`;
+  // Action plan (localStorage)
+  const actionKey = `kpi_action_${memberId}_${latest?.id ?? ""}`;
   const [actionPlan, setActionPlan] = useState(() => localStorage.getItem(actionKey) ?? "");
-  const saveActionPlan = () => {
-    localStorage.setItem(actionKey, actionPlan);
-    toast({ title: "บันทึก Action Plan แล้ว" });
-  };
+  const saveAction = () => { localStorage.setItem(actionKey, actionPlan); toast({ title: "บันทึก Action Plan แล้ว" }); };
 
-  if (!member) {
-    return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  }
+  if (!member) return (
+    <div className="p-6 flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
 
-  const avatarUrl = getAvatarUrl(member.avatar);
+  const url = avatarUrl(member.avatar);
 
   return (
     <div className="p-4 md:p-6 page-enter max-w-3xl mx-auto">
-      {/* Back */}
-      <button onClick={() => navigate("/kpi/overview")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors">
+      <button onClick={() => navigate("/kpi/overview")}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors">
         <ArrowLeft className="w-4 h-4" /> กลับ
       </button>
 
-      {/* Header */}
+      {/* Member header */}
       <div className="bg-card border border-border/60 rounded-2xl p-5 mb-5 flex items-center gap-4">
         <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
-          {avatarUrl
-            ? <img src={avatarUrl} alt={member.name} className="w-full h-full object-cover" />
-            : <span className="text-xl font-bold text-primary">{member.name.charAt(0)}</span>
-          }
+          {url
+            ? <img src={url} alt={member.name} className="w-full h-full object-cover" />
+            : <span className="text-xl font-bold text-primary">{member.name.charAt(0)}</span>}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -171,7 +164,7 @@ export default function KpiReport() {
             <h1 className="text-xl font-bold truncate">{member.name}</h1>
           </div>
           <p className="text-sm text-muted-foreground">{member.position}</p>
-          {latestPeriod && <p className="text-xs text-muted-foreground mt-0.5">รอบล่าสุด: {latestPeriod.label}</p>}
+          {latest && <p className="text-xs text-muted-foreground mt-0.5">รอบล่าสุด: {latest.label}</p>}
         </div>
         {finalScore !== null && (
           <div className="text-center flex-shrink-0">
@@ -182,60 +175,58 @@ export default function KpiReport() {
         )}
       </div>
 
-      {!latestPeriod ? (
+      {!latest ? (
         <div className="bg-card border border-border/60 rounded-2xl p-10 text-center text-muted-foreground">
           ยังไม่มีรอบการประเมินที่ปิดแล้ว
         </div>
       ) : (
         <div className="space-y-5">
-
-          {/* ── Score Breakdown ── */}
+          {/* Score breakdown */}
           <div className="bg-card border border-border/60 rounded-2xl p-5">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-              คะแนนแยกประเภท — {latestPeriod.label}
+              คะแนนแยกประเภท — {latest.label}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
-                { label: "Auto (งาน)", value: autoScore, color: "hsl(215 14% 50%)", weight: `${(REVIEWER_WEIGHTS.auto * 100).toFixed(0)}%` },
-                { label: "ตนเอง (Self)", value: latestBreakdown?.self ?? null, color: "hsl(191 91% 37%)", weight: `${(REVIEWER_WEIGHTS.self * 100).toFixed(0)}%` },
-                { label: `เพื่อน (${latestBreakdown?.peerCount ?? 0} คน)`, value: isAdmin ? (latestBreakdown?.peer ?? null) : null, color: "hsl(262 83% 58%)", adminOnly: true, weight: `${(REVIEWER_WEIGHTS.peer * 100).toFixed(0)}%` },
-                { label: "หัวหน้า (Supervisor)", value: latestBreakdown?.supervisor ?? null, color: "hsl(38 92% 50%)", weight: `${(REVIEWER_WEIGHTS.supervisor * 100).toFixed(0)}%` },
-              ].filter(s => !s.adminOnly || isAdmin).map(s => (
+                { label: "Auto (งาน)", value: autoScore, color: "hsl(215 14% 50%)", w: REVIEWER_WEIGHTS.auto },
+                { label: "ตนเอง (Self)", value: breakdown?.self ?? null, color: "hsl(191 91% 37%)", w: REVIEWER_WEIGHTS.self },
+                ...(isAdmin ? [{ label: `เพื่อน (${breakdown?.peerCount ?? 0} คน)`, value: breakdown?.peer ?? null, color: "hsl(262 83% 58%)", w: REVIEWER_WEIGHTS.peer }] : []),
+                { label: "หัวหน้า", value: breakdown?.supervisor ?? null, color: "hsl(38 92% 50%)", w: REVIEWER_WEIGHTS.supervisor },
+              ].map(s => (
                 <div key={s.label} className="bg-muted/50 rounded-xl p-3 text-center">
                   <p className="text-[10px] text-muted-foreground mb-1 leading-tight">{s.label}</p>
                   <p className="text-xl font-bold" style={{ color: s.color }}>
                     {s.value !== null && s.value !== undefined ? s.value.toFixed(2) : "—"}
                   </p>
                   <p className="text-[10px] text-muted-foreground">/ 5</p>
-                  {"weight" in s && <p className="text-[9px] text-muted-foreground/60 mt-0.5">น้ำหนัก {(s as any).weight}</p>}
+                  <p className="text-[9px] text-muted-foreground/60 mt-0.5">น้ำหนัก {(s.w * 100).toFixed(0)}%</p>
                 </div>
               ))}
             </div>
 
-            {/* Peer privacy note (non-admin) */}
-            {!isAdmin && (latestBreakdown?.peerCount ?? 0) > 0 && (
-              <div className="flex items-center gap-1.5 mb-3 text-xs text-muted-foreground">
-                <Star className="w-3 h-3 flex-shrink-0" />
-                คะแนนเพื่อนร่วมงาน ({latestBreakdown?.peerCount} คน) เป็นนิรนาม — ไม่แสดงรายบุคคล
-              </div>
+            {/* Peer anonymity note */}
+            {!isAdmin && (breakdown?.peerCount ?? 0) > 0 && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-3">
+                <Star className="w-3 h-3" />
+                คะแนนเพื่อนร่วมงาน ({breakdown?.peerCount} คน) เป็นนิรนาม
+              </p>
             )}
 
-            {/* Per-category breakdown */}
-            {latestBreakdown?.allScores && (
+            {/* Category bars */}
+            {breakdown?.allScores && (
               <div className="space-y-2 pt-3 border-t border-border/40">
                 <p className="text-xs font-medium text-muted-foreground mb-3">คะแนนรายหมวด (ค่าเฉลี่ยทุกประเภท)</p>
                 {KPI_CATEGORIES.map(cat => {
-                  const score = calcCategoryScore(latestBreakdown.allScores!, cat.key);
-                  const pct = (score / 5) * 100;
+                  const score = calcCategoryScore(breakdown.allScores!, cat.key);
                   return (
                     <div key={cat.key}>
-                      <div className="flex items-center justify-between text-xs mb-1">
+                      <div className="flex justify-between text-xs mb-1">
                         <span className="font-medium">{cat.labelTh}</span>
                         <span className="font-bold" style={{ color: cat.color }}>{score > 0 ? score.toFixed(2) : "—"}</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, background: cat.color }} />
+                          style={{ width: `${(score / 5) * 100}%`, background: cat.color }} />
                       </div>
                     </div>
                   );
@@ -244,31 +235,25 @@ export default function KpiReport() {
             )}
           </div>
 
-          {/* ── Radar Chart ── */}
+          {/* Radar */}
           {radarData.length > 0 && (
             <div className="bg-card border border-border/60 rounded-2xl p-5">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">Radar Chart</h2>
               <p className="text-xs text-muted-foreground mb-4">สมดุลทักษะทั้ง 4 ด้าน</p>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={280}>
                 <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
                   <PolarGrid stroke="hsl(220 13% 88%)" />
                   <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: "hsl(222 47% 40%)" }} />
                   <PolarRadiusAxis domain={[0, 5]} tick={{ fontSize: 9 }} tickCount={6} />
-                  <Radar
-                    name={member.name}
-                    dataKey="คะแนน"
-                    stroke="hsl(191 91% 37%)"
-                    fill="hsl(191 91% 37%)"
-                    fillOpacity={0.25}
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(191 91% 37%)", r: 4 }}
-                  />
+                  <Radar name={member.name} dataKey="คะแนน"
+                    stroke="hsl(191 91% 37%)" fill="hsl(191 91% 37%)" fillOpacity={0.25}
+                    strokeWidth={2} dot={{ fill: "hsl(191 91% 37%)", r: 4 }} />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* ── Trend Line ── */}
+          {/* Trend */}
           {trendData.length >= 2 && (
             <div className="bg-card border border-border/60 rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-1">
@@ -291,7 +276,7 @@ export default function KpiReport() {
             </div>
           )}
 
-          {/* ── Action Plan ── */}
+          {/* Action plan */}
           <div className="bg-card border border-border/60 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Star className="w-4 h-4 text-primary" />
@@ -305,9 +290,7 @@ export default function KpiReport() {
               placeholder="กำหนดแผนพัฒนาตนเองสำหรับรอบถัดไป..."
               className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 mb-3"
             />
-            <button onClick={saveActionPlan} className="btn-primary text-sm px-4 py-2 rounded-lg">
-              บันทึก
-            </button>
+            <button onClick={saveAction} className="btn-primary text-sm px-4 py-2 rounded-lg">บันทึก</button>
           </div>
         </div>
       )}
