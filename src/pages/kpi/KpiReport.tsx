@@ -15,6 +15,7 @@ import {
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { resolveRoleKey, ROLE_SECTION_WEIGHTS, REVIEWER_WEIGHTS } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 function getAvatarUrl(path: string | undefined) {
@@ -35,9 +36,27 @@ function avgScores(evals: KpiEvaluation[]): KpiSubScores | null {
   return result as KpiSubScores;
 }
 
-function avgWeighted(evals: KpiEvaluation[]): number | null {
+function avgWeightedForRole(evals: KpiEvaluation[], memberName?: string): number | null {
   if (evals.length === 0) return null;
-  const scores = evals.map(e => calcWeightedScore(e.scores as KpiSubScores));
+  const roleKey = memberName ? resolveRoleKey(memberName) : null;
+  const roleWeights = roleKey ? ROLE_SECTION_WEIGHTS[roleKey] : null;
+
+  const scores = evals.map(e => {
+    if (!roleWeights) return calcWeightedScore(e.scores as KpiSubScores);
+    // Use role-specific section weights
+    const s = e.scores as KpiSubScores;
+    let total = 0;
+    let weightSum = 0;
+    for (const cat of KPI_CATEGORIES) {
+      const w = roleWeights[cat.key] ?? 0;
+      if (w === 0) continue;
+      const avg = calcCategoryScore(s, cat.key);
+      if (avg === 0) continue;
+      total += avg * w;
+      weightSum += w;
+    }
+    return weightSum === 0 ? 0 : total / weightSum;
+  });
   return scores.reduce((a, b) => a + b, 0) / scores.length;
 }
 
@@ -61,10 +80,11 @@ export default function KpiReport() {
   function getBreakdown(periodId: string) {
     const evals = allEvals.filter(e => e.period_id === periodId && e.evaluatee_id === memberId && e.submitted_at);
     return {
-      self: avgWeighted(evals.filter(e => e.type === "self")),
-      peer: avgWeighted(evals.filter(e => e.type === "peer")),
-      supervisor: avgWeighted(evals.filter(e => e.type === "supervisor")),
+      self: avgWeightedForRole(evals.filter(e => e.type === "self"), member?.name),
+      peer: avgWeightedForRole(evals.filter(e => e.type === "peer"), member?.name),
+      supervisor: avgWeightedForRole(evals.filter(e => e.type === "supervisor"), member?.name),
       allScores: avgScores(evals),
+      peerCount: evals.filter(e => e.type === "peer").length,
     };
   }
 
@@ -85,7 +105,12 @@ export default function KpiReport() {
   }, [memberId]);
 
   const finalScore = latestBreakdown
-    ? calcFinalScore(autoScore, latestBreakdown.self, latestBreakdown.peer, latestBreakdown.supervisor)
+    ? calcFinalScore(
+        autoScore,
+        latestBreakdown.self,
+        latestBreakdown.peer,
+        latestBreakdown.supervisor,
+      )
     : null;
 
   // Radar: category averages from all submitted evals of latest period
@@ -171,10 +196,10 @@ export default function KpiReport() {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
-                { label: "Auto (งาน)", value: autoScore, color: "hsl(215 14% 50%)" },
-                { label: "ตนเอง (Self)", value: latestBreakdown?.self ?? null, color: "hsl(191 91% 37%)" },
-                { label: "เพื่อน (Peer)", value: isAdmin ? (latestBreakdown?.peer ?? null) : null, color: "hsl(262 83% 58%)", adminOnly: true },
-                { label: "หัวหน้า (Supervisor)", value: latestBreakdown?.supervisor ?? null, color: "hsl(38 92% 50%)" },
+                { label: "Auto (งาน)", value: autoScore, color: "hsl(215 14% 50%)", weight: `${(REVIEWER_WEIGHTS.auto * 100).toFixed(0)}%` },
+                { label: "ตนเอง (Self)", value: latestBreakdown?.self ?? null, color: "hsl(191 91% 37%)", weight: `${(REVIEWER_WEIGHTS.self * 100).toFixed(0)}%` },
+                { label: `เพื่อน (${latestBreakdown?.peerCount ?? 0} คน)`, value: isAdmin ? (latestBreakdown?.peer ?? null) : null, color: "hsl(262 83% 58%)", adminOnly: true, weight: `${(REVIEWER_WEIGHTS.peer * 100).toFixed(0)}%` },
+                { label: "หัวหน้า (Supervisor)", value: latestBreakdown?.supervisor ?? null, color: "hsl(38 92% 50%)", weight: `${(REVIEWER_WEIGHTS.supervisor * 100).toFixed(0)}%` },
               ].filter(s => !s.adminOnly || isAdmin).map(s => (
                 <div key={s.label} className="bg-muted/50 rounded-xl p-3 text-center">
                   <p className="text-[10px] text-muted-foreground mb-1 leading-tight">{s.label}</p>
@@ -182,9 +207,18 @@ export default function KpiReport() {
                     {s.value !== null && s.value !== undefined ? s.value.toFixed(2) : "—"}
                   </p>
                   <p className="text-[10px] text-muted-foreground">/ 5</p>
+                  {"weight" in s && <p className="text-[9px] text-muted-foreground/60 mt-0.5">น้ำหนัก {(s as any).weight}</p>}
                 </div>
               ))}
             </div>
+
+            {/* Peer privacy note (non-admin) */}
+            {!isAdmin && (latestBreakdown?.peerCount ?? 0) > 0 && (
+              <div className="flex items-center gap-1.5 mb-3 text-xs text-muted-foreground">
+                <Star className="w-3 h-3 flex-shrink-0" />
+                คะแนนเพื่อนร่วมงาน ({latestBreakdown?.peerCount} คน) เป็นนิรนาม — ไม่แสดงรายบุคคล
+              </div>
+            )}
 
             {/* Per-category breakdown */}
             {latestBreakdown?.allScores && (
