@@ -1,8 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ClipboardCheck, Info } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, Info, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useKpiPeriods, useKpiEvaluations, useKpiRoleWeights, type KpiEvaluation } from "@/hooks/useKpi";
+import {
+  KPI_CATEGORIES,
+  useKpiPeriods, useKpiEvaluations,
+  type KpiEvaluation, type KpiSubScores, type KpiSubScoreKey,
+  calcCategoryScore,
+} from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -14,71 +19,47 @@ function getAvatarUrl(path: string | undefined) {
   return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
 }
 
-const SCORE_LABELS: Record<string, { th: string; desc: string[] }> = {
-  job_performance: {
-    th: "ผลการปฏิบัติงาน",
-    desc: ["ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"],
-  },
-  competency: {
-    th: "ความสามารถ / ทักษะ",
-    desc: ["ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"],
-  },
-  teamwork: {
-    th: "การทำงานเป็นทีม",
-    desc: ["ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"],
-  },
-  leadership: {
-    th: "ภาวะผู้นำ",
-    desc: ["ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"],
-  },
-  creativity: {
-    th: "ความคิดสร้างสรรค์",
-    desc: ["ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"],
-  },
-};
+// ── Default scores (all sub-items = 3) ────────────────────────────────────
+function defaultScores(): KpiSubScores {
+  const s: KpiSubScores = {};
+  for (const cat of KPI_CATEGORIES) {
+    for (const item of cat.items) {
+      s[item.key as KpiSubScoreKey] = 3;
+    }
+  }
+  return s;
+}
 
-const SCORE_KEYS = ["job_performance", "competency", "teamwork", "leadership", "creativity"] as const;
-
-function ScoreSlider({
-  label,
-  thLabel,
-  desc,
-  value,
-  onChange,
-}: {
-  label: string;
-  thLabel: string;
-  desc: string[];
-  value: number;
-  onChange: (v: number) => void;
-}) {
+// ── Star Rating Component ──────────────────────────────────────────────────
+function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0);
+  const display = hovered || value;
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">{thLabel}</label>
-        <span className="text-sm font-bold" style={{ color: "hsl(191 91% 40%)" }}>{value} / 5</span>
-      </div>
-      <input
-        type="range"
-        min={1}
-        max={5}
-        step={1}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer"
-        style={{
-          background: `linear-gradient(to right, hsl(191 91% 37%) ${(value - 1) * 25}%, hsl(220 13% 88%) ${(value - 1) * 25}%)`,
-          accentColor: "hsl(191 91% 37%)",
-        }}
-      />
-      <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
-        {desc.map((d, i) => (
-          <span key={i} className={value === i + 1 ? "font-semibold text-primary" : ""}>{d}</span>
-        ))}
-      </div>
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map(n => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          onMouseEnter={() => setHovered(n)}
+          onMouseLeave={() => setHovered(0)}
+          className="transition-transform duration-100 hover:scale-110 active:scale-95"
+        >
+          <Star
+            className="w-6 h-6"
+            fill={n <= display ? "hsl(38 92% 50%)" : "none"}
+            stroke={n <= display ? "hsl(38 92% 50%)" : "hsl(215 14% 70%)"}
+          />
+        </button>
+      ))}
+      <span className="text-sm font-semibold ml-1" style={{ color: "hsl(38 92% 45%)" }}>
+        {value}/5
+      </span>
     </div>
   );
 }
+
+const SCORE_LABELS = ["", "ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"];
 
 export default function KpiEvaluate() {
   const { evaluateeId, periodId } = useParams<{ evaluateeId: string; periodId: string }>();
@@ -88,15 +69,8 @@ export default function KpiEvaluate() {
   const { periods } = useKpiPeriods();
   const { evaluations, upsertEvaluation } = useKpiEvaluations(periodId);
   const { employees } = useEmployees();
-  const { getWeightForRole } = useKpiRoleWeights();
 
-  const [scores, setScores] = useState<Record<string, number>>({
-    job_performance: 3,
-    competency: 3,
-    teamwork: 3,
-    leadership: 3,
-    creativity: 3,
-  });
+  const [scores, setScores] = useState<KpiSubScores>(defaultScores());
   const [notesStrength, setNotesStrength] = useState("");
   const [notesImprove, setNotesImprove] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -106,78 +80,61 @@ export default function KpiEvaluate() {
   const evaluatee = useMemo(() => employees.find(e => e.id === evaluateeId), [employees, evaluateeId]);
   const period = useMemo(() => periods.find(p => p.id === periodId), [periods, periodId]);
 
-  // Find current user's employee record by email, fallback to display_name match
+  // Resolve current user → employee record
   useEffect(() => {
     if (!user || employees.length === 0) return;
-    // Try email match first
     supabase.from("employees").select("*").eq("email", user.email ?? "").maybeSingle()
       .then(({ data }) => {
-        if (data) {
-          setEvaluatorEmployee(data as Employee);
-        } else {
-          // Fallback: match by display_name vs employee name
-          const displayName = (user.user_metadata?.display_name ?? "").toLowerCase();
-          const matched = employees.find(e => e.name.toLowerCase() === displayName);
-          if (matched) {
-            setEvaluatorEmployee(matched);
-          } else {
-            setEvaluatorNotFound(true);
-          }
-        }
+        if (data) { setEvaluatorEmployee(data as Employee); return; }
+        const displayName = (user.user_metadata?.display_name ?? "").toLowerCase();
+        const matched = employees.find(e => e.name.toLowerCase() === displayName);
+        if (matched) setEvaluatorEmployee(matched);
+        else setEvaluatorNotFound(true);
       });
   }, [user, employees]);
 
-  // Determine evaluation type
   const evalType = useMemo((): "self" | "peer" | "supervisor" => {
     if (!evaluatorEmployee || !evaluatee) return "peer";
     if (evaluatorEmployee.id === evaluatee.id) return "self";
-    // ต้า = director role -> supervisor
     if (evaluatorEmployee.role?.toLowerCase().includes("director")) return "supervisor";
     return "peer";
   }, [evaluatorEmployee, evaluatee]);
 
-  // Pre-fill if draft exists
+  // Pre-fill existing draft
   useEffect(() => {
     if (!evaluatorEmployee) return;
     const existing = evaluations.find(
-      e => e.evaluator_id === evaluatorEmployee.id &&
-        e.evaluatee_id === evaluateeId &&
-        e.period_id === periodId
+      e => e.evaluator_id === evaluatorEmployee.id && e.evaluatee_id === evaluateeId && e.period_id === periodId
     );
     if (existing) {
-      setScores(existing.scores as Record<string, number>);
+      setScores(existing.scores as KpiSubScores);
       setNotesStrength(existing.notes_strength ?? "");
       setNotesImprove(existing.notes_improve ?? "");
     }
   }, [evaluations, evaluatorEmployee, evaluateeId, periodId]);
 
-  // Auto-score: task stats for evaluatee
+  // Auto task stats
   const [taskStats, setTaskStats] = useState<{ punctuality: number; quality: number } | null>(null);
   useEffect(() => {
     if (!evaluateeId) return;
-    supabase
-      .from("tasks")
-      .select("status, due_date, comments")
-      .contains("assigned_to", [evaluateeId])
+    supabase.from("tasks").select("status, due_date, comments").contains("assigned_to", [evaluateeId])
       .then(({ data }) => {
         if (!data || data.length === 0) { setTaskStats({ punctuality: 0, quality: 0 }); return; }
         const done = data.filter(t => t.status === "Done");
-        const onTime = done.filter(t => {
-          if (!t.due_date) return false;
-          return new Date(t.due_date) >= new Date();
-        });
-        const punctuality = done.length > 0 ? (onTime.length / done.length) * 100 : 0;
-        // Quality: tasks approved first pass (no revision comment — approximation)
+        const onTime = done.filter(t => t.due_date && new Date(t.due_date) >= new Date());
         const firstPass = done.filter(t => !t.comments?.toLowerCase().includes("revision") && !t.comments?.toLowerCase().includes("แก้ไข"));
-        const quality = done.length > 0 ? (firstPass.length / done.length) * 100 : 0;
-        setTaskStats({ punctuality, quality });
+        setTaskStats({
+          punctuality: done.length > 0 ? (onTime.length / done.length) * 100 : 0,
+          quality: done.length > 0 ? (firstPass.length / done.length) * 100 : 0,
+        });
       });
   }, [evaluateeId]);
 
-  const roleWeights = evaluatee ? getWeightForRole(evaluatee.role ?? "") : null;
+  const setScore = (key: KpiSubScoreKey, value: number) =>
+    setScores(prev => ({ ...prev, [key]: value }));
 
   const handleSubmit = async () => {
-    if (!evaluatorEmployee) { toast({ title: "ไม่พบข้อมูลผู้ประเมิน", variant: "destructive" }); return; }
+    if (!evaluatorEmployee) { toast({ title: "กรุณาเลือกชื่อของคุณก่อน", variant: "destructive" }); return; }
     if (!notesStrength.trim() || !notesImprove.trim()) {
       toast({ title: "กรุณากรอกจุดแข็งและสิ่งที่ควรพัฒนา", variant: "destructive" });
       return;
@@ -202,12 +159,10 @@ export default function KpiEvaluate() {
   };
 
   if (!evaluatee || !period) {
-    return (
-      <div className="p-6 flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   }
+
+  const evalTypeLabel = evalType === "self" ? "ตนเอง" : evalType === "supervisor" ? "หัวหน้า" : "เพื่อนร่วมงาน";
 
   return (
     <div className="p-4 md:p-6 page-enter max-w-2xl mx-auto">
@@ -216,134 +171,145 @@ export default function KpiEvaluate() {
         <ArrowLeft className="w-4 h-4" /> กลับ
       </button>
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <ClipboardCheck className="w-5 h-5 text-primary" />
+      {/* ── ส่วนบน: ข้อมูลผู้ถูกประเมิน ── */}
+      <div className="bg-card border border-border/60 rounded-2xl p-5 mb-5">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
+            {getAvatarUrl(evaluatee.avatar)
+              ? <img src={getAvatarUrl(evaluatee.avatar)!} alt={evaluatee.name} className="w-full h-full object-cover" />
+              : <span className="text-xl font-bold text-primary">{evaluatee.name.charAt(0)}</span>
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <ClipboardCheck className="w-4 h-4 text-primary flex-shrink-0" />
+              <h1 className="text-lg font-bold truncate">{evaluatee.name}</h1>
+            </div>
+            <p className="text-sm text-muted-foreground">{evaluatee.position}</p>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={{ background: "hsl(191 91% 37% / 0.12)", color: "hsl(191 91% 40%)" }}>
+                {period.label}
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
+                ประเมิน: {evalTypeLabel}
+              </span>
+            </div>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold">ประเมิน: {evaluatee.name}</h1>
-          <p className="text-sm text-muted-foreground">{evaluatee.position} · {period.label} · ประเภท: {evalType === "self" ? "ตนเอง" : evalType === "supervisor" ? "หัวหน้า" : "เพื่อนร่วมงาน"}</p>
-        </div>
+
+        {/* Auto task stats */}
+        {taskStats !== null && (
+          <div className="mt-4 pt-4 border-t border-border/40">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Info className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">ข้อมูลจากระบบ (อัตโนมัติ)</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-muted/50 rounded-lg px-3 py-2 text-center">
+                <p className="text-[10px] text-muted-foreground mb-0.5">ความตรงต่อเวลา</p>
+                <p className="text-base font-bold">{taskStats.punctuality.toFixed(0)}%</p>
+              </div>
+              <div className="bg-muted/50 rounded-lg px-3 py-2 text-center">
+                <p className="text-[10px] text-muted-foreground mb-0.5">คุณภาพงาน (ผ่านรอบแรก)</p>
+                <p className="text-base font-bold">{taskStats.quality.toFixed(0)}%</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Evaluator identity picker (shown only when auto-match fails) */}
+      {/* Evaluator identity picker */}
       {evaluatorNotFound && !evaluatorEmployee && (
         <div className="bg-card border border-border/60 rounded-xl p-4 mb-5">
-          <p className="text-sm font-medium mb-2">คุณคือใครในทีม? <span className="text-destructive">*</span></p>
-          <p className="text-xs text-muted-foreground mb-3">ไม่พบข้อมูลของคุณในระบบโดยอัตโนมัติ กรุณาเลือกชื่อของคุณ</p>
-          <select
-            onChange={e => {
-              const emp = employees.find(em => em.id === e.target.value);
-              if (emp) setEvaluatorEmployee(emp);
-            }}
-            defaultValue=""
-            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
+          <p className="text-sm font-medium mb-1">คุณคือใครในทีม? <span className="text-destructive">*</span></p>
+          <p className="text-xs text-muted-foreground mb-3">ไม่พบข้อมูลของคุณโดยอัตโนมัติ กรุณาเลือกชื่อ</p>
+          <select onChange={e => { const emp = employees.find(em => em.id === e.target.value); if (emp) setEvaluatorEmployee(emp); }} defaultValue=""
+            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
             <option value="" disabled>— เลือกชื่อของคุณ —</option>
-            {employees.map(e => (
-              <option key={e.id} value={e.id}>{e.name} ({e.position})</option>
-            ))}
+            {employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.position})</option>)}
           </select>
         </div>
       )}
-
-      {/* Evaluator identity confirmed */}
       {evaluatorEmployee && (
-        <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg"
-          style={{ background: "hsl(191 91% 37% / 0.08)" }}>
-          <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
+        <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg" style={{ background: "hsl(191 91% 37% / 0.06)" }}>
+          <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
             {getAvatarUrl(evaluatorEmployee.avatar)
               ? <img src={getAvatarUrl(evaluatorEmployee.avatar)!} alt={evaluatorEmployee.name} className="w-full h-full object-cover" />
-              : <span className="text-[10px] font-bold text-primary">{evaluatorEmployee.name.charAt(0)}</span>
+              : <span className="text-[9px] font-bold text-primary">{evaluatorEmployee.name.charAt(0)}</span>
             }
           </div>
           <p className="text-xs text-muted-foreground">ประเมินในฐานะ: <span className="font-semibold text-foreground">{evaluatorEmployee.name}</span></p>
         </div>
       )}
 
-      {/* Auto stats card */}
-      {taskStats !== null && (
-        <div className="bg-card border border-border/60 rounded-xl p-4 mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Info className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">ข้อมูลอ้างอิงจากงาน (อัตโนมัติ)</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">ความตรงต่อเวลา</p>
-              <p className="text-lg font-bold">{taskStats.punctuality.toFixed(0)}%</p>
-              <p className="text-[10px] text-muted-foreground">งานที่ส่งก่อน due date</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">คุณภาพงาน</p>
-              <p className="text-lg font-bold">{taskStats.quality.toFixed(0)}%</p>
-              <p className="text-[10px] text-muted-foreground">ผ่านการอนุมัติรอบแรก</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sliders */}
-      <div className="bg-card border border-border/60 rounded-xl p-5 mb-5 space-y-6">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">คะแนนประเมิน</h2>
-        {SCORE_KEYS.map(key => {
-          const info = SCORE_LABELS[key];
-          const weight = roleWeights ? roleWeights[key] : 0;
+      {/* ── ส่วนกลาง: 4 หมวดหมู่การประเมิน ── */}
+      <div className="space-y-4 mb-5">
+        {KPI_CATEGORIES.map(cat => {
+          const catAvg = calcCategoryScore(scores, cat.key);
           return (
-            <div key={key}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium">{info.th}</span>
-                {weight > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                    style={{ background: "hsl(191 91% 37% / 0.12)", color: "hsl(191 91% 40%)" }}>
-                    น้ำหนัก {weight}%
-                  </span>
-                )}
+            <div key={cat.key} className="bg-card border border-border/60 rounded-2xl overflow-hidden">
+              {/* Category header */}
+              <div className="px-5 py-3.5 border-b border-border/40 flex items-center justify-between"
+                style={{ background: `${cat.color}0d` }}>
+                <div>
+                  <h3 className="font-semibold text-sm">{cat.labelTh}</h3>
+                  <p className="text-xs text-muted-foreground">{cat.label} · น้ำหนัก {cat.weight}%</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold" style={{ color: cat.color }}>
+                    {catAvg > 0 ? catAvg.toFixed(1) : "—"}
+                  </p>
+                  {catAvg > 0 && <p className="text-[10px] text-muted-foreground">{SCORE_LABELS[Math.round(catAvg)]}</p>}
+                </div>
               </div>
-              <ScoreSlider
-                label={key}
-                thLabel=""
-                desc={info.desc}
-                value={scores[key] ?? 3}
-                onChange={v => setScores(prev => ({ ...prev, [key]: v }))}
-              />
+
+              {/* Sub-items */}
+              <div className="divide-y divide-border/20">
+                {cat.items.map(item => (
+                  <div key={item.key} className="px-5 py-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{item.labelTh}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                      </div>
+                    </div>
+                    <StarRating
+                      value={scores[item.key as KpiSubScoreKey] ?? 3}
+                      onChange={v => setScore(item.key as KpiSubScoreKey, v)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Text fields */}
-      <div className="bg-card border border-border/60 rounded-xl p-5 mb-5 space-y-4">
+      {/* ── ส่วนล่าง: ความคิดเห็น ── */}
+      <div className="bg-card border border-border/60 rounded-2xl p-5 mb-5 space-y-4">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">ความคิดเห็น</h2>
         <div>
-          <label className="text-sm font-medium mb-1.5 block">จุดแข็ง <span className="text-destructive">*</span></label>
-          <textarea
-            value={notesStrength}
-            onChange={e => setNotesStrength(e.target.value)}
-            rows={3}
+          <label className="text-sm font-medium mb-1.5 block">
+            จุดแข็ง <span className="text-destructive">*</span>
+          </label>
+          <textarea value={notesStrength} onChange={e => setNotesStrength(e.target.value)} rows={3}
             placeholder="ระบุจุดแข็งของผู้ถูกประเมิน..."
-            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
+            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
         <div>
-          <label className="text-sm font-medium mb-1.5 block">สิ่งที่ควรพัฒนา <span className="text-destructive">*</span></label>
-          <textarea
-            value={notesImprove}
-            onChange={e => setNotesImprove(e.target.value)}
-            rows={3}
+          <label className="text-sm font-medium mb-1.5 block">
+            สิ่งที่ควรพัฒนา <span className="text-destructive">*</span>
+          </label>
+          <textarea value={notesImprove} onChange={e => setNotesImprove(e.target.value)} rows={3}
             placeholder="ระบุสิ่งที่ควรพัฒนา..."
-            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
+            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
       </div>
 
       {/* Submit */}
-      <button
-        onClick={handleSubmit}
-        disabled={submitting}
-        className="w-full btn-primary py-3 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-      >
+      <button onClick={handleSubmit} disabled={submitting}
+        className="w-full btn-primary py-3 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
         {submitting ? "กำลังส่ง..." : "ส่งการประเมิน"}
       </button>
     </div>
