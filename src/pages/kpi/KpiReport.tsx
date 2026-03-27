@@ -92,7 +92,11 @@ export default function KpiReport() {
   }
 
   const breakdown = latest ? getBreakdown(latest.id) : null;
+codex/refactor-kpi-questions-and-evaluations-nq11eu
+  const showPeerIdentity = Boolean(me && canSeePeerIdentity(me));
+=======
   const showPeerIdentity = !!(me && canSeePeerIdentity(me));
+ main
 
   // Auto score from tasks
   const [autoScore, setAutoScore] = useState(0);
@@ -221,6 +225,9 @@ export default function KpiReport() {
               </p>
             )}
 
+codex/refactor-kpi-questions-and-evaluations-nq11eu
+            {(isAdmin || showPeerIdentity) && (breakdown?.peerEvaluators?.length ?? 0) > 0 && (
+ main
               <p className="text-xs text-muted-foreground mb-3">
                 Peer evaluators: {breakdown?.peerEvaluators.join(", ")}
               </p>

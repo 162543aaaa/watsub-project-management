@@ -26,6 +26,51 @@ const avatarUrl = (p?: string) =>
   !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
 
 type AutoValues = Record<AutoValueId, string>;
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
+
+async function computeAutoValues(empId: string, periodId: string): Promise<AutoValues> {
+  // Prefer period-scoped queries; gracefully fallback for older schemas.
+  const fetchTasks = async () => {
+    const withPeriod = await supabase
+      .from("tasks")
+      .select("status,due_date,comments,customer_id")
+      .contains("assigned_to", [empId])
+      .eq("period_id", periodId);
+    if (!withPeriod.error) return withPeriod.data ?? [];
+
+    const fallback = await supabase
+      .from("tasks")
+      .select("status,due_date,comments,customer_id")
+      .contains("assigned_to", [empId]);
+    return fallback.data ?? [];
+  };
+
+  const fetchProjects = async () => {
+    const withPeriod = await supabase
+      .from("projects")
+      .select("id,status")
+      .contains("member_ids", [empId])
+      .eq("period_id", periodId);
+    if (!withPeriod.error) return withPeriod.data ?? [];
+
+    const fallback = await supabase
+      .from("projects")
+      .select("id,status")
+      .contains("member_ids", [empId]);
+    return fallback.data ?? [];
+  };
+
+  const fetchCustomers = async () => {
+    const withPeriod = await supabase
+      .from("customers")
+      .select("id,payment_fee")
+      .eq("period_id", periodId);
+    if (!withPeriod.error) return withPeriod.data ?? [];
+
+    const fallback = await supabase.from("customers").select("id,payment_fee");
+    return fallback.data ?? [];
+  };
+=======
 
 async function computeAutoValues(empId: string, periodId: string): Promise<AutoValues> {
   const [tasksRes, projectsRes, customersRes, goalsRes] = await Promise.all([
@@ -34,12 +79,29 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
     supabase.from("customers").select("id,payment_fee,period_id").eq("period_id", periodId),
     supabase.from("goals").select("target_value,assigned_to,period_id").eq("period_id", periodId),
   ]);
+ main
 
-  const tasks = tasksRes.data ?? [];
-  const projects = projectsRes.data ?? [];
-  const customers = customersRes.data ?? [];
-  const goals = goalsRes.data ?? [];
+  const fetchGoals = async () => {
+    const withPeriod = await supabase
+      .from("goals")
+      .select("target_value,assigned_to")
+      .eq("period_id", periodId);
+    if (!withPeriod.error) return withPeriod.data ?? [];
 
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
+    const fallback = await supabase.from("goals").select("target_value,assigned_to");
+    return fallback.data ?? [];
+  };
+
+  const [tasks, projects, customers, goals] = await Promise.all([
+    fetchTasks(),
+    fetchProjects(),
+    fetchCustomers(),
+    fetchGoals(),
+  ]);
+
+=======
+ main
   const done = tasks.filter((t) => t.status === "Done");
   const onTimeActual = done.filter((t) => t.due_date);
   const revisionTasks = done.filter((t) =>
@@ -67,6 +129,12 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 }
 
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
+function getAutoValue(autoValues: AutoValues | null, questionAutoId?: AutoValueId): string {
+  if (!questionAutoId || !autoValues) return "—";
+  return autoValues[questionAutoId] ?? "—";
+=======
+ main
 }
 
 const SCORE_LABELS = ["", "ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"];
@@ -283,6 +351,10 @@ export default function KpiEvaluate() {
       evaluator_id: evaluator.id,
       evaluatee_id: evaluateeId!,
       type: evalType,
+codex/refactor-kpi-questions-and-evaluations-nq11eu
+      scores: answersInScores,
+=======
+main
       notes_strength: null,
       notes_improve: null,
       submitted_at: new Date().toISOString(),

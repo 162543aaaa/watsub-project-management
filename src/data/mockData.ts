@@ -1,3 +1,5 @@
+import { TEAM_ROSTER } from "@/config/teamRoster";
+
 export type TaskStatus = "To Do" | "In Progress" | "Done";
 export type TaskPriority = "High" | "Medium" | "Low";
 export type LeaveStatus = "Pending" | "Approved" | "Rejected";
@@ -86,6 +88,12 @@ export interface Notification {
 
 // ========= MOCK DATA =========
 
+ codex/refactor-kpi-questions-and-evaluations-nq11eu
+export const employees: Employee[] = TEAM_ROSTER.map((member, idx) => ({
+  id: `emp${idx + 1}`,
+  ...member,
+}));
+=======
 export const employees: Employee[] = [
   { id: "emp1", name: "TARMISI WANI", position: "Founding Director", email: "tamisiwani@gmail.com", role: "director" },
   { id: "emp2", name: "สุไมยนา หวังเบ็ญหมัด", position: "Content Strategist & Client Coordinator", email: "dudhjjui@gmail.com", role: "employee" },
@@ -94,6 +102,7 @@ export const employees: Employee[] = [
   { id: "emp5", name: "zuhariya yato", position: "Content Assistant", email: "zuhariya.yato@watsub.local", role: "employee" },
   { id: "emp6", name: "Natdia Benyakat", position: "Content Coordinator", email: "natdia.benyakat@watsub.local", role: "employee" },
 ];
+ main
 
 export const projects: Project[] = [
   {
