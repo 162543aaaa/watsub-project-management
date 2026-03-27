@@ -120,7 +120,7 @@ export interface KpiEvaluation {
   evaluator_id: string;
   evaluatee_id: string;
   type: "self" | "peer" | "supervisor";
-  scores: KpiSubScores;
+  scores: Record<string, number | string>;
   notes_strength: string | null;
   notes_improve: string | null;
   submitted_at: string | null;

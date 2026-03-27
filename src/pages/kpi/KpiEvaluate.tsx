@@ -10,34 +10,29 @@ import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import {
-  KPI_QUESTIONS, ROLE_WEIGHTS,
-  getEligiblePeerReviewers, resolveRoleKey,
-  type RoleKey, type ReviewerType, type AutoValueId, type KPISection,
+  KPI_QUESTIONS,
+  ROLE_WEIGHTS,
+  getEligiblePeerReviewers,
+  getSelfEvaluationType,
+  resolveRoleKey,
+  type RoleKey,
+  type ReviewerType,
+  type AutoValueId,
+  type KPISection,
 } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
   !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
 
-// ─── Auto value computation ───────────────────────────────────────────────────
+type AutoValues = Record<AutoValueId, string>;
 
-interface AutoValues {
-  tasks_ontime_pct: string;
-  tasks_done_count: string;
-  revision_avg: string;
-  projects_closed: string;
-  revenue_vs_target_q: string;
-  scripts_ontime_pct: string;
-  client_count: string;
-  task_approve_d1: string;
-}
-
-async function computeAutoValues(empId: string): Promise<AutoValues> {
+async function computeAutoValues(empId: string, periodId: string): Promise<AutoValues> {
   const [tasksRes, projectsRes, customersRes, goalsRes] = await Promise.all([
-    supabase.from("tasks").select("status,due_date,comments,customer_id").contains("assigned_to", [empId]),
-    supabase.from("projects").select("id,status").contains("member_ids", [empId]),
-    supabase.from("customers").select("id,payment_fee"),
-    supabase.from("goals").select("target_value,assigned_to"),
+    supabase.from("tasks").select("status,due_date,comments,customer_id").contains("assigned_to", [empId]).eq("period_id", periodId),
+    supabase.from("projects").select("id,status,period_id").contains("member_ids", [empId]).eq("period_id", periodId),
+    supabase.from("customers").select("id,payment_fee,period_id").eq("period_id", periodId),
+    supabase.from("goals").select("target_value,assigned_to,period_id").eq("period_id", periodId),
   ]);
 
   const tasks = tasksRes.data ?? [];
@@ -45,15 +40,15 @@ async function computeAutoValues(empId: string): Promise<AutoValues> {
   const customers = customersRes.data ?? [];
   const goals = goalsRes.data ?? [];
 
-  const done = tasks.filter(t => t.status === "Done");
-  const onTimeActual = done.filter(t => t.due_date);
-  const revisionTasks = done.filter(t =>
+  const done = tasks.filter((t) => t.status === "Done");
+  const onTimeActual = done.filter((t) => t.due_date);
+  const revisionTasks = done.filter((t) =>
     (t.comments ?? "").toLowerCase().includes("revision") ||
     (t.comments ?? "").toLowerCase().includes("แก้ไข"));
   const avgRevision = done.length ? (revisionTasks.length / done.length).toFixed(1) : "0";
 
-  const clientIds = new Set(tasks.map(t => t.customer_id).filter(Boolean));
-  const closedProjects = projects.filter(p => p.status === "completed" || p.status === "done");
+  const clientIds = new Set(tasks.map((t) => t.customer_id).filter(Boolean));
+  const closedProjects = projects.filter((p) => p.status === "completed" || p.status === "done");
   const revenueTotal = customers.reduce((sum, customer) => {
     const parsed = Number(String(customer.payment_fee ?? "").replace(/,/g, ""));
     return Number.isFinite(parsed) ? sum + parsed : sum;
@@ -72,7 +67,10 @@ async function computeAutoValues(empId: string): Promise<AutoValues> {
   };
 }
 
-// ─── Star Rating ──────────────────────────────────────────────────────────────
+function getAutoValue(autoValues: AutoValues | null, questionAutoId?: AutoValueId): string {
+  if (!questionAutoId || !autoValues) return "—";
+  return autoValues[questionAutoId] ?? "—";
+}
 
 const SCORE_LABELS = ["", "ต่ำมาก", "ต่ำ", "ปานกลาง", "ดี", "ดีเยี่ยม"];
 
@@ -81,26 +79,27 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
   const active = hover || value;
   return (
     <div className="flex items-center gap-1 flex-wrap">
-      {[1, 2, 3, 4, 5].map(n => (
-        <button key={n} type="button"
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
           onClick={() => onChange(n)}
           onMouseEnter={() => setHover(n)}
           onMouseLeave={() => setHover(0)}
-          className="transition-transform hover:scale-110 active:scale-95">
-          <Star className="w-6 h-6"
+          className="transition-transform hover:scale-110 active:scale-95"
+        >
+          <Star
+            className="w-6 h-6"
             fill={n <= active ? "hsl(38 92% 50%)" : "none"}
-            stroke={n <= active ? "hsl(38 92% 50%)" : "hsl(215 14% 70%)"} />
+            stroke={n <= active ? "hsl(38 92% 50%)" : "hsl(215 14% 70%)"}
+          />
         </button>
       ))}
-      <span className="text-sm font-semibold ml-1.5" style={{ color: "hsl(38 92% 45%)" }}>
-        {value}/5
-      </span>
+      <span className="text-sm font-semibold ml-1.5" style={{ color: "hsl(38 92% 45%)" }}>{value}/5</span>
       <span className="text-xs text-muted-foreground ml-0.5">{SCORE_LABELS[value]}</span>
     </div>
   );
 }
-
-// ─── Section renderer ─────────────────────────────────────────────────────────
 
 function SectionCard({
   section,
@@ -117,67 +116,53 @@ function SectionCard({
   onRate: (key: KpiSubScoreKey, v: number) => void;
   onText: (id: string, v: string) => void;
 }) {
-  // Don't render section if all questions are hidden or auto-only
-  const visibleQ = section.questions.filter(q => q.type !== "hidden");
+  const visibleQ = section.questions.filter((q) => q.type !== "hidden");
   if (!visibleQ.length) return null;
 
   return (
     <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-border/40"
-        style={{ background: `${section.color}12` }}>
+      <div className="px-5 py-3.5 border-b border-border/40" style={{ background: `${section.color}12` }}>
         <div className="flex items-center justify-between gap-3">
-          <h3 className="font-semibold text-sm">{section.title ?? section.labelTh}</h3>
-          {section.weight && (
-            <span className="text-[11px] font-medium text-muted-foreground">{section.weight}</span>
-          )}
+          <h3 className="font-semibold text-sm">{section.title}</h3>
+          <span className="text-[11px] font-medium text-muted-foreground">{section.weight}</span>
         </div>
       </div>
       <div className="divide-y divide-border/20">
-        {visibleQ.map(q => {
-          const questionLabel = q.question ?? q.labelTh;
+        {visibleQ.map((q) => {
           switch (q.type) {
-
             case "auto":
               return (
                 <div key={q.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground truncate">{questionLabel}</p>
+                    <p className="text-sm text-muted-foreground truncate">{q.question}</p>
                   </div>
                   <span className="text-sm font-bold flex-shrink-0" style={{ color: section.color }}>
-                    {autoValues?.[q.autoId as AutoValueId] ?? "—"}
+                    {getAutoValue(autoValues, q.autoId)}
                   </span>
                 </div>
               );
-
             case "rate":
               return (
                 <div key={q.id} className="px-5 py-4">
-                  <p className="text-sm font-medium mb-2.5">{questionLabel}</p>
+                  <p className="text-sm font-medium mb-2.5">{q.question}</p>
                   {q.helperText && <p className="text-xs text-muted-foreground mb-2">{q.helperText}</p>}
-                  <StarRating
-                    value={scores[q.scoreKey!] ?? 3}
-                    onChange={v => onRate(q.scoreKey!, v)}
-                  />
+                  <StarRating value={scores[q.scoreKey!] ?? 3} onChange={(v) => onRate(q.scoreKey!, v)} />
                 </div>
               );
-
             case "text":
               return (
                 <div key={q.id} className="px-5 py-4">
-                  <label className="text-sm font-medium mb-1.5 block">
-                    {questionLabel} <span className="text-destructive">*</span>
-                  </label>
+                  <label className="text-sm font-medium mb-1.5 block">{q.question} <span className="text-destructive">*</span></label>
                   <textarea
                     value={textAnswers[q.id] ?? ""}
-                    onChange={e => onText(q.id, e.target.value)}
+                    onChange={(e) => onText(q.id, e.target.value)}
                     rows={3}
                     placeholder="กรอกคำตอบของคุณ..."
                     className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
               );
-
             default:
               return null;
           }
@@ -186,8 +171,6 @@ function SectionCard({
     </div>
   );
 }
-
-// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function KpiEvaluate() {
   const { evaluateeId, periodId } = useParams<{ evaluateeId: string; periodId: string }>();
@@ -205,88 +188,77 @@ export default function KpiEvaluate() {
   const [needPicker, setNeedPicker] = useState(false);
   const [autoValues, setAutoValues] = useState<AutoValues | null>(null);
 
-  const evaluatee = useMemo(() => employees.find(e => e.id === evaluateeId), [employees, evaluateeId]);
-  const period    = useMemo(() => periods.find(p => p.id === periodId), [periods, periodId]);
+  const evaluatee = useMemo(() => employees.find((e) => e.id === evaluateeId), [employees, evaluateeId]);
+  const period = useMemo(() => periods.find((p) => p.id === periodId), [periods, periodId]);
 
-  // Resolve evaluator from auth user
   useEffect(() => {
     if (!user || !employees.length) return;
     supabase.from("employees").select("*").eq("email", user.email ?? "").maybeSingle()
       .then(({ data }) => {
         if (data) { setEvaluator(data as Employee); return; }
         const dn = (user.user_metadata?.display_name ?? "").toLowerCase();
-        const match = employees.find(e => e.name.toLowerCase() === dn);
+        const match = employees.find((e) => e.name.toLowerCase() === dn);
         if (match) setEvaluator(match);
         else setNeedPicker(true);
       });
   }, [user, employees]);
 
-  // Load auto values
   useEffect(() => {
-    if (evaluateeId) computeAutoValues(evaluateeId).then(setAutoValues);
-  }, [evaluateeId]);
+    if (evaluateeId && periodId) computeAutoValues(evaluateeId, periodId).then(setAutoValues);
+  }, [evaluateeId, periodId]);
 
-  // Determine eval type
-  const evalType = useMemo((): ReviewerType => {
-    if (!evaluator || !evaluatee) return "peer";
-    if (evaluator.id === evaluatee.id) {
-      return resolveRoleKey(evaluatee.name) === "ta" ? "supervisor" : "self";
-    }
-    if (evaluator.role?.toLowerCase().includes("director")) return "supervisor";
-    return "peer";
-  }, [evaluator, evaluatee]);
-
-  // Get the form config — resolveRoleKey always returns a value ("default" as fallback)
   const roleKey = useMemo(
-    () => evaluatee ? resolveRoleKey(evaluatee.name) : "default" as RoleKey,
+    () => (evaluatee ? resolveRoleKey(evaluatee.name) : "default") as RoleKey,
     [evaluatee],
   );
+
+  const evalType = useMemo((): ReviewerType => {
+    if (!evaluator || !evaluatee) return "peer";
+    if (evaluator.id === evaluatee.id) return getSelfEvaluationType(roleKey);
+    if (evaluator.role?.toLowerCase().includes("director")) return "supervisor";
+    return "peer";
+  }, [evaluator, evaluatee, roleKey]);
+
   const isPeerAllowed = useMemo(() => {
     if (!evaluatee || !evaluator || evalType !== "peer") return true;
     return getEligiblePeerReviewers(evaluatee, employees).some((emp) => emp.id === evaluator.id);
   }, [evaluatee, evaluator, evalType, employees]);
-  const formConfig = useMemo(
-    () => KPI_QUESTIONS[roleKey][evalType],
-    [roleKey, evalType],
-  );
 
-  // Default all rate questions to 3
+  const formConfig = useMemo(() => KPI_QUESTIONS[roleKey][evalType], [roleKey, evalType]);
+
   useEffect(() => {
     if (!formConfig) return;
-    setScores(prev => {
+    setScores((prev) => {
       const s = { ...prev };
       for (const sec of formConfig.sections) {
         for (const q of sec.questions) {
-          if (q.type === "rate" && q.scoreKey && !(q.scoreKey in s)) {
-            s[q.scoreKey] = 3;
-          }
+          if (q.type === "rate" && q.scoreKey && !(q.scoreKey in s)) s[q.scoreKey] = 3;
         }
       }
       return s;
     });
   }, [formConfig]);
 
-  // Pre-fill existing draft
   useEffect(() => {
     if (!evaluator || !evaluations.length) return;
     const existing = evaluations.find(
-      e => e.evaluator_id === evaluator.id && e.evaluatee_id === evaluateeId && e.period_id === periodId,
+      (e) => e.evaluator_id === evaluator.id && e.evaluatee_id === evaluateeId && e.period_id === periodId,
     );
     if (!existing) return;
-    setScores(existing.scores as KpiSubScores);
-    // Restore text answers from notes
-    if (existing.notes_strength) {
-      try {
-        const parsed = JSON.parse(existing.notes_strength);
-        if (typeof parsed === "object") setTextAnswers(parsed);
-      } catch {
-        // legacy single string — ignore
-      }
+
+    const saved = existing.scores as Record<string, number | string>;
+    const restoredScores: KpiSubScores = {};
+    const restoredText: Record<string, string> = {};
+    for (const [key, value] of Object.entries(saved ?? {})) {
+      if (typeof value === "number") restoredScores[key as KpiSubScoreKey] = value;
+      if (typeof value === "string") restoredText[key] = value;
     }
+    setScores(restoredScores);
+    setTextAnswers(restoredText);
   }, [evaluations, evaluator, evaluateeId, periodId]);
 
-  const setScore = (key: KpiSubScoreKey, v: number) => setScores(p => ({ ...p, [key]: v }));
-  const setText  = (id: string, v: string) => setTextAnswers(p => ({ ...p, [id]: v }));
+  const setScore = (key: KpiSubScoreKey, v: number) => setScores((p) => ({ ...p, [key]: v }));
+  const setText = (id: string, v: string) => setTextAnswers((p) => ({ ...p, [id]: v }));
 
   const handleSubmit = async () => {
     if (!evaluator) {
@@ -297,29 +269,29 @@ export default function KpiEvaluate() {
       toast({ title: "คุณไม่มีสิทธิ์ประเมินแบบ Peer สำหรับคนนี้", variant: "destructive" });
       return;
     }
-    // Validate required text fields
-    if (formConfig) {
-      for (const sec of formConfig.sections) {
-        for (const q of sec.questions) {
-          if (q.type === "text" && !textAnswers[q.id]?.trim()) {
-            toast({ title: `กรุณากรอก: ${q.question ?? q.labelTh}`, variant: "destructive" });
-            return;
-          }
+
+    for (const sec of formConfig.sections) {
+      for (const q of sec.questions) {
+        if (q.type === "text" && !textAnswers[q.id]?.trim()) {
+          toast({ title: `กรุณากรอก: ${q.question}`, variant: "destructive" });
+          return;
         }
       }
     }
 
     setSubmitting(true);
+    const answersInScores: Record<string, number | string> = { ...scores, ...textAnswers };
     const ev: Omit<KpiEvaluation, "id" | "created_at"> = {
       period_id: periodId!,
       evaluator_id: evaluator.id,
       evaluatee_id: evaluateeId!,
       type: evalType,
-      scores,
-      notes_strength: JSON.stringify(textAnswers),
+      scores: answersInScores,
+      notes_strength: null,
       notes_improve: null,
       submitted_at: new Date().toISOString(),
     };
+
     const result = await upsertEvaluation(ev);
     setSubmitting(false);
     if (result) {
@@ -328,12 +300,13 @@ export default function KpiEvaluate() {
     }
   };
 
-  // ── Loading state ──
-  if (!evaluatee || !period) return (
-    <div className="p-6 flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-    </div>
-  );
+  if (!evaluatee || !period) {
+    return (
+      <div className="p-6 flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   const evalTypeLabel = formConfig.uiLabel
     ?? (evalType === "self" ? "ตนเอง" : evalType === "supervisor" ? "หัวหน้า" : "เพื่อนร่วมงาน");
@@ -342,13 +315,13 @@ export default function KpiEvaluate() {
 
   return (
     <div className="p-4 md:p-6 page-enter max-w-2xl mx-auto">
-      {/* Back */}
-      <button onClick={() => navigate("/kpi/overview")}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors">
+      <button
+        onClick={() => navigate("/kpi/overview")}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors"
+      >
         <ArrowLeft className="w-4 h-4" /> กลับ
       </button>
 
-      {/* Evaluatee header card */}
       <div className="bg-card border border-border/60 rounded-2xl p-5 mb-5">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
@@ -363,23 +336,13 @@ export default function KpiEvaluate() {
             </div>
             <p className="text-sm text-muted-foreground">{evaluatee.position}</p>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ background: "hsl(191 91% 37% / 0.12)", color: "hsl(191 91% 40%)" }}>
-                {period.label}
-              </span>
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
-                {evalTypeLabel}
-              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "hsl(191 91% 37% / 0.12)", color: "hsl(191 91% 40%)" }}>{period.label}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">{evalTypeLabel}</span>
             </div>
           </div>
         </div>
-        {formConfig.note && (
-          <div className="mt-3 text-xs text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
-            {formConfig.note}
-          </div>
-        )}
+        <div className="mt-3 text-xs text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">{formConfig.note}</div>
 
-        {/* Role weights */}
         <div className="mt-4 pt-4 border-t border-border/40">
           <p className="text-xs font-medium text-muted-foreground mb-2">น้ำหนักการประเมิน ({roleKey})</p>
           <div className="flex flex-wrap gap-2">
@@ -392,38 +355,31 @@ export default function KpiEvaluate() {
         </div>
       </div>
 
-      {/* Evaluator picker (when auto-resolve fails) */}
       {needPicker && !evaluator && (
         <div className="bg-card border border-border/60 rounded-xl p-4 mb-5">
           <p className="text-sm font-medium mb-1">คุณคือใครในทีม? <span className="text-destructive">*</span></p>
           <p className="text-xs text-muted-foreground mb-3">ไม่พบข้อมูลอัตโนมัติ กรุณาเลือกชื่อ</p>
           <select
             defaultValue=""
-            onChange={e => { const emp = employees.find(em => em.id === e.target.value); if (emp) setEvaluator(emp); }}
-            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+            onChange={(e) => { const emp = employees.find((em) => em.id === e.target.value); if (emp) setEvaluator(emp); }}
+            className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
             <option value="" disabled>— เลือกชื่อของคุณ —</option>
-            {employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.position})</option>)}
+            {employees.map((e) => <option key={e.id} value={e.id}>{e.name} ({e.position})</option>)}
           </select>
         </div>
       )}
-      {evaluator && (
-        <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg" style={{ background: "hsl(191 91% 37% / 0.06)" }}>
-          <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
-            {avatarUrl(evaluator.avatar)
-              ? <img src={avatarUrl(evaluator.avatar)!} alt={evaluator.name} className="w-full h-full object-cover" />
-              : <span className="text-[9px] font-bold text-primary">{evaluator.name.charAt(0)}</span>}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            ประเมินในฐานะ: <span className="font-semibold text-foreground">{evaluator.name}</span>
-          </p>
+
+      {!isPeerAllowed && (
+        <div className="mb-4 text-xs rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive">
+          สถานะ: คุณไม่อยู่ในรายการ peer reviewer ที่มีสิทธิ์ของ {evaluatee.name}
         </div>
       )}
 
-      {/* Form sections */}
       <div className="space-y-4 mb-5">
-        {formConfig.sections.map(section => (
+        {formConfig.sections.map((section) => (
           <SectionCard
-            key={section.key}
+            key={section.id}
             section={section}
             scores={scores}
             textAnswers={textAnswers}
@@ -434,21 +390,11 @@ export default function KpiEvaluate() {
         ))}
       </div>
 
-      {/* Peer anonymity notice */}
-      {evalType === "peer" && (
-        <div className="flex items-start gap-2 bg-muted/50 border border-border/40 rounded-xl px-4 py-3 mb-5">
-          <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-muted-foreground">
-            การประเมินแบบเพื่อนร่วมงานจะเป็น<span className="font-semibold">นิรนาม</span> — ผู้ถูกประเมินจะไม่เห็นว่าคุณเป็นผู้ให้คะแนน
-          </p>
-        </div>
-      )}
-
-      {/* Submit */}
       <button
         onClick={handleSubmit}
         disabled={submitting || !isPeerAllowed}
-        className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-all">
+        className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+      >
         {submitting ? "กำลังส่ง..." : !isPeerAllowed ? "ไม่มีสิทธิ์ประเมิน" : "ส่งการประเมิน"}
       </button>
     </div>
