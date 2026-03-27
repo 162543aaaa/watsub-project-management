@@ -25,6 +25,10 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import WaitingApproval from "./pages/WaitingApproval";
 import AdminPanel from "./pages/AdminPanel";
+import KpiOverview from "./pages/kpi/KpiOverview";
+import KpiEvaluate from "./pages/kpi/KpiEvaluate";
+import KpiReport from "./pages/kpi/KpiReport";
+import KpiAdmin from "./pages/kpi/KpiAdmin";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -63,6 +67,10 @@ const App = () => (
                 <Route path="/import" element={<Import />} />
                 <Route path="/export" element={<Export />} />
                 <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/kpi/overview" element={<KpiOverview />} />
+                <Route path="/kpi/evaluate/:evaluateeId/:periodId" element={<KpiEvaluate />} />
+                <Route path="/kpi/report/:memberId" element={<KpiReport />} />
+                <Route path="/kpi/admin" element={<KpiAdmin />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

@@ -1,0 +1,235 @@
+import { useState, useMemo } from "react";
+import { Navigate, Link } from "react-router-dom";
+import { Shield, Plus, Lock, Unlock, CheckCircle2, Clock, ExternalLink } from "lucide-react";
+import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
+interface NewPeriodForm {
+  label: string;
+  type: "project" | "quarter";
+  project_id: string;
+}
+
+export default function KpiAdmin() {
+  const { isAdmin, loading: authLoading } = useAuthContext();
+  const { periods, loading: periodsLoading, addPeriod, updatePeriod } = useKpiPeriods();
+  const { evaluations } = useKpiEvaluations();
+  const { employees } = useEmployees();
+
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<NewPeriodForm>({ label: "", type: "quarter", project_id: "" });
+  const [creating, setCreating] = useState(false);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+
+  // Load projects for the dropdown
+  useState(() => {
+    supabase.from("projects").select("id, name").order("name").then(({ data }) => {
+      setProjects(data ?? []);
+    });
+  });
+
+  const handleCreate = async () => {
+    if (!form.label.trim()) { toast({ title: "กรุณาระบุชื่อรอบประเมิน", variant: "destructive" }); return; }
+    setCreating(true);
+    await addPeriod({
+      label: form.label,
+      type: form.type,
+      status: "open",
+      project_id: form.type === "project" && form.project_id ? form.project_id : null,
+    });
+    setForm({ label: "", type: "quarter", project_id: "" });
+    setShowForm(false);
+    setCreating(false);
+  };
+
+  const handleToggleStatus = async (id: string, current: "open" | "closed") => {
+    const next = current === "open" ? "closed" : "open";
+    await updatePeriod(id, { status: next });
+    toast({ title: next === "closed" ? "ปิดรอบประเมินแล้ว" : "เปิดรอบประเมินแล้ว" });
+  };
+
+  // Submission status per period
+  const periodStats = useMemo(() => {
+    return periods.map(period => {
+      const evals = evaluations.filter(e => e.period_id === period.id);
+      const submitted = evals.filter(e => e.submitted_at);
+      const total = employees.length * employees.length; // all combinations
+      const memberRows = employees.map(emp => {
+        const selfDone = evals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === "self" && e.submitted_at);
+        const supDone = evals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
+        const peersDone = employees.filter(p => p.id !== emp.id)
+          .filter(peer => evals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && e.type === "peer" && e.submitted_at))
+          .length;
+        return { emp, selfDone, supDone, peersDone, peersTotal: employees.length - 1 };
+      });
+      return { period, submitted: submitted.length, memberRows };
+    });
+  }, [periods, evaluations, employees]);
+
+  if (authLoading || periodsLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+  if (!isAdmin) return <Navigate to="/kpi/overview" replace />;
+
+  return (
+    <div className="p-4 md:p-6 page-enter">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">KPI Admin</h1>
+            <p className="text-sm text-muted-foreground">จัดการรอบการประเมินและดูสถานะการส่ง</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowForm(v => !v)}
+          className="btn-primary flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg"
+        >
+          <Plus className="w-4 h-4" />
+          รอบใหม่
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showForm && (
+        <div className="bg-card border border-border/60 rounded-2xl p-5 mb-6">
+          <h2 className="text-sm font-semibold mb-4">สร้างรอบประเมินใหม่</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">ชื่อรอบประเมิน</label>
+              <input
+                type="text"
+                value={form.label}
+                onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+                placeholder="เช่น OVL Project Review หรือ Q2 2026"
+                className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">ประเภท</label>
+              <select
+                value={form.type}
+                onChange={e => setForm(f => ({ ...f, type: e.target.value as "project" | "quarter" }))}
+                className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="quarter">รายไตรมาส</option>
+                <option value="project">ตามโปรเจกต์</option>
+              </select>
+            </div>
+            {form.type === "project" && (
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">โปรเจกต์</label>
+                <select
+                  value={form.project_id}
+                  onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
+                  className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="">— เลือกโปรเจกต์ —</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleCreate} disabled={creating} className="btn-primary text-sm px-4 py-2 rounded-lg disabled:opacity-60">
+              {creating ? "กำลังสร้าง..." : "สร้าง"}
+            </button>
+            <button onClick={() => setShowForm(false)} className="text-sm px-4 py-2 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors">
+              ยกเลิก
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Periods list */}
+      <div className="space-y-5">
+        {periodStats.length === 0 && (
+          <div className="bg-card border border-border/60 rounded-2xl p-10 text-center text-muted-foreground">
+            ยังไม่มีรอบการประเมิน
+          </div>
+        )}
+        {periodStats.map(({ period, submitted, memberRows }) => (
+          <div key={period.id} className="bg-card border border-border/60 rounded-2xl overflow-hidden">
+            {/* Period header */}
+            <div className="px-5 py-4 border-b border-border/40 flex items-center justify-between gap-3"
+              style={{ background: "hsl(222 47% 11% / 0.04)" }}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-semibold text-base">{period.label}</h2>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={period.status === "open"
+                      ? { background: "hsl(142 71% 45% / 0.12)", color: "hsl(142 71% 35%)" }
+                      : { background: "hsl(215 14% 60% / 0.15)", color: "hsl(215 14% 45%)" }}>
+                    {period.status === "open" ? "เปิดอยู่" : "ปิดแล้ว"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {period.type === "project" ? "ตามโปรเจกต์" : "รายไตรมาส"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">ส่งแล้ว {submitted} รายการ</p>
+              </div>
+              <button
+                onClick={() => handleToggleStatus(period.id, period.status as "open" | "closed")}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0"
+              >
+                {period.status === "open"
+                  ? <><Lock className="w-3.5 h-3.5" /> ปิดรอบ</>
+                  : <><Unlock className="w-3.5 h-3.5" /> เปิดรอบ</>
+                }
+              </button>
+            </div>
+
+            {/* Member submission grid */}
+            <div className="divide-y divide-border/30">
+              {memberRows.map(({ emp, selfDone, supDone, peersDone, peersTotal }) => (
+                <div key={emp.id} className="px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
+                      {emp.avatar
+                        ? <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+                        : <span className="text-[10px] font-bold text-primary">{emp.name.charAt(0)}</span>
+                      }
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{emp.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{emp.position}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <StatusPill done={selfDone} label="ตนเอง" />
+                    <StatusPill done={peersDone === peersTotal && peersTotal > 0} label={`เพื่อน ${peersDone}/${peersTotal}`} />
+                    <StatusPill done={supDone} label="หัวหน้า" />
+                  </div>
+                  <Link to={`/kpi/report/${emp.id}`}>
+                    <button className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
+                      <ExternalLink className="w-3 h-3" /> รายงาน
+                    </button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({ done, label }: { done: boolean; label: string }) {
+  return (
+    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${done ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+      {done ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+      {label}
+    </span>
+  );
+}
