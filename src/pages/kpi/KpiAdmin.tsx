@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
-import { Shield, Plus, Lock, Unlock, CheckCircle2, Clock, ExternalLink } from "lucide-react";
+import { Shield, Plus, Lock, Unlock, CheckCircle2, Clock, ExternalLink, FileDown } from "lucide-react";
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { exportPDF, escapeHtml } from "@/lib/exportUtils";
+import { getEligiblePeerReviewers } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
@@ -62,14 +64,54 @@ export default function KpiAdmin() {
     const rows = employees.map(emp => {
       const selfDone  = evals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === "self" && e.submitted_at);
       const supDone   = evals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
-      const peersTotal = employees.length - 1;
-      const peersDone  = employees.filter(p => p.id !== emp.id)
+      const eligiblePeers = getEligiblePeerReviewers(emp, employees);
+      const peersTotal = eligiblePeers.length;
+      const peersDone  = eligiblePeers
         .filter(peer => evals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && e.type === "peer" && e.submitted_at))
         .length;
       return { emp, selfDone, supDone, peersDone, peersTotal };
     });
-    return { period, submitted, rows };
+    const expectedTotal = rows.reduce((sum, r) => sum + 2 + r.peersTotal, 0);
+    const completedTotal = rows.reduce((sum, r) => sum + (r.selfDone ? 1 : 0) + (r.supDone ? 1 : 0) + r.peersDone, 0);
+    const allCompleted = expectedTotal > 0 && completedTotal >= expectedTotal;
+    return { period, submitted, rows, expectedTotal, completedTotal, allCompleted };
   }), [periods, evaluations, employees]);
+
+  const handleExportPeriodPdf = (periodLabel: string, rows: Array<{
+    emp: { name: string; position: string };
+    selfDone: boolean;
+    supDone: boolean;
+    peersDone: number;
+    peersTotal: number;
+  }>) => {
+    const html = `
+      <h1>KPI Completion Report</h1>
+      <div class="sub">Period: ${escapeHtml(periodLabel)}</div>
+      <table>
+        <thead>
+          <tr>
+            <th>ชื่อ</th>
+            <th>ตำแหน่ง</th>
+            <th>Self</th>
+            <th>Peer</th>
+            <th>Supervisor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${escapeHtml(row.emp.name)}</td>
+              <td>${escapeHtml(row.emp.position)}</td>
+              <td>${row.selfDone ? "✅" : "❌"}</td>
+              <td>${row.peersDone}/${row.peersTotal}</td>
+              <td>${row.supDone ? "✅" : "❌"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+    exportPDF(`kpi-completion-${periodLabel}`, html);
+  };
 
   if (authLoading || periodsLoading) return (
     <div className="p-6 flex items-center justify-center h-64">
@@ -147,7 +189,7 @@ export default function KpiAdmin() {
             ยังไม่มีรอบการประเมิน
           </div>
         )}
-        {periodStats.map(({ period, submitted, rows }) => (
+        {periodStats.map(({ period, submitted, rows, completedTotal, expectedTotal, allCompleted }) => (
           <div key={period.id} className="bg-card border border-border/60 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-border/40 flex items-center justify-between gap-3"
               style={{ background: "hsl(222 47% 11% / 0.04)" }}>
@@ -165,14 +207,24 @@ export default function KpiAdmin() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">ส่งแล้ว {submitted} รายการ</p>
+                <p className="text-xs text-muted-foreground mt-0.5">ครบถ้วน {completedTotal}/{expectedTotal}</p>
               </div>
-              <button
-                onClick={() => handleToggleStatus(period.id, period.status as "open" | "closed")}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
-                {period.status === "open"
-                  ? <><Lock className="w-3.5 h-3.5" /> ปิดรอบ</>
-                  : <><Unlock className="w-3.5 h-3.5" /> เปิดรอบ</>}
-              </button>
+              <div className="flex items-center gap-2">
+                {allCompleted && (
+                  <button
+                    onClick={() => handleExportPeriodPdf(period.label, rows)}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
+                    <FileDown className="w-3.5 h-3.5" /> Export PDF
+                  </button>
+                )}
+                <button
+                  onClick={() => handleToggleStatus(period.id, period.status as "open" | "closed")}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
+                  {period.status === "open"
+                    ? <><Lock className="w-3.5 h-3.5" /> ปิดรอบ</>
+                    : <><Unlock className="w-3.5 h-3.5" /> เปิดรอบ</>}
+                </button>
+              </div>
             </div>
 
             <div className="divide-y divide-border/30">

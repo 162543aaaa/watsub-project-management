@@ -37,6 +37,7 @@ export type AutoValueId =
   | "tasks_done_count"     // total tasks with status Done
   | "revision_avg"         // avg revisions per task (from comments)
   | "projects_closed"      // count of closed projects
+  | "revenue_vs_target_q"  // revenue total vs quarterly target
   | "scripts_ontime_pct"   // % of script/caption tasks on time (sumayna)
   | "client_count"         // distinct clients managed
   | "task_approve_d1";     // tasks with approval within D-1 (%)
@@ -56,12 +57,30 @@ export const REVIEWER_WEIGHTS = { auto: 0.30, self: 0.10, peer: 0.20, supervisor
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+export function normalizeName(name: string): string {
+  return name.toLowerCase().trim();
+}
+
 export function resolveRoleKey(name: string): RoleKey {
-  const n = name.toLowerCase().trim();
+  const n = normalizeName(name);
   if (n === "ta" || n.startsWith("ta ") || n.endsWith(" ta") || n.includes("tarmisi")) return "ta";
-  if (n.includes("hafeez")) return "hafeez";
+  if (n.includes("hafeez") || n.includes("hafiz") || n.includes("ฮาฟีซ")) return "hafeez";
   if (n.includes("sumayna")) return "sumayna";
   return "default";
+}
+
+export function getEligiblePeerReviewers<T extends { id: string; name: string }>(
+  evaluatee: T,
+  employees: T[],
+): T[] {
+  const evaluateeRole = resolveRoleKey(evaluatee.name);
+  if (evaluateeRole === "ta") {
+    return employees.filter((emp) =>
+      emp.id !== evaluatee.id &&
+      ["hafeez", "sumayna"].includes(resolveRoleKey(emp.name)),
+    );
+  }
+  return employees.filter((emp) => emp.id !== evaluatee.id);
 }
 
 // ─── 9 Form Configs ───────────────────────────────────────────────────────────
@@ -77,19 +96,17 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
         {
           key: "job_performance", labelTh: "ผลการปฏิบัติงาน", color: "hsl(191 91% 37%)",
           questions: [
-            { id: "ta_self_j1", labelTh: "คุณภาพของ direction/concept ที่มอบให้ทีม", type: "rate", scoreKey: "quality" },
-            { id: "ta_self_j2", labelTh: "จำนวนโปรเจกต์ที่ปิดได้ในรอบ (ข้อมูลจากระบบ)", type: "auto", autoId: "projects_closed" },
-            { id: "ta_self_j3", labelTh: "ส่ง feedback/approval ให้ทีมทัน D-3 ถึง D-0", type: "rate", scoreKey: "punctuality" },
-            { id: "ta_self_j4", labelTh: "ความถูกต้องของงบประมาณที่ตัดสินใจและรับผิดชอบ", type: "rate", scoreKey: "accountability" },
+            { id: "ta_self_j1", labelTh: "ส่งมอบ feedback / approval ให้ทีมทันตามสัญญาณ D-3 ถึง D-0", type: "rate", scoreKey: "punctuality" },
+            { id: "ta_self_j2", labelTh: "จำนวนโปรเจกต์ที่ปิดได้ในรอบนี้ (ข้อมูลจากระบบ)", type: "auto", autoId: "projects_closed" },
+            { id: "ta_self_j3", labelTh: "ความถูกต้องของงบประมาณที่ตัดสินใจ (overrun / underrun)", type: "rate", scoreKey: "accountability" },
           ],
         },
         {
           key: "competency", labelTh: "ความสามารถ / ทักษะ", color: "hsl(262 83% 58%)",
           questions: [
             { id: "ta_self_c1", labelTh: "การวิเคราะห์และตัดสินใจเชิงธุรกิจ", type: "rate", scoreKey: "problem_solving" },
-            { id: "ta_self_c2", labelTh: "การบริหารความเสี่ยงในโปรเจกต์", type: "rate", scoreKey: "technical" },
-            { id: "ta_self_c3", labelTh: "ความคิดสร้างสรรค์ในการพัฒนา creative direction", type: "rate", scoreKey: "creativity" },
-            { id: "ta_self_c4", labelTh: "การติดตามเทรนด์ (AI, creative economy, platform)", type: "rate", scoreKey: "learning" },
+            { id: "ta_self_c2", labelTh: "การบริหารความเสี่ยงในโปรเจกต์", type: "rate", scoreKey: "management" },
+            { id: "ta_self_c3", labelTh: "การติดตามเทรนด์ที่เกี่ยวข้องกับสตูดิโอ (AI, creative economy)", type: "rate", scoreKey: "learning" },
           ],
         },
         {
@@ -97,8 +114,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           questions: [
             { id: "ta_self_t1", labelTh: "ความชัดเจนของ brief ที่มอบให้ทีม", type: "rate", scoreKey: "communication" },
             { id: "ta_self_t2", labelTh: "การรับฟัง feedback จากทีมและ client", type: "rate", scoreKey: "openness" },
-            { id: "ta_self_t3", labelTh: "การสนับสนุนและช่วยเหลือทีม", type: "rate", scoreKey: "support" },
-            { id: "ta_self_t4", labelTh: "การสร้างบรรยากาศที่ทีมทำงานสบายใจ", type: "rate", scoreKey: "collaboration" },
+            { id: "ta_self_t3", labelTh: "การสร้างบรรยากาศที่ทีมทำงานสบายใจ", type: "rate", scoreKey: "collaboration" },
           ],
         },
         {
@@ -106,9 +122,8 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           questions: [
             { id: "ta_self_l1", labelTh: "ทิศทาง WatSUB! ชัดเจนและสื่อสารให้ทีมเข้าใจ", type: "rate", scoreKey: "strategic" },
             { id: "ta_self_l2", labelTh: "การสร้างและรักษาความสัมพันธ์กับ partner/client", type: "rate", scoreKey: "presentation" },
-            { id: "ta_self_l3", labelTh: "การตัดสินใจที่ชัดเจนเมื่อทีมต้องการทิศทาง", type: "rate", scoreKey: "decision_making" },
-            { id: "ta_self_l4", labelTh: "การพัฒนาระบบภายใน (PM, SOP, cashflow)", type: "rate", scoreKey: "management" },
-            { id: "ta_self_l5", labelTh: "เป้าหมายที่ต้องการพัฒนาในรอบถัดไป", type: "text" },
+            { id: "ta_self_l3", labelTh: "การพัฒนาระบบภายใน (PM, SOP, cashflow)", type: "rate", scoreKey: "management" },
+            { id: "ta_self_l4", labelTh: "เป้าหมายที่ต้องการพัฒนาในรอบถัดไป", type: "text" },
           ],
         },
       ],
@@ -119,7 +134,7 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
         {
           key: "teamwork", labelTh: "การทำงานร่วมกัน", color: "hsl(142 71% 45%)",
           questions: [
-            { id: "ta_peer_t1", labelTh: "ต้า brief งานชัดเจนและนำไปใช้ได้ทันที", type: "rate", scoreKey: "communication" },
+            { id: "ta_peer_t1", labelTh: "ต้า brief งานชัดเจนและเข้าใจได้", type: "rate", scoreKey: "communication" },
             { id: "ta_peer_t2", labelTh: "ต้าตอบสนองต่อคำถาม / ปัญหาของทีมได้ทันเวลา", type: "rate", scoreKey: "support" },
             { id: "ta_peer_t3", labelTh: "ต้า approve / reject งานพร้อม reason ที่ชัดเจน", type: "rate", scoreKey: "openness" },
             { id: "ta_peer_t4", labelTh: "ต้ารับฟังเมื่อทีมเสนอ idea หรือปัญหา", type: "rate", scoreKey: "collaboration" },
@@ -133,6 +148,13 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
             { id: "ta_peer_l3", labelTh: "สิ่งที่อยากให้ต้าปรับปรุงหรือพัฒนา", type: "text" },
           ],
         },
+        {
+          key: "hidden_peer_only", labelTh: "ซ่อน", color: "transparent",
+          questions: [
+            { id: "ta_peer_h1", labelTh: "Job Performance (ปริมาณงาน, financial)", type: "hidden" },
+            { id: "ta_peer_h2", labelTh: "Competency (business analysis, risk)", type: "hidden" },
+          ],
+        },
       ],
     },
 
@@ -143,8 +165,9 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
           key: "auto_data", labelTh: "ข้อมูลจากระบบ (อ้างอิง)", color: "hsl(215 14% 50%)",
           questions: [
             { id: "ta_sup_a1", labelTh: "จำนวนโปรเจกต์ที่ close ในรอบ", type: "auto", autoId: "projects_closed" },
+            { id: "ta_sup_a1_2", labelTh: "Revenue รวม vs เป้าหมาย Q", type: "auto", autoId: "revenue_vs_target_q" },
             { id: "ta_sup_a2", labelTh: "Task ที่ approve ภายใน D-1 (%)", type: "auto", autoId: "task_approve_d1" },
-            { id: "ta_sup_a3", labelTh: "งานที่ส่งตรงเวลา (%)", type: "auto", autoId: "tasks_ontime_pct" },
+            { id: "ta_sup_a3", labelTh: "Task ที่ approve ภายใน D-1 (% on-time)", type: "auto", autoId: "tasks_ontime_pct" },
           ],
         },
         {

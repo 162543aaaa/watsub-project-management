@@ -11,7 +11,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import {
   KPI_QUESTIONS, ROLE_WEIGHTS,
-  resolveRoleKey,
+  getEligiblePeerReviewers, resolveRoleKey,
   type RoleKey, type ReviewerType, type AutoValueId, type KPISection,
 } from "@/config/kpiQuestions";
 
@@ -26,19 +26,24 @@ interface AutoValues {
   tasks_done_count: string;
   revision_avg: string;
   projects_closed: string;
+  revenue_vs_target_q: string;
   scripts_ontime_pct: string;
   client_count: string;
   task_approve_d1: string;
 }
 
 async function computeAutoValues(empId: string): Promise<AutoValues> {
-  const [tasksRes, projectsRes] = await Promise.all([
+  const [tasksRes, projectsRes, customersRes, goalsRes] = await Promise.all([
     supabase.from("tasks").select("status,due_date,comments,customer_id").contains("assigned_to", [empId]),
     supabase.from("projects").select("id,status").contains("member_ids", [empId]),
+    supabase.from("customers").select("id,payment_fee"),
+    supabase.from("goals").select("target_value,assigned_to"),
   ]);
 
   const tasks = tasksRes.data ?? [];
   const projects = projectsRes.data ?? [];
+  const customers = customersRes.data ?? [];
+  const goals = goalsRes.data ?? [];
 
   const done = tasks.filter(t => t.status === "Done");
   const onTime = done.filter(t => t.due_date && new Date(t.due_date) >= new Date(t.due_date /* always true, check against now */));
@@ -51,12 +56,18 @@ async function computeAutoValues(empId: string): Promise<AutoValues> {
 
   const clientIds = new Set(tasks.map(t => t.customer_id).filter(Boolean));
   const closedProjects = projects.filter(p => p.status === "completed" || p.status === "done");
+  const revenueTotal = customers.reduce((sum, customer) => {
+    const parsed = Number(String(customer.payment_fee ?? "").replace(/,/g, ""));
+    return Number.isFinite(parsed) ? sum + parsed : sum;
+  }, 0);
+  const goalTarget = goals.reduce((sum, goal) => sum + (goal.target_value ?? 0), 0);
 
   return {
     tasks_ontime_pct: done.length ? `${((onTimeActual.length / done.length) * 100).toFixed(0)}%` : "—",
     tasks_done_count: `${done.length} งาน`,
     revision_avg: `${avgRevision} ครั้ง/งาน`,
     projects_closed: `${closedProjects.length} โปรเจกต์`,
+    revenue_vs_target_q: `฿${revenueTotal.toLocaleString()} / ฿${goalTarget.toLocaleString()}`,
     scripts_ontime_pct: done.length ? `${((onTimeActual.length / done.length) * 100).toFixed(0)}%` : "—",
     client_count: `${clientIds.size} client`,
     task_approve_d1: done.length ? `${Math.round((onTimeActual.length / done.length) * 100)}%` : "—",
@@ -223,6 +234,10 @@ export default function KpiEvaluate() {
     () => evaluatee ? resolveRoleKey(evaluatee.name) : "default" as RoleKey,
     [evaluatee],
   );
+  const isPeerAllowed = useMemo(() => {
+    if (!evaluatee || !evaluator || evalType !== "peer") return true;
+    return getEligiblePeerReviewers(evaluatee, employees).some((emp) => emp.id === evaluator.id);
+  }, [evaluatee, evaluator, evalType, employees]);
   const formConfig = useMemo(
     () => KPI_QUESTIONS[roleKey][evalType],
     [roleKey, evalType],
@@ -269,6 +284,10 @@ export default function KpiEvaluate() {
   const handleSubmit = async () => {
     if (!evaluator) {
       toast({ title: "กรุณาเลือกชื่อของคุณก่อน", variant: "destructive" });
+      return;
+    }
+    if (!isPeerAllowed) {
+      toast({ title: "คุณไม่มีสิทธิ์ประเมินแบบ Peer สำหรับคนนี้", variant: "destructive" });
       return;
     }
     // Validate required text fields
@@ -416,9 +435,9 @@ export default function KpiEvaluate() {
       {/* Submit */}
       <button
         onClick={handleSubmit}
-        disabled={submitting}
+        disabled={submitting || !isPeerAllowed}
         className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-all">
-        {submitting ? "กำลังส่ง..." : "ส่งการประเมิน"}
+        {submitting ? "กำลังส่ง..." : !isPeerAllowed ? "ไม่มีสิทธิ์ประเมิน" : "ส่งการประเมิน"}
       </button>
     </div>
   );
