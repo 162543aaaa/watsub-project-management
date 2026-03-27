@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
-import { TrendingUp, CheckCircle2, Clock, ChevronRight, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { TrendingUp, CheckCircle2, Clock, ChevronRight, Pencil, Trash2, AlertTriangle, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
@@ -86,6 +86,29 @@ export default function KpiOverview() {
 
     return { period, rows, submitted };
   }), [openPeriods, evaluations, employees, me]);
+
+  // Notify ต้า when all evaluations for a period are complete
+  const notifiedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!me) return;
+    const isTa = resolveRoleKey(me.name) === "ta" || me.role?.toLowerCase().includes("director") || me.role?.toLowerCase().includes("admin");
+    if (!isTa) return;
+
+    for (const { period, rows } of periodData) {
+      if (notifiedRef.current.has(period.id)) continue;
+      const expectedTotal = rows.reduce((sum, r) => sum + 2 + r.peersTotal, 0);
+      const completedTotal = rows.reduce(
+        (sum, r) => sum + (r.selfDone ? 1 : 0) + (r.supDone ? 1 : 0) + r.peersDone, 0,
+      );
+      if (expectedTotal > 0 && completedTotal >= expectedTotal) {
+        notifiedRef.current.add(period.id);
+        toast({
+          title: `การประเมินครบแล้ว — ${period.label}`,
+          description: "ทุกคนส่งการประเมินครบแล้ว เข้าไปดู Report ได้เลย",
+        });
+      }
+    }
+  }, [periodData, me]);
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
