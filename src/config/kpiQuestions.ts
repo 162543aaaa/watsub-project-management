@@ -40,6 +40,7 @@ export interface KPIFormConfig {
   note?: string;
 }
 
+
 export const ROLE_WEIGHTS: Record<RoleKey, Record<string, number>> = {
   ta: { job_performance: 20, competency: 20, teamwork: 20, leadership: 40 },
   hafeez: { job_performance: 40, competency: 35, teamwork: 15, leadership: 10 },
@@ -49,17 +50,6 @@ export const ROLE_WEIGHTS: Record<RoleKey, Record<string, number>> = {
 
 export const REVIEWER_WEIGHTS = { auto: 0.3, self: 0.1, peer: 0.2, supervisor: 0.4 };
 
-export function normalizeName(name: string): string {
-  return name.toLowerCase().trim();
-}
-
-export function normalizeName(name: string): string {
-  return name.toLowerCase().trim();
-}
-
-export function resolveRoleKey(name: string): RoleKey {
-  const n = normalizeName(name);
-
   return "default";
 }
 
@@ -67,6 +57,7 @@ export function getEligiblePeerReviewers<T extends { id: string; name: string }>
   evaluatee: T,
   employees: T[],
 ): T[] {
+
 
 const TA_SELF: KPISection[] = [
   sec("job_performance", "ผลการปฏิบัติงาน", C.job, [
@@ -284,13 +275,6 @@ const DEFAULT_CONFIG: Record<ReviewerType, KPIFormConfig> = {
 export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>> = {
   ta: {
     self: {
-
-    },
-    peer: {
-
-    },
-    supervisor: {
-      uiLabel: "Self-Reflection",
 
     },
   },

@@ -46,8 +46,6 @@ async function computeAutoValues(empId: string): Promise<AutoValues> {
   const goals = goalsRes.data ?? [];
 
   const done = tasks.filter(t => t.status === "Done");
-  const onTime = done.filter(t => t.due_date && new Date(t.due_date) >= new Date(t.due_date /* always true, check against now */));
-  // Actually check if completed before/on due date — we approximate with due_date >= now for pending
   const onTimeActual = done.filter(t => t.due_date);
   const revisionTasks = done.filter(t =>
     (t.comments ?? "").toLowerCase().includes("revision") ||
