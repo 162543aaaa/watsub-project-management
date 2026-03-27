@@ -156,7 +156,18 @@ export function useKpiPeriods() {
     setPeriods(prev => prev.map(p => p.id === id ? data as KpiPeriod : p));
   };
 
-  return { periods, loading, addPeriod, updatePeriod, refetch: fetch };
+  const deletePeriod = async (id: string) => {
+    const { error } = await supabase.from("kpi_periods").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return false;
+    }
+    setPeriods((prev) => prev.filter((p) => p.id !== id));
+    toast({ title: "ลบรอบประเมินสำเร็จ" });
+    return true;
+  };
+
+  return { periods, loading, addPeriod, updatePeriod, deletePeriod, refetch: fetch };
 }
 
 export function useKpiEvaluations(periodId?: string) {

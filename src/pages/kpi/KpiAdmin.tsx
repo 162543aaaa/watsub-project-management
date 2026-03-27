@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
-import { Shield, Plus, Lock, Unlock, CheckCircle2, Clock, ExternalLink, FileDown } from "lucide-react";
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -24,7 +23,7 @@ function StatusPill({ done, label }: { done: boolean; label: string }) {
 
 export default function KpiAdmin() {
   const { isAdmin, loading: authLoading } = useAuthContext();
-  const { periods, loading: periodsLoading, addPeriod, updatePeriod } = useKpiPeriods();
+  const { periods, loading: periodsLoading, addPeriod, updatePeriod, deletePeriod } = useKpiPeriods();
   const { evaluations } = useKpiEvaluations();
   const { employees } = useEmployees();
 
@@ -56,6 +55,14 @@ export default function KpiAdmin() {
     const next = current === "open" ? "closed" : "open";
     await updatePeriod(id, { status: next });
     toast({ title: next === "closed" ? "ปิดรอบประเมินแล้ว" : "เปิดรอบประเมินแล้ว" });
+  };
+
+  const handleDeletePeriod = async (periodId: string, periodLabel: string) => {
+    const confirmDelete = window.confirm(
+      `ต้องการลบรอบประเมิน "${periodLabel}" ใช่หรือไม่?\nการลบจะลบข้อมูลการประเมินในรอบนี้ทั้งหมด`,
+    );
+    if (!confirmDelete) return;
+    await deletePeriod(periodId);
   };
 
   const periodStats = useMemo(() => periods.map(period => {

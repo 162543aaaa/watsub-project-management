@@ -91,7 +91,7 @@ export const employees: Employee[] = [
   { id: "emp2", name: "สุไมยนา หวังเบ็ญหมัด", position: "Community Support", email: "dudhjjui@gmail.com", role: "employee" },
   { id: "emp3", name: "ฮาฟีซ ดอเลาะ", position: "Community Support", email: "fisdoloh00@gmail.com", role: "employee" },
   { id: "emp4", name: "Faheem Yusoh", position: "Production Assistant", email: "faheem.yusoh@watsub.local", role: "employee" },
-  { id: "emp5", name: "Natdia Benyakat", position: "Content Coordinator", email: "natdia.benyakat@watsub.local", role: "employee" },
+
 ];
 
 export const projects: Project[] = [
