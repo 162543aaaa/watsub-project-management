@@ -40,29 +40,6 @@ export interface KPIFormConfig {
   note?: string;
 }
 
-const C = {
-  job: "hsl(191 91% 37%)",
-  comp: "hsl(262 83% 58%)",
-  team: "hsl(142 71% 45%)",
-  lead: "hsl(38 92% 50%)",
-  auto: "hsl(215 14% 50%)",
-} as const;
-
-const sec = (
-  key: string,
-  labelTh: string,
-  color: string,
-  questions: KPIQuestion[],
-  meta?: { id?: string; title?: string; weight?: string },
-): KPISection => ({ key, labelTh, color, questions, ...meta });
-
-const q = (
-  id: string,
-  labelTh: string,
-  type: QuestionType,
-  extra?: Partial<Pick<KPIQuestion, "scoreKey" | "autoId" | "question" | "helperText">>,
-): KPIQuestion => ({ id, labelTh, type, ...extra });
-
 export const ROLE_WEIGHTS: Record<RoleKey, Record<string, number>> = {
   ta: { job_performance: 20, competency: 20, teamwork: 20, leadership: 40 },
   hafeez: { job_performance: 40, competency: 35, teamwork: 15, leadership: 10 },
@@ -76,11 +53,13 @@ export function normalizeName(name: string): string {
   return name.toLowerCase().trim();
 }
 
+export function normalizeName(name: string): string {
+  return name.toLowerCase().trim();
+}
+
 export function resolveRoleKey(name: string): RoleKey {
   const n = normalizeName(name);
-  if (n.includes("tarmisi") || n === "ta" || n.startsWith("ta ") || n.endsWith(" ta")) return "ta";
-  if (n.includes("hafeez") || n.includes("hafiz") || n.includes("ฮาฟีซ")) return "hafeez";
-  if (n.includes("sumayna") || n.includes("สุไมยนา")) return "sumayna";
+
   return "default";
 }
 
@@ -88,20 +67,6 @@ export function getEligiblePeerReviewers<T extends { id: string; name: string }>
   evaluatee: T,
   employees: T[],
 ): T[] {
-  const role = resolveRoleKey(evaluatee.name);
-  const includeByRole: Record<RoleKey, RoleKey[] | null> = {
-    ta: ["hafeez", "sumayna"],
-    hafeez: ["ta", "sumayna"],
-    sumayna: ["ta", "hafeez"],
-    default: null,
-  };
-  const allowed = includeByRole[role];
-  return employees.filter((emp) => {
-    if (emp.id === evaluatee.id) return false;
-    if (!allowed) return true;
-    return allowed.includes(resolveRoleKey(emp.name));
-  });
-}
 
 const TA_SELF: KPISection[] = [
   sec("job_performance", "ผลการปฏิบัติงาน", C.job, [
@@ -319,17 +284,14 @@ const DEFAULT_CONFIG: Record<ReviewerType, KPIFormConfig> = {
 export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>> = {
   ta: {
     self: {
-      note: "ต้าประเมินตัวเองในมิติ Strategic และ Management เป็นหลัก — ไม่มีหัวข้อ Technical",
-      sections: TA_SELF,
+
     },
     peer: {
-      note: "Peer ของต้า = ฮาฟีซ + สุไมยนา ประเมินเฉพาะสิ่งที่เห็นในการทำงานร่วมกัน — ไม่ประเมิน strategic / financial",
-      sections: TA_PEER,
+
     },
     supervisor: {
       uiLabel: "Self-Reflection",
-      note: "ต้าไม่มี supervisor — ส่วนนี้ใช้ Self-Reflection แบบลึก + ดู auto data จากระบบ",
-      sections: TA_SUP,
+
     },
   },
   hafeez: {

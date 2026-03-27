@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
-import { Shield, Plus, Lock, Unlock, CheckCircle2, Clock, ExternalLink, FileDown, Trash2 } from "lucide-react";
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -232,13 +231,6 @@ export default function KpiAdmin() {
                     ? <><Lock className="w-3.5 h-3.5" /> ปิดรอบ</>
                     : <><Unlock className="w-3.5 h-3.5" /> เปิดรอบ</>}
                 </button>
-                {period.type === "quarter" && (
-                  <button
-                    onClick={() => handleDeletePeriod(period.id, period.label)}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-destructive/40 text-destructive hover:bg-destructive/5 transition-colors flex-shrink-0">
-                    <Trash2 className="w-3.5 h-3.5" /> ลบไตรมาส
-                  </button>
-                )}
               </div>
             </div>
 
