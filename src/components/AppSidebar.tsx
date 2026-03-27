@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin, TrendingUp
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useState } from "react";
@@ -22,6 +22,7 @@ const navItems = [
   { label: "Notifications", icon: Bell, path: "/notifications" },
   { label: "Import", icon: Upload, path: "/import" },
   { label: "Export", icon: Download, path: "/export" },
+  { label: "KPI", icon: TrendingUp, path: "/kpi/overview" },
 ];
 
 export default function AppSidebar() {
@@ -52,7 +53,9 @@ export default function AppSidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {navItems.map((item) => {
-          const active = location.pathname === item.path;
+          const active = item.path === "/"
+            ? location.pathname === "/"
+            : location.pathname === item.path || location.pathname.startsWith(item.path + "/");
           const isNotif = item.path === "/notifications";
           return (
             <Link key={item.path} to={item.path}>

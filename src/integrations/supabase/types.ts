@@ -14,6 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
+      kpi_periods: {
+        Row: {
+          id: string
+          label: string
+          project_id: string | null
+          type: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          project_id?: string | null
+          type: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          project_id?: string | null
+          type?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_periods_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_evaluations: {
+        Row: {
+          id: string
+          period_id: string
+          evaluator_id: string
+          evaluatee_id: string
+          type: string
+          scores: Json
+          notes_strength: string | null
+          notes_improve: string | null
+          submitted_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          period_id: string
+          evaluator_id: string
+          evaluatee_id: string
+          type: string
+          scores?: Json
+          notes_strength?: string | null
+          notes_improve?: string | null
+          submitted_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          period_id?: string
+          evaluator_id?: string
+          evaluatee_id?: string
+          type?: string
+          scores?: Json
+          notes_strength?: string | null
+          notes_improve?: string | null
+          submitted_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_evaluations_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_evaluations_evaluatee_id_fkey"
+            columns: ["evaluatee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_role_weights: {
+        Row: {
+          role: string
+          job_performance: number
+          competency: number
+          teamwork: number
+          leadership: number
+          creativity: number
+        }
+        Insert: {
+          role: string
+          job_performance?: number
+          competency?: number
+          teamwork?: number
+          leadership?: number
+          creativity?: number
+        }
+        Update: {
+          role?: string
+          job_performance?: number
+          competency?: number
+          teamwork?: number
+          leadership?: number
+          creativity?: number
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           created_at: string
