@@ -4,6 +4,8 @@ export type LeaveStatus = "Pending" | "Approved" | "Rejected";
 export type GoalType = "individual" | "team";
 export type NotifType = "success" | "error" | "info";
 
+import { TEAM_ROSTER } from "@/config/teamRoster";
+
 export interface Employee {
   id: string;
   name: string;
@@ -86,13 +88,10 @@ export interface Notification {
 
 // ========= MOCK DATA =========
 
-export const employees: Employee[] = [
-  { id: "emp1", name: "TARMISI WANI", position: "Community Lead", email: "tamisiwani@gmail.com", role: "employee" },
-  { id: "emp2", name: "สุไมยนา หวังเบ็ญหมัด", position: "Community Support", email: "dudhjjui@gmail.com", role: "employee" },
-  { id: "emp3", name: "ฮาฟีซ ดอเลาะ", position: "Community Support", email: "fisdoloh00@gmail.com", role: "employee" },
-  { id: "emp4", name: "Faheem Yusoh", position: "Production Assistant", email: "faheem.yusoh@watsub.local", role: "employee" },
-
-];
+export const employees: Employee[] = TEAM_ROSTER.map((member, idx) => ({
+  id: `emp${idx + 1}`,
+  ...member,
+}));
 
 export const projects: Project[] = [
   {

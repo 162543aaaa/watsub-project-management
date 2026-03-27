@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
+import { CheckCircle2, Clock, ExternalLink, FileDown, Lock, Plus, Shield, Trash2, Unlock } from "lucide-react";
 
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -7,7 +8,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { exportPDF, escapeHtml } from "@/lib/exportUtils";
-import { getEligiblePeerReviewers } from "@/config/kpiQuestions";
+import { getEligiblePeerReviewers, getSelfEvaluationType, resolveRoleKey } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
@@ -70,7 +71,8 @@ export default function KpiAdmin() {
     const evals = evaluations.filter(e => e.period_id === period.id);
     const submitted = evals.filter(e => e.submitted_at).length;
     const rows = employees.map(emp => {
-      const selfDone  = evals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === "self" && e.submitted_at);
+      const selfType = getSelfEvaluationType(resolveRoleKey(emp.name));
+      const selfDone  = evals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === selfType && e.submitted_at);
       const supDone   = evals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
       const eligiblePeers = getEligiblePeerReviewers(emp, employees);
       const peersTotal = eligiblePeers.length;
@@ -231,6 +233,12 @@ export default function KpiAdmin() {
                   {period.status === "open"
                     ? <><Lock className="w-3.5 h-3.5" /> ปิดรอบ</>
                     : <><Unlock className="w-3.5 h-3.5" /> เปิดรอบ</>}
+                </button>
+
+                <button
+                  onClick={() => handleDeletePeriod(period.id, period.label)}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors flex-shrink-0">
+                  <Trash2 className="w-3.5 h-3.5" /> ลบไตรมาส
                 </button>
 
               </div>

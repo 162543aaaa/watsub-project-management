@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { TEAM_ROSTER } from "@/config/teamRoster";
 
 // Seed all mock data to Supabase database
 export async function seedDatabase() {
@@ -12,11 +13,10 @@ export async function seedDatabase() {
   console.log("Seeding database...");
 
   // Seed employees
-  const { data: empData, error: empError } = await supabase.from("employees").insert([
-    { name: "TARMISI WANI", position: "Community Lead", email: "tamisiwani@gmail.com", role: "employee" },
-    { name: "สุไมยนา หวังเบ็ญหมัด", position: "Community Support", email: "dudhjjui@gmail.com", role: "employee" },
-    { name: "ฮาฟีซ ดอเลาะ", position: "Community Support", email: "fisdoloh00@gmail.com", role: "employee" },
-  ]).select();
+  const { data: empData, error: empError } = await supabase
+    .from("employees")
+    .insert(TEAM_ROSTER)
+    .select();
   if (empError) { console.error("Employee seed error:", empError); return; }
   console.log("Employees seeded:", empData?.length);
 
