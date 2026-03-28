@@ -8,6 +8,9 @@ export interface Employee {
   position: string;
   email: string;
   role: string;
+  kpi_role?: string;
+  type?: string;
+  active?: boolean;
   avatar?: string;
   phone?: string;
   promptpay_qr?: string;
