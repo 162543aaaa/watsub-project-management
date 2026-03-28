@@ -1,4 +1,5 @@
 import type { KpiCategoryKey, KpiSubScoreKey } from "@/hooks/useKpi";
+import { supabase } from "@/integrations/supabase/client";
 
 export type RoleKey = "ta" | "hafeez" | "sumayna" | "outsource" | "default";
 export type ReviewerType = "self" | "peer" | "supervisor";
@@ -36,6 +37,14 @@ export interface KPIFormConfig {
   uiLabel?: string;
   sections: KPISection[];
 }
+
+export const ROLEKEY_TO_DB_ROLE: Record<RoleKey, string | null> = {
+  ta: "director",
+  hafeez: "production",
+  sumayna: "strategy",
+  outsource: "outsource",
+  default: null,
+};
 
 const scoreByCategory: Record<string, KpiSubScoreKey[]> = {
   job_performance: ["quality", "quantity", "punctuality", "accountability"],
@@ -83,12 +92,20 @@ export function resolveRoleKey(input?:
   const normalize = (v?: string | null) => (v ?? "").trim().toLowerCase();
   if (!input) return "default";
 
+  if (typeof input !== "string") {
+    const kpiRole = normalize(input.kpi_role);
+    if (kpiRole === "director") return "ta";
+    if (kpiRole === "production") return "hafeez";
+    if (kpiRole === "strategy") return "sumayna";
+    if (kpiRole === "outsource") return "outsource";
+  }
+
   const text = typeof input === "string"
     ? normalize(input)
-    : [normalize(input.kpi_role), normalize(input.role), normalize(input.type), normalize(input.name)].join(" ");
+    : [normalize(input.role), normalize(input.type), normalize(input.name)].join(" ");
 
   if (!text) return "default";
-  if (text.includes("outsource") || text.includes("outsource")) return "outsource";
+  if (text.includes("outsource")) return "outsource";
   for (const role of ["ta", "hafeez", "sumayna", "outsource"] as const) {
     if (ROLE_ALIASES[role].some((alias) => text.includes(alias))) return role;
   }
@@ -530,3 +547,64 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
   },
   default: DEFAULT_CONFIG,
 };
+
+type DbTemplateRow = {
+  section_id: string | null;
+  section_title: string | null;
+  section_weight: string | null;
+  question_text: string | null;
+  question_type: string | null;
+  auto_source: string | null;
+  order_index: number | null;
+};
+
+export async function loadKpiFormConfig(
+  roleKey: RoleKey,
+  reviewerType: ReviewerType,
+): Promise<KPIFormConfig> {
+  const dbRole = ROLEKEY_TO_DB_ROLE[roleKey];
+  if (!dbRole) return KPI_QUESTIONS[roleKey][reviewerType];
+
+  const { data, error } = await supabase
+    .from("kpi_question_templates")
+    .select("section_id, section_title, section_weight, question_text, question_type, auto_source, order_index")
+    .eq("role", dbRole)
+    .eq("reviewer_type", reviewerType)
+    .order("order_index", { ascending: true });
+
+  if (error || !data || data.length === 0) return KPI_QUESTIONS[roleKey][reviewerType];
+
+  const grouped = new Map<string, KPISection>();
+  (data as DbTemplateRow[]).forEach((row, i) => {
+    const sid = row.section_id ?? "general";
+    if (!grouped.has(sid)) {
+      grouped.set(sid, {
+        id: sid,
+        title: row.section_title ?? sid,
+        weight: row.section_weight ?? "",
+        color: C.team,
+        questions: [],
+      });
+    }
+    const section = grouped.get(sid)!;
+    const t = (row.question_type ?? "text") as QuestionType;
+    const qId = `${sid}_${(row.order_index ?? i + 1).toString()}`;
+    const next: KPIQuestion = {
+      id: qId,
+      question: row.question_text ?? "",
+      type: t,
+    };
+    if (t === "rate") {
+      next.scoreKey = scoreFor(sid, section.questions.filter((q) => q.type === "rate").length);
+    }
+    if (t === "auto" && row.auto_source) {
+      next.autoId = row.auto_source as AutoValueId;
+    }
+    section.questions.push(next);
+  });
+
+  return {
+    note: `DB template (${dbRole}/${reviewerType})`,
+    sections: Array.from(grouped.values()),
+  };
+}
