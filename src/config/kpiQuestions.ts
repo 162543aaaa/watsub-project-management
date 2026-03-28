@@ -1,4 +1,4 @@
-import type { KpiCategoryKey, KpiSubScoreKey } from "@/hooks/useKpi";
+import type { KpiCategoryKey } from "@/hooks/useKpi";
 import { supabase } from "@/integrations/supabase/client";
 
 export type RoleKey = "ta" | "hafeez" | "sumayna" | "outsource" | "default";
@@ -19,7 +19,7 @@ export interface KPIQuestion {
   id: string;
   question: string;
   type: QuestionType;
-  scoreKey?: KpiSubScoreKey;
+  scoreKey?: string;
   autoId?: AutoValueId;
   helperText?: string;
 }
@@ -46,18 +46,8 @@ export const ROLEKEY_TO_DB_ROLE: Record<RoleKey, string | null> = {
   default: null,
 };
 
-const scoreByCategory: Record<string, KpiSubScoreKey[]> = {
-  job_performance: ["quality", "quantity", "punctuality", "accountability"],
-  competency: ["technical", "problem_solving", "learning", "decision_making"],
-  teamwork: ["communication", "support", "openness", "collaboration"],
-  leadership: ["presentation", "decision_making", "management", "strategic"],
-  creativity: ["creativity", "openness", "collaboration", "learning"],
-  collaboration: ["communication", "support", "openness", "collaboration"],
-};
-
-function scoreFor(cat: string, i: number): KpiSubScoreKey {
-  const list = scoreByCategory[cat] ?? scoreByCategory.teamwork;
-  return list[i % list.length];
+function scoreFor(cat: string, questionId: string): string {
+  return `${cat}__${questionId}`;
 }
 
 export const ROLE_SECTION_WEIGHTS: Record<RoleKey, Record<string, number>> = {
@@ -155,7 +145,10 @@ const C = {
 
 const q = (id: string, question: string, type: QuestionType, extra: Partial<KPIQuestion> = {}): KPIQuestion => ({ id, question, type, ...extra });
 const sec = (id: string, title: string, color: string, weight: string, questions: KPIQuestion[]): KPISection => ({ id, title, color, weight, questions });
-const rates = (prefix: string, cat: string, lines: string[]) => lines.map((line, i) => q(`${prefix}_${i + 1}`, line, "rate", { scoreKey: scoreFor(cat, i) }));
+const rates = (prefix: string, cat: string, lines: string[]) => lines.map((line, i) => {
+  const id = `${prefix}_${i + 1}`;
+  return q(id, line, "rate", { scoreKey: scoreFor(cat, id) });
+});
 const texts = (prefix: string, lines: string[]) => lines.map((line, i) => q(`${prefix}_${i + 1}`, line, "text"));
 
 const TA_SELF: KPISection[] = [
@@ -597,7 +590,7 @@ export async function loadKpiFormConfig(
       type: t,
     };
     if (t === "rate") {
-      next.scoreKey = scoreFor(sid, section.questions.filter((q) => q.type === "rate").length);
+      next.scoreKey = scoreFor(sid, qId);
     }
     if (t === "auto" && row.auto_source) {
       next.autoId = row.auto_source as AutoValueId;

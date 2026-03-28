@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronDown, ChevronRight, ClipboardCheck, Info, Star } from
 import { supabase } from "@/integrations/supabase/client";
 import {
   useKpiPeriods, useKpiEvaluations,
-  type KpiEvaluation, type KpiSubScores, type KpiSubScoreKey,
+  type KpiEvaluation, type KpiSubScores,
 } from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -165,7 +165,7 @@ function SectionCard({
   scores: KpiSubScores;
   textAnswers: Record<string, string>;
   autoValues: AutoValues | null;
-  onRate: (key: KpiSubScoreKey, v: number) => void;
+  onRate: (key: string, v: number) => void;
   onText: (id: string, v: string) => void;
   disabled?: boolean;
 }) {
@@ -350,7 +350,7 @@ export default function KpiEvaluate() {
     const restoredScores: KpiSubScores = {};
     const restoredText: Record<string, string> = {};
     for (const [key, value] of Object.entries(saved ?? {})) {
-      if (typeof value === "number") restoredScores[key as KpiSubScoreKey] = value;
+      if (typeof value === "number") restoredScores[key] = value;
       if (typeof value === "string") restoredText[key] = value;
     }
     setScores(restoredScores);
@@ -359,7 +359,7 @@ export default function KpiEvaluate() {
     if (existing.submitted_at) setIsReadOnly(true);
   }, [evaluations, evaluator, evaluateeId, periodId, evalType]);
 
-  const setScore = (key: KpiSubScoreKey, v: number) => {
+  const setScore = (key: string, v: number) => {
     if (isReadOnly) return;
     setScores((p) => ({ ...p, [key]: v }));
   };

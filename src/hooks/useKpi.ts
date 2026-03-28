@@ -66,16 +66,26 @@ export type KpiSubScoreKey =
   | "communication" | "support" | "openness" | "collaboration"
   | "presentation" | "decision_making" | "management" | "strategic";
 
-export type KpiSubScores = Partial<Record<KpiSubScoreKey, number>>;
+export type KpiSubScores = Record<string, number>;
 
 // ─── Score calculations ───────────────────────────────────────────────────────
 
 export function calcCategoryScore(scores: KpiSubScores, catKey: KpiCategoryKey): number {
+  // New format: keys encoded as "${catKey}__${questionId}"
+  const prefix = `${catKey}__`;
+  const newVals = Object.entries(scores)
+    .filter(([k]) => k.startsWith(prefix))
+    .map(([, v]) => v)
+    .filter(v => v > 0);
+  if (newVals.length > 0) {
+    return newVals.reduce((a, b) => a + b, 0) / newVals.length;
+  }
+  // Old format: specific sub-score keys e.g. "quality", "technical" (backward compat)
   const cat = KPI_CATEGORIES.find(c => c.key === catKey);
   if (!cat) return 0;
-  const vals = cat.items.map(i => scores[i.key as KpiSubScoreKey] ?? 0).filter(v => v > 0);
-  if (!vals.length) return 0;
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
+  const oldVals = cat.items.map(i => scores[i.key] ?? 0).filter(v => v > 0);
+  if (!oldVals.length) return 0;
+  return oldVals.reduce((a, b) => a + b, 0) / oldVals.length;
 }
 
 export function calcWeightedScore(scores: KpiSubScores): number {
