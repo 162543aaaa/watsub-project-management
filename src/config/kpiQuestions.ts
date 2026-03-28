@@ -563,8 +563,7 @@ export async function loadKpiFormConfig(
   reviewerType: ReviewerType,
 ): Promise<KPIFormConfig> {
   const dbRole = ROLEKEY_TO_DB_ROLE[roleKey];
-  const fallback = KPI_QUESTIONS[roleKey][reviewerType];
-  if (!dbRole) return fallback;
+
 
   const { data, error } = await supabase
     .from("kpi_question_templates")
@@ -573,7 +572,7 @@ export async function loadKpiFormConfig(
     .eq("reviewer_type", reviewerType)
     .order("order_index", { ascending: true });
 
-  if (error || !data || data.length === 0) return fallback;
+
 
   const grouped = new Map<string, KPISection>();
   (data as DbTemplateRow[]).forEach((row, i) => {
@@ -604,21 +603,5 @@ export async function loadKpiFormConfig(
     section.questions.push(next);
   });
 
-  const dbConfig: KPIFormConfig = {
-    note: `DB template (${dbRole}/${reviewerType})`,
-    sections: Array.from(grouped.values()),
-  };
 
-  // Safety guard:
-  // If DB templates are partially seeded (e.g. only one section/question),
-  // keep using the in-code fallback so users still see the complete form.
-  const dbQuestionCount = dbConfig.sections.reduce((sum, s) => sum + s.questions.length, 0);
-  const fallbackQuestionCount = fallback.sections.reduce((sum, s) => sum + s.questions.length, 0);
-  const dbSectionCount = dbConfig.sections.length;
-  const fallbackSectionCount = fallback.sections.length;
-  const dbLooksIncomplete =
-    dbSectionCount < Math.max(1, Math.ceil(fallbackSectionCount * 0.75)) ||
-    dbQuestionCount < Math.max(2, Math.ceil(fallbackQuestionCount * 0.75));
-
-  return dbLooksIncomplete ? fallback : dbConfig;
 }
