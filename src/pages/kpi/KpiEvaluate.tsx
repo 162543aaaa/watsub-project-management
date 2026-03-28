@@ -11,6 +11,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import {
   KPI_QUESTIONS,
+  loadKpiFormConfig,
   ROLE_WEIGHTS,
   getEligiblePeerReviewers,
   getSelfEvaluationType,
@@ -272,6 +273,7 @@ export default function KpiEvaluate() {
   const [needPicker, setNeedPicker] = useState(false);
   const [autoValues, setAutoValues] = useState<AutoValues | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const [formConfig, setFormConfig] = useState(KPI_QUESTIONS.default.peer);
 
   const evaluatee = useMemo(() => employees.find((e) => e.id === evaluateeId), [employees, evaluateeId]);
   const period = useMemo(() => periods.find((p) => p.id === periodId), [periods, periodId]);
@@ -309,7 +311,13 @@ export default function KpiEvaluate() {
     return getEligiblePeerReviewers(evaluatee, employees).some((emp) => emp.id === evaluator.id);
   }, [evaluatee, evaluator, evalType, employees]);
 
-  const formConfig = useMemo(() => KPI_QUESTIONS[roleKey][evalType], [roleKey, evalType]);
+  useEffect(() => {
+    let mounted = true;
+    loadKpiFormConfig(roleKey, evalType).then((cfg) => {
+      if (mounted) setFormConfig(cfg);
+    });
+    return () => { mounted = false; };
+  }, [roleKey, evalType]);
 
   // Initialize scores to 0 (not 3) so user must explicitly rate
   useEffect(() => {
