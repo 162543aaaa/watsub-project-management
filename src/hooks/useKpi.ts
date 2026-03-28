@@ -119,7 +119,8 @@ export interface KpiEvaluation {
   period_id: string;
   evaluator_id: string;
   evaluatee_id: string;
-  type: "self" | "peer" | "supervisor";
+  reviewer_type: "self" | "peer" | "supervisor";
+  type?: "self" | "peer" | "supervisor";
   scores: Record<string, number | string>;
   notes_strength: string | null;
   notes_improve: string | null;
@@ -185,22 +186,29 @@ export function useKpiEvaluations(periodId?: string) {
   useEffect(() => { fetch(); }, [fetch]);
 
   const upsertEvaluation = async (ev: Omit<KpiEvaluation, "id" | "created_at">) => {
+    const reviewerType = ev.reviewer_type ?? ev.type;
     const { data: existing } = await supabase
       .from("kpi_evaluations").select("id")
       .eq("period_id", ev.period_id)
       .eq("evaluator_id", ev.evaluator_id)
       .eq("evaluatee_id", ev.evaluatee_id)
-      .eq("type", ev.type)
+      .eq("reviewer_type", reviewerType)
       .maybeSingle();
+
+    const payload = {
+      ...ev,
+      reviewer_type: reviewerType,
+      type: reviewerType,
+    };
 
     if (existing?.id) {
       const { data, error } = await supabase
-        .from("kpi_evaluations").update(ev).eq("id", existing.id).select().single();
+        .from("kpi_evaluations").update(payload).eq("id", existing.id).select().single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setEvaluations(prev => prev.map(e => e.id === existing.id ? data as KpiEvaluation : e));
       return data as KpiEvaluation;
     } else {
-      const { data, error } = await supabase.from("kpi_evaluations").insert(ev).select().single();
+      const { data, error } = await supabase.from("kpi_evaluations").insert(payload).select().single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setEvaluations(prev => [...prev, data as KpiEvaluation]);
       return data as KpiEvaluation;

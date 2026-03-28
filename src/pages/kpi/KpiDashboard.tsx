@@ -16,6 +16,10 @@ function avg(nums: number[]) {
   return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
 
+function getReviewType(e: { reviewer_type?: string | null; type?: string | null }) {
+  return (e.reviewer_type ?? e.type ?? "").toLowerCase();
+}
+
 function averageCategory(scores: Record<string, number | string>, keys: string[]) {
   const vals = keys.map((k) => Number(scores[k] ?? 0)).filter((v) => Number.isFinite(v) && v > 0);
   return avg(vals);
@@ -65,9 +69,9 @@ export default function KpiDashboard() {
       const roleKey = resolveRoleKey(emp);
       const roleWeights = ROLE_WEIGHTS[roleKey];
       const memberEvals = evaluations.filter((e) => e.period_id === currentPeriod.id && e.evaluatee_id === emp.id && e.submitted_at);
-      const self = avg(memberEvals.filter((e) => e.type === "self").map((e) => weightedFromRole(e.scores as Record<string, number | string>, roleWeights)));
-      const peer = avg(memberEvals.filter((e) => e.type === "peer").map((e) => weightedFromRole(e.scores as Record<string, number | string>, roleWeights)));
-      const sup = avg(memberEvals.filter((e) => e.type === "supervisor").map((e) => weightedFromRole(e.scores as Record<string, number | string>, roleWeights)));
+      const self = avg(memberEvals.filter((e) => getReviewType(e) === "self").map((e) => weightedFromRole(e.scores as Record<string, number | string>, roleWeights)));
+      const peer = avg(memberEvals.filter((e) => getReviewType(e) === "peer").map((e) => weightedFromRole(e.scores as Record<string, number | string>, roleWeights)));
+      const sup = avg(memberEvals.filter((e) => getReviewType(e) === "supervisor").map((e) => weightedFromRole(e.scores as Record<string, number | string>, roleWeights)));
       const auto = 0;
       const final = calcFinalScore(auto, self || null, peer || null, sup || null);
       const job = avg(memberEvals.map((e) => averageCategory(e.scores as Record<string, number | string>, ["quality", "quantity", "punctuality", "accountability"])));
@@ -84,9 +88,9 @@ export default function KpiDashboard() {
       }
 
       const status = {
-        self: memberEvals.some((e) => e.evaluator_id === emp.id && e.type === "self"),
-        peer: memberEvals.filter((e) => e.type === "peer").length,
-        supervisor: memberEvals.some((e) => e.type === "supervisor"),
+        self: memberEvals.some((e) => e.evaluator_id === emp.id && getReviewType(e) === "self"),
+        peer: memberEvals.filter((e) => getReviewType(e) === "peer").length,
+        supervisor: memberEvals.some((e) => getReviewType(e) === "supervisor"),
       };
 
       return { emp, final, job, comp, team, lead, trend, status };

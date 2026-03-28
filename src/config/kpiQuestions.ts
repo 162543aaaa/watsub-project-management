@@ -563,7 +563,9 @@ export async function loadKpiFormConfig(
   reviewerType: ReviewerType,
 ): Promise<KPIFormConfig> {
   const dbRole = ROLEKEY_TO_DB_ROLE[roleKey];
+  const fallback = KPI_QUESTIONS[roleKey]?.[reviewerType] ?? KPI_QUESTIONS.default[reviewerType];
 
+  if (!dbRole) return fallback;
 
   const { data, error } = await supabase
     .from("kpi_question_templates")
@@ -572,7 +574,7 @@ export async function loadKpiFormConfig(
     .eq("reviewer_type", reviewerType)
     .order("order_index", { ascending: true });
 
-
+  if (error || !data?.length) return fallback;
 
   const grouped = new Map<string, KPISection>();
   (data as DbTemplateRow[]).forEach((row, i) => {
@@ -603,5 +605,8 @@ export async function loadKpiFormConfig(
     section.questions.push(next);
   });
 
-
+  return {
+    ...fallback,
+    sections: Array.from(grouped.values()),
+  };
 }

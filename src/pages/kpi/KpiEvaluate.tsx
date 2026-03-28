@@ -27,6 +27,8 @@ const avatarUrl = (p?: string) =>
   !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
 
 type AutoValues = Record<AutoValueId, string>;
+const getReviewType = (e: { reviewer_type?: string | null; type?: string | null }) =>
+  (e.reviewer_type ?? e.type ?? "").toLowerCase();
 
 async function computeAutoValues(empId: string, periodId: string): Promise<AutoValues> {
   const fetchTasks = async () => {
@@ -337,7 +339,10 @@ export default function KpiEvaluate() {
   useEffect(() => {
     if (!evaluator || !evaluations.length) return;
     const existing = evaluations.find(
-      (e) => e.evaluator_id === evaluator.id && e.evaluatee_id === evaluateeId && e.period_id === periodId,
+      (e) => e.evaluator_id === evaluator.id
+        && e.evaluatee_id === evaluateeId
+        && e.period_id === periodId
+        && getReviewType(e) === evalType,
     );
     if (!existing) return;
 
@@ -352,7 +357,7 @@ export default function KpiEvaluate() {
     setTextAnswers(restoredText);
 
     if (existing.submitted_at) setIsReadOnly(true);
-  }, [evaluations, evaluator, evaluateeId, periodId]);
+  }, [evaluations, evaluator, evaluateeId, periodId, evalType]);
 
   const setScore = (key: KpiSubScoreKey, v: number) => {
     if (isReadOnly) return;
@@ -413,7 +418,7 @@ export default function KpiEvaluate() {
       period_id: periodId!,
       evaluator_id: evaluator.id,
       evaluatee_id: evaluateeId!,
-      type: evalType,
+      reviewer_type: evalType,
       scores: answersInScores,
       notes_strength: null,
       notes_improve: null,
