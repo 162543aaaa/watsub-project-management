@@ -101,14 +101,14 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   const noTasks = done.length === 0;
 
   return {
-    tasks_ontime_pct: noTasks ? "ไม่มีข้อมูล" : `${((onTimeActual.length / done.length) * 100).toFixed(0)}%`,
-    tasks_done_count: noTasks ? "ไม่มีข้อมูล" : `${done.length} งาน`,
-    revision_avg: noTasks ? "ไม่มีข้อมูล" : `${avgRevision} ครั้ง/งาน`,
-    projects_closed: projects.length === 0 ? "ไม่มีข้อมูล" : `${closedProjects.length} โปรเจกต์`,
+    on_time_rate: noTasks ? "ไม่มีข้อมูล" : `${((onTimeActual.length / done.length) * 100).toFixed(0)}%`,
+    total_tasks: noTasks ? "ไม่มีข้อมูล" : `${done.length} งาน`,
+    avg_revision: noTasks ? "ไม่มีข้อมูล" : `${avgRevision} ครั้ง/งาน`,
+    closed_projects: projects.length === 0 ? "ไม่มีข้อมูล" : `${closedProjects.length} โปรเจกต์`,
     revenue_vs_target_q: customers.length === 0 && goals.length === 0 ? "ไม่มีข้อมูล" : `฿${revenueTotal.toLocaleString()} / ฿${goalTarget.toLocaleString()}`,
-    scripts_ontime_pct: noTasks ? "ไม่มีข้อมูล" : `${((onTimeActual.length / done.length) * 100).toFixed(0)}%`,
-    client_count: tasks.length === 0 ? "ไม่มีข้อมูล" : `${clientIds.size} client`,
-    task_approve_d1: noTasks ? "ไม่มีข้อมูล" : `${Math.round((onTimeActual.length / done.length) * 100)}%`,
+    script_on_time: noTasks ? "ไม่มีข้อมูล" : `${((onTimeActual.length / done.length) * 100).toFixed(0)}%`,
+    total_clients: tasks.length === 0 ? "ไม่มีข้อมูล" : `${clientIds.size} client`,
+    client_revision_avg: noTasks ? "ไม่มีข้อมูล" : `${avgRevision} ครั้ง/งาน`,
   };
 }
 
@@ -293,7 +293,7 @@ export default function KpiEvaluate() {
   }, [evaluateeId, periodId]);
 
   const roleKey = useMemo(
-    () => (evaluatee ? resolveRoleKey(evaluatee.name) : "default") as RoleKey,
+    () => (evaluatee ? resolveRoleKey(evaluatee) : "default") as RoleKey,
     [evaluatee],
   );
 

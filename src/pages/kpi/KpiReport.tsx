@@ -33,9 +33,9 @@ function avgScores(evals: KpiEvaluation[]): KpiSubScores | null {
   return acc as KpiSubScores;
 }
 
-function avgWeighted(evals: KpiEvaluation[], memberName?: string): number | null {
+function avgWeighted(evals: KpiEvaluation[], memberInfo?: { name?: string; kpi_role?: string; role?: string; type?: string } | null): number | null {
   if (!evals.length) return null;
-  const roleKey = memberName ? resolveRoleKey(memberName) : null;
+  const roleKey = memberInfo ? resolveRoleKey(memberInfo) : null;
   const roleW = roleKey ? ROLE_WEIGHTS[roleKey] : null;
 
   const vals = evals.map(ev => {
@@ -82,9 +82,9 @@ export default function KpiReport() {
   function getBreakdown(periodId: string) {
     const evals = allEvals.filter(e => e.period_id === periodId && e.evaluatee_id === memberId && e.submitted_at);
     return {
-      self: avgWeighted(evals.filter(e => e.type === "self"), member?.name),
-      peer: avgWeighted(evals.filter(e => e.type === "peer"), member?.name),
-      supervisor: avgWeighted(evals.filter(e => e.type === "supervisor"), member?.name),
+      self: avgWeighted(evals.filter(e => e.type === "self"), member),
+      peer: avgWeighted(evals.filter(e => e.type === "peer"), member),
+      supervisor: avgWeighted(evals.filter(e => e.type === "supervisor"), member),
       allScores: avgScores(evals),
       peerCount: evals.filter(e => e.type === "peer").length,
       peerEvaluators: evals.filter(e => e.type === "peer").map((e) => employees.find((emp) => emp.id === e.evaluator_id)?.name).filter(Boolean) as string[],
