@@ -13,6 +13,8 @@ import { getEligiblePeerReviewers, getSelfEvaluationType, resolveRoleKey } from 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
   !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
+const getReviewType = (e: { reviewer_type?: string | null; type?: string | null }) =>
+  (e.reviewer_type ?? e.type ?? "").toLowerCase();
 
 function StatusPill({ done, label }: { done: boolean; label: string }) {
   return (
@@ -72,12 +74,12 @@ export default function KpiAdmin() {
     const submitted = evals.filter(e => e.submitted_at).length;
     const rows = employees.map(emp => {
       const selfType = getSelfEvaluationType(resolveRoleKey(emp));
-      const selfDone  = evals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === selfType && e.submitted_at);
-      const supDone   = evals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
+      const selfDone  = evals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && getReviewType(e) === selfType && e.submitted_at);
+      const supDone   = evals.some(e => e.evaluatee_id === emp.id && getReviewType(e) === "supervisor" && e.submitted_at);
       const eligiblePeers = getEligiblePeerReviewers(emp, employees);
       const peersTotal = eligiblePeers.length;
       const peersDone  = eligiblePeers
-        .filter(peer => evals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && e.type === "peer" && e.submitted_at))
+        .filter(peer => evals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && getReviewType(e) === "peer" && e.submitted_at))
         .length;
       return { emp, selfDone, supDone, peersDone, peersTotal };
     });
