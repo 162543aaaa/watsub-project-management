@@ -61,7 +61,7 @@ export default function KpiOverview() {
     const submitted = pEvals.filter(e => e.submitted_at).length;
 
     const rows = employees.map(emp => {
-      const selfType = getSelfEvaluationType(resolveRoleKey(emp.name));
+      const selfType = getSelfEvaluationType(resolveRoleKey(emp));
       const selfDone  = pEvals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === selfType && e.submitted_at);
       const supDone   = pEvals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
       const eligiblePeers = getEligiblePeerReviewers(emp, employees);
@@ -91,7 +91,7 @@ export default function KpiOverview() {
   const notifiedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!me) return;
-    const isTa = resolveRoleKey(me.name) === "ta" || me.role?.toLowerCase().includes("director") || me.role?.toLowerCase().includes("admin");
+    const isTa = resolveRoleKey(me) === "ta" || me.role?.toLowerCase().includes("director") || me.role?.toLowerCase().includes("admin");
     if (!isTa) return;
 
     for (const { period, rows } of periodData) {

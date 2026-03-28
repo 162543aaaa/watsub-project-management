@@ -10,16 +10,17 @@ import { TEAM_ROSTER } from "@/config/teamRoster";
 
 describe("kpiQuestions helpers", () => {
   const employees = [
-    { id: "ta", name: "TARMISI WANI" },
-    { id: "hf", name: "ฮาฟีซ ดอเลาะ" },
-    { id: "sy", name: "สุไมยนา หวังเบ็ญหมัด" },
-    { id: "x", name: "Someone Else" },
+    { id: "ta", name: "TARMISI WANI", kpi_role: "director" },
+    { id: "hf", name: "ฮาฟีซ ดอเลาะ", kpi_role: "production" },
+    { id: "sy", name: "สุไมยนา หวังเบ็ญหมัด", kpi_role: "strategy" },
+    { id: "x", name: "Someone Else", kpi_role: "outsource", type: "outsource" },
   ];
 
-  it("resolves roles from english/thai names", () => {
-    expect(resolveRoleKey("TARMISI WANI")).toBe("ta");
-    expect(resolveRoleKey("ฮาฟีซ ดอเลาะ")).toBe("hafeez");
-    expect(resolveRoleKey("สุไมยนา หวังเบ็ญหมัด")).toBe("sumayna");
+  it("resolves roles from member role metadata", () => {
+    expect(resolveRoleKey({ kpi_role: "director" })).toBe("ta");
+    expect(resolveRoleKey({ kpi_role: "production" })).toBe("hafeez");
+    expect(resolveRoleKey({ kpi_role: "strategy" })).toBe("sumayna");
+    expect(resolveRoleKey({ type: "outsource" })).toBe("outsource");
     expect(resolveRoleKey("Unknown")).toBe("default");
   });
 

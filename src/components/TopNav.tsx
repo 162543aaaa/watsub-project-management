@@ -20,7 +20,7 @@ const secondaryNav = [
   { label: "Team", icon: Users, path: "/team" },
   { label: "Leave", icon: Plane, path: "/leave" },
   { label: "Budget", icon: Wallet, path: "/budget" },
-  { label: "KPI", icon: TrendingUp, path: "/kpi/overview" },
+  { label: "KPI", icon: TrendingUp, path: "/kpi/dashboard" },
   { label: "Reports", icon: BarChart3, path: "/reports" },
   { label: "Notifications", icon: Bell, path: "/notifications" },
   { label: "Import", icon: Upload, path: "/import" },

@@ -26,6 +26,7 @@ import Signup from "./pages/Signup";
 import WaitingApproval from "./pages/WaitingApproval";
 import AdminPanel from "./pages/AdminPanel";
 import KpiOverview from "./pages/kpi/KpiOverview";
+import KpiDashboard from "./pages/kpi/KpiDashboard";
 import KpiEvaluate from "./pages/kpi/KpiEvaluate";
 import KpiReport from "./pages/kpi/KpiReport";
 import KpiAdmin from "./pages/kpi/KpiAdmin";
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="/export" element={<Export />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/kpi/overview" element={<KpiOverview />} />
+                <Route path="/kpi/dashboard" element={<KpiDashboard />} />
                 <Route path="/kpi/evaluate/:evaluateeId/:periodId" element={<KpiEvaluate />} />
                 <Route path="/kpi/report/:memberId" element={<KpiReport />} />
                 <Route path="/kpi/admin" element={<KpiAdmin />} />

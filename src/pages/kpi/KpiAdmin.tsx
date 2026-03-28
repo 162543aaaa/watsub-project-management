@@ -71,7 +71,7 @@ export default function KpiAdmin() {
     const evals = evaluations.filter(e => e.period_id === period.id);
     const submitted = evals.filter(e => e.submitted_at).length;
     const rows = employees.map(emp => {
-      const selfType = getSelfEvaluationType(resolveRoleKey(emp.name));
+      const selfType = getSelfEvaluationType(resolveRoleKey(emp));
       const selfDone  = evals.some(e => e.evaluatee_id === emp.id && e.evaluator_id === emp.id && e.type === selfType && e.submitted_at);
       const supDone   = evals.some(e => e.evaluatee_id === emp.id && e.type === "supervisor" && e.submitted_at);
       const eligiblePeers = getEligiblePeerReviewers(emp, employees);

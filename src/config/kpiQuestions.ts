@@ -1,18 +1,18 @@
 import type { KpiCategoryKey, KpiSubScoreKey } from "@/hooks/useKpi";
 
-export type RoleKey = "ta" | "hafeez" | "sumayna" | "default";
+export type RoleKey = "ta" | "hafeez" | "sumayna" | "outsource" | "default";
 export type ReviewerType = "self" | "peer" | "supervisor";
 export type QuestionType = "auto" | "rate" | "text" | "hidden";
 
 export type AutoValueId =
-  | "tasks_ontime_pct"
-  | "tasks_done_count"
-  | "revision_avg"
-  | "projects_closed"
-  | "revenue_vs_target_q"
-  | "scripts_ontime_pct"
-  | "client_count"
-  | "task_approve_d1";
+  | "on_time_rate"
+  | "avg_revision"
+  | "total_tasks"
+  | "closed_projects"
+  | "total_clients"
+  | "script_on_time"
+  | "client_revision_avg"
+  | "revenue_vs_target_q";
 
 export interface KPIQuestion {
   id: string;
@@ -37,11 +37,26 @@ export interface KPIFormConfig {
   sections: KPISection[];
 }
 
+const scoreByCategory: Record<string, KpiSubScoreKey[]> = {
+  job_performance: ["quality", "quantity", "punctuality", "accountability"],
+  competency: ["technical", "problem_solving", "learning", "decision_making"],
+  teamwork: ["communication", "support", "openness", "collaboration"],
+  leadership: ["presentation", "decision_making", "management", "strategic"],
+  creativity: ["creativity", "openness", "collaboration", "learning"],
+  collaboration: ["communication", "support", "openness", "collaboration"],
+};
+
+function scoreFor(cat: string, i: number): KpiSubScoreKey {
+  const list = scoreByCategory[cat] ?? scoreByCategory.teamwork;
+  return list[i % list.length];
+}
+
 export const ROLE_SECTION_WEIGHTS: Record<RoleKey, Record<string, number>> = {
-  ta: { job_performance: 0.2, competency: 0.2, teamwork: 0.2, leadership: 0.4, creativity: 0 },
-  hafeez: { job_performance: 0.4, competency: 0.35, teamwork: 0.15, leadership: 0, creativity: 0.1 },
-  sumayna: { job_performance: 0.35, competency: 0.3, teamwork: 0.25, leadership: 0, creativity: 0.1 },
-  default: { job_performance: 0.3, competency: 0.3, teamwork: 0.2, leadership: 0.2, creativity: 0 },
+  ta: { job_performance: 0.2, competency: 0.2, teamwork: 0.2, leadership: 0.4, creativity: 0, collaboration: 0 },
+  hafeez: { job_performance: 0.4, competency: 0.35, teamwork: 0.15, leadership: 0, creativity: 0.1, collaboration: 0 },
+  sumayna: { job_performance: 0.35, competency: 0.3, teamwork: 0.25, leadership: 0, creativity: 0.1, collaboration: 0 },
+  outsource: { job_performance: 0.45, competency: 0.4, teamwork: 0, leadership: 0, creativity: 0, collaboration: 0.15 },
+  default: { job_performance: 0.3, competency: 0.3, teamwork: 0.2, leadership: 0.2, creativity: 0, collaboration: 0 },
 };
 
 export const ROLE_WEIGHTS: Record<RoleKey, Record<string, number>> = Object.fromEntries(
@@ -54,17 +69,27 @@ export const ROLE_WEIGHTS: Record<RoleKey, Record<string, number>> = Object.from
 export const REVIEWER_WEIGHTS = { auto: 0.3, self: 0.1, peer: 0.2, supervisor: 0.4 };
 
 const ROLE_ALIASES: Record<RoleKey, string[]> = {
-  ta: ["tarmisi", "ต้า"],
-  hafeez: ["hafeez", "ฮาฟีซ"],
-  sumayna: ["sumayna", "สุไมยนา"],
+  ta: ["director"],
+  hafeez: ["production"],
+  sumayna: ["strategy"],
+  outsource: ["outsource", "freelance", "external"],
   default: [],
 };
 
-export function resolveRoleKey(name?: string | null): RoleKey {
-  const n = (name ?? "").trim().toLowerCase();
-  if (!n) return "default";
-  for (const role of ["ta", "hafeez", "sumayna"] as const) {
-    if (ROLE_ALIASES[role].some((alias) => n.includes(alias))) return role;
+export function resolveRoleKey(input?:
+  | string
+  | null
+  | { name?: string | null; kpi_role?: string | null; role?: string | null; type?: string | null }): RoleKey {
+  const normalize = (v?: string | null) => (v ?? "").trim().toLowerCase();
+  if (!input) return "default";
+
+  const text = typeof input === "string"
+    ? normalize(input)
+    : [normalize(input.kpi_role), normalize(input.role), normalize(input.type), normalize(input.name)].join(" ");
+
+  if (!text) return "default";
+  for (const role of ["ta", "hafeez", "sumayna", "outsource"] as const) {
+    if (ROLE_ALIASES[role].some((alias) => text.includes(alias))) return role;
   }
   return "default";
 }
@@ -73,20 +98,26 @@ export function getSelfEvaluationType(roleKey: RoleKey): ReviewerType {
   return roleKey === "ta" ? "supervisor" : "self";
 }
 
-export function getEligiblePeerReviewers<T extends { id: string; name: string }>(
+export function getEligiblePeerReviewers<T extends { id: string; name?: string; kpi_role?: string; role?: string; type?: string }>(
   evaluatee: T,
   employees: T[],
 ): T[] {
-  const role = resolveRoleKey(evaluatee.name);
+  const role = resolveRoleKey(evaluatee);
+  if (role === "outsource") {
+    return employees.filter((emp) => emp.id !== evaluatee.id && resolveRoleKey(emp) !== "outsource");
+  }
+
   const allowedByRole: Record<RoleKey, RoleKey[]> = {
     ta: ["hafeez", "sumayna"],
     hafeez: ["ta", "sumayna"],
     sumayna: ["ta", "hafeez"],
+    outsource: ["ta", "hafeez", "sumayna"],
     default: [],
   };
+
   const allowed = allowedByRole[role];
   if (!allowed.length) return employees.filter((emp) => emp.id !== evaluatee.id);
-  return employees.filter((emp) => emp.id !== evaluatee.id && allowed.includes(resolveRoleKey(emp.name)));
+  return employees.filter((emp) => emp.id !== evaluatee.id && allowed.includes(resolveRoleKey(emp)));
 }
 
 export function canSeePeerIdentity(viewer: { role?: string | null }): boolean {
@@ -104,236 +135,370 @@ const C = {
   lead: "hsl(38 92% 50%)",
 };
 
-const q = (id: string, question: string, type: QuestionType, extra: Partial<KPIQuestion> = {}): KPIQuestion => ({
-  id,
-  question,
-  type,
-  ...extra,
-});
-
-const sec = (id: string, title: string, color: string, weight: string, questions: KPIQuestion[]): KPISection => ({
-  id,
-  title,
-  color,
-  weight,
-  questions,
-});
-
-// ─── TA (ต้า / Tarmisi) ───────────────────────────────────────────────────────
+const q = (id: string, question: string, type: QuestionType, extra: Partial<KPIQuestion> = {}): KPIQuestion => ({ id, question, type, ...extra });
+const sec = (id: string, title: string, color: string, weight: string, questions: KPIQuestion[]): KPISection => ({ id, title, color, weight, questions });
+const rates = (prefix: string, cat: string, lines: string[]) => lines.map((line, i) => q(`${prefix}_${i + 1}`, line, "rate", { scoreKey: scoreFor(cat, i) }));
+const texts = (prefix: string, lines: string[]) => lines.map((line, i) => q(`${prefix}_${i + 1}`, line, "text"));
 
 const TA_SELF: KPISection[] = [
   sec("job_performance", "Job Performance", C.job, "20%", [
-    q("ta_self_j1", "ส่ง feedback/approval ทีมทัน D-3 ถึง D-0", "rate", { scoreKey: "punctuality" }),
-    q("ta_self_j2", "จำนวนโปรเจกต์ที่ปิดได้ในรอบ", "auto", { autoId: "projects_closed" }),
-    q("ta_self_j3", "ความถูกต้องของงบประมาณที่ตัดสินใจ", "rate", { scoreKey: "accountability" }),
+    ...rates("ta_self_job", "job_performance", [
+      "ส่ง feedback และ approval ให้ทีมตามสัญญาณ D-3 ถึง D-0 ทุกครั้ง",
+      "ความแม่นยำของงบประมาณที่วางแผนไว้ vs ค่าใช้จ่ายจริง",
+      "ติดตาม cashflow และ payment จาก client ได้ครบถ้วน",
+      "จัดการเอกสารสัญญาและ scope of work ให้ชัดเจนก่อนเริ่มงาน",
+      "รับผิดชอบและแก้ปัญหาเมื่อโปรเจกต์ไม่เป็นไปตามแผน",
+    ]),
+    q("ta_self_job_auto_1", "จำนวนโปรเจกต์ที่ปิด (close) ได้ในรอบนี้", "auto", { autoId: "closed_projects" }),
   ]),
   sec("competency", "Competency", C.comp, "20%", [
-    q("ta_self_c1", "การวิเคราะห์และตัดสินใจเชิงธุรกิจ", "rate", { scoreKey: "problem_solving" }),
-    q("ta_self_c2", "การบริหารความเสี่ยงในโปรเจกต์", "rate", { scoreKey: "management" }),
-    q("ta_self_c3", "การติดตามเทรนด์ (AI, creative economy)", "rate", { scoreKey: "learning" }),
+    ...rates("ta_self_comp", "competency", [
+      "วิเคราะห์สถานการณ์และตัดสินใจเชิงธุรกิจได้ทันเวลา",
+      "บริหารความเสี่ยงของโปรเจกต์ก่อนที่จะกลายเป็นปัญหา",
+      "ติดตามเทรนด์ที่เกี่ยวข้อง เช่น AI tools, creative economy, local market",
+      "นำเสนอ proposal หรือ pitch ให้ client เข้าใจและตัดสินใจได้",
+      "เจรจาต่อรองราคาและเงื่อนไขกับ client หรือ supplier ได้",
+      "ออกแบบและพัฒนาระบบหรือ process ภายในสตูดิโอให้ดีขึ้น",
+    ]),
+    ...texts("ta_self_comp_text", ["สิ่งที่ได้เรียนรู้ด้านธุรกิจหรือการบริหารในรอบนี้"]),
   ]),
-  sec("teamwork", "Teamwork", C.team, "20%", [
-    q("ta_self_t1", "ความชัดเจนของ brief ที่มอบให้ทีม", "rate", { scoreKey: "communication" }),
-    q("ta_self_t2", "การรับฟัง feedback จากทีมและ client", "rate", { scoreKey: "openness" }),
-    q("ta_self_t3", "การสร้างบรรยากาศที่ทีมทำงานสบายใจ", "rate", { scoreKey: "collaboration" }),
-  ]),
-  sec("leadership", "Leadership", C.lead, "40%", [
-    q("ta_self_l1", "ทิศทาง WatSUB! ชัดเจนและสื่อสารให้ทีมเข้าใจ", "rate", { scoreKey: "strategic" }),
-    q("ta_self_l2", "การสร้างและรักษาความสัมพันธ์กับ partner/client", "rate", { scoreKey: "presentation" }),
-    q("ta_self_l3", "การพัฒนาระบบภายใน (PM, SOP, cashflow)", "rate", { scoreKey: "management" }),
-    q("ta_self_l4", "เป้าหมายที่ต้องการพัฒนาในรอบถัดไป", "text"),
+  sec("teamwork", "Teamwork", C.team, "20%", rates("ta_self_team", "teamwork", [
+    "มอบหมายงานพร้อม brief ที่ชัดเจนก่อนเริ่ม production",
+    "รับฟัง feedback จากทีมและนำไปปรับทิศทาง",
+    "สร้างบรรยากาศที่ทีมรู้สึกปลอดภัยในการแสดงความคิดเห็น",
+    "ให้เวลาและพื้นที่ทีมพัฒนาทักษะของตัวเอง",
+    "จัดการ conflict หรือความขัดแย้งในทีมได้อย่างสร้างสรรค์",
+    "ยอมรับเมื่อตัดสินใจผิดพลาดและแก้ไขให้ทีมเห็น",
+  ])),
+  sec("leadership", "Leadership / Business", C.lead, "40%", [
+    ...rates("ta_self_lead", "leadership", [
+      "ทิศทางและ vision ของ WatSUB! ชัดเจนและสื่อสารให้ทีมเข้าใจได้",
+      "สร้างและรักษาความสัมพันธ์กับ partner และ client ระยะยาว",
+      "พัฒนาระบบภายใน (PM, SOP, cashflow, Drive structure) อย่างต่อเนื่อง",
+      "วางแผนรายได้และควบคุมค่าใช้จ่ายให้สตูดิโออยู่ได้",
+      "สร้างโอกาสธุรกิจใหม่ หรือ service ใหม่ในรอบนี้",
+      "ตัดสินใจเรื่อง hiring หรือ outsource ได้ถูกต้องตามความต้องการจริง",
+      "ดูแล positioning ของ WatSUB! ในตลาด Pattani creative scene",
+    ]),
+    ...texts("ta_self_lead_text", [
+      "เป้าหมาย Q ที่ตั้งไว้ vs ผลจริง (อธิบาย)",
+      "ความท้าทายใหญ่สุดรอบนี้และวิธีที่จัดการ",
+      "สิ่งที่จะทำต่างออกไปในรอบถัดไป",
+    ]),
   ]),
 ];
 
 const TA_PEER: KPISection[] = [
-  sec("teamwork", "Teamwork", C.team, "หลัก", [
-    q("ta_peer_t1", "ต้า brief งานชัดเจนและเข้าใจได้", "rate", { scoreKey: "communication" }),
-    q("ta_peer_t2", "ต้าตอบสนองต่อคำถาม/ปัญหาได้ทันเวลา", "rate", { scoreKey: "support" }),
-    q("ta_peer_t3", "ต้า approve/reject งานพร้อม reason ชัดเจน", "rate", { scoreKey: "openness" }),
-    q("ta_peer_t4", "ต้ารับฟังเมื่อทีมเสนอ idea หรือปัญหา", "rate", { scoreKey: "collaboration" }),
+  sec("lead", "การ Lead และสั่งงาน", C.team, "peer", rates("ta_peer_lead", "teamwork", [
+    "Tarmisi brief งานชัดเจนก่อนเริ่มทุกครั้ง",
+    "Tarmisi ระบุ deadline และ priority ของงานให้ชัดเจน",
+    "Tarmisi approve หรือ reject งานพร้อม reason ที่ทีมนำไปปรับได้",
+    "Tarmisi ตอบสนองต่อคำถามหรือปัญหาได้ทันเวลา",
+    "Tarmisi ไม่เปลี่ยน direction กลางคันโดยไม่มี reason",
+  ])),
+  sec("relation", "ความสัมพันธ์กับทีม", C.comp, "peer", [
+    ...rates("ta_peer_rel", "teamwork", [
+      "รู้สึกว่า Tarmisi รับฟังเมื่อเราเสนอ idea หรือแจ้งปัญหา",
+      "Tarmisi ให้ feedback ที่ช่วยให้พัฒนาได้จริง ไม่ใช่แค่วิจารณ์",
+      "รู้สึก safe ที่จะพูดตรงๆ กับ Tarmisi เมื่อมีปัญหา",
+      "Tarmisi ยอมรับเมื่อตัดสินใจผิดและแก้ไข",
+    ]),
   ]),
-  sec("leadership", "Leadership", C.lead, "รอง", [
-    q("ta_peer_l1", "ทิศทางสตูดิโอชัด", "rate", { scoreKey: "strategic" }),
-    q("ta_peer_l2", "สิ่งที่ทำได้ดี", "text"),
-    q("ta_peer_l3", "สิ่งที่ควรปรับ", "text"),
+  sec("direction", "ทิศทางสตูดิโอ", C.lead, "peer", [
+    ...rates("ta_peer_dir", "leadership", [
+      "รู้สึกว่า WatSUB! มีทิศทางที่ชัดเจนในรอบนี้",
+      "เข้าใจว่าตัวเองมีบทบาทอะไรใน vision ของ WatSUB!",
+    ]),
+    ...texts("ta_peer_dir_text", [
+      "สิ่งที่ Tarmisi ทำได้ดีมากในรอบนี้",
+      "สิ่งที่อยากให้ Tarmisi ปรับเพื่อให้ทีมทำงานได้ดีขึ้น",
+    ]),
   ]),
 ];
 
 const TA_SUP: KPISection[] = [
   sec("auto_data", "Auto Data", C.auto, "read-only", [
-    q("ta_sup_a1", "จำนวนโปรเจกต์ที่ close ในรอบ", "auto", { autoId: "projects_closed" }),
-    q("ta_sup_a2", "Revenue รวม vs เป้าหมาย Q", "auto", { autoId: "revenue_vs_target_q" }),
-    q("ta_sup_a3", "Task ที่ approve ภายใน D-1", "auto", { autoId: "task_approve_d1" }),
+    q("ta_sup_auto_1", "จำนวนโปรเจกต์ที่ close ในรอบ", "auto", { autoId: "closed_projects" }),
+    q("ta_sup_auto_2", "Revenue รวมในรอบ vs เป้าหมาย Q", "auto", { autoId: "revenue_vs_target_q" }),
+    q("ta_sup_auto_3", "Task ที่ approve ภายใน D-1 (%)", "auto", { autoId: "on_time_rate" }),
+    q("ta_sup_auto_4", "จำนวน client ที่ทำงานด้วยในรอบ", "auto", { autoId: "total_clients" }),
   ]),
-  sec("reflection", "Reflection", C.lead, "required", [
-    q("ta_sup_s1", "เป้าหมาย Q ที่ตั้งไว้ vs ผลจริง", "text"),
-    q("ta_sup_s2", "ความท้าทายใหญ่สุดรอบนี้และจัดการอย่างไร", "text"),
-    q("ta_sup_s3", "สิ่งที่จะทำต่างออกไปในรอบถัดไป", "text"),
-  ]),
+  sec("reflection", "Strategic Reflection", C.lead, "required", texts("ta_sup_text", [
+    "เป้าหมาย Q ที่ตั้งไว้ vs ผลจริง — ตรงไหนสำเร็จ ตรงไหนพลาด",
+    "ความท้าทายใหญ่สุดรอบนี้และวิธีที่จัดการ",
+    "ระบบหรือ process ที่พัฒนาขึ้นในรอบนี้ มีผลอย่างไรกับทีม",
+    "client หรือ project ที่ภูมิใจสุดในรอบนี้ เพราะอะไร",
+    "สิ่งที่จะทำต่างออกไปในรอบถัดไป",
+    "เป้าหมาย 3 อย่างสำหรับรอบถัดไป",
+  ])),
 ];
-
-// ─── HAFEEZ (ฮาฟีซ) ──────────────────────────────────────────────────────────
 
 const HF_SELF: KPISection[] = [
   sec("job_performance", "Job Performance", C.job, "40%", [
-    q("hf_self_j1", "Task ที่ submit ก่อน D-0", "auto", { autoId: "tasks_ontime_pct" }),
-    q("hf_self_j2", "จำนวน revision หลัง waiting-approval", "auto", { autoId: "revision_avg" }),
-    q("hf_self_j3", "ความพิถีพิถันในการจัดไฟล์ตาม naming convention", "rate", { scoreKey: "quality" }),
-    q("hf_self_j4", "การดูแลอุปกรณ์กล้องและ hard drive", "rate", { scoreKey: "accountability" }),
+    q("hf_self_auto_1", "Task ที่ submit ก่อน D-0", "auto", { autoId: "on_time_rate" }),
+    q("hf_self_auto_2", "จำนวน revision หลัง waiting-approval", "auto", { autoId: "avg_revision" }),
+    ...rates("hf_self_job", "job_performance", [
+      "จัดไฟล์ตาม naming convention [PROJECT]_[TYPE]_[VERSION]_[YYYYMM]",
+      "ดูแลอุปกรณ์กล้อง, hard drive และ cable ให้พร้อมใช้เสมอ",
+      "เช็ก battery, card และ settings ก่อนถ่ายทุกครั้ง",
+      "แจ้งทีมเมื่อมี delay หรือปัญหาเกิดขึ้นระหว่างงาน",
+      "ทำตาม production checklist ครบก่อนส่งงาน",
+    ]),
   ]),
-  sec("competency", "Competency", C.comp, "35%", [
-    q("hf_self_c1", "ทักษะการถ่ายทำ (exposure, framing, movement)", "rate", { scoreKey: "technical" }),
-    q("hf_self_c2", "ทักษะการตัดต่อ (pacing, color grade, sound sync)", "rate", { scoreKey: "problem_solving" }),
-    q("hf_self_c3", "ทักษะ graphic/motion", "rate", { scoreKey: "creativity" }),
-    q("hf_self_c4", "การแก้ปัญหาเฉพาะหน้าในกองถ่าย", "rate", { scoreKey: "learning" }),
-    q("hf_self_c5", "การเรียนรู้ tool หรือ technique ใหม่ในรอบนี้", "text"),
+  sec("competency", "Competency — ถ่ายทำ/ตัดต่อ", C.comp, "35%", [
+    ...rates("hf_self_comp", "competency", [
+      "ควบคุม exposure, white balance และ focus ได้ถูกต้อง",
+      "จัด framing และ composition ได้สวยงามตาม brief",
+      "เคลื่อนกล้องได้ smooth (handheld, slider, gimbal)",
+      "เลือก lens และ focal length ได้เหมาะกับ scene",
+      "บันทึกเสียง (on-camera หรือ external mic) ได้ชัดเจน",
+      "ตัดต่อ pacing ตรงกับ mood และ brief",
+      "ทำ color grade ได้ consistent ตลอดทั้งชิ้น",
+      "ทำ sound design และ sync เสียงได้ดี",
+      "ใส่ motion graphic หรือ text overlay ได้เหมาะสม",
+      "export ไฟล์ได้ถูก spec ตามที่ client ต้องการ",
+      "แก้ปัญหาเฉพาะหน้าในกองถ่ายหรือใน post ได้",
+    ]),
+    ...texts("hf_self_comp_text", ["เรียนรู้ tool หรือ technique ใหม่ที่นำมาใช้ในรอบนี้"]),
   ]),
-  sec("teamwork", "Teamwork", C.team, "15%", [
-    q("hf_self_t1", "การซัพพอร์ตทีมในกองถ่าย", "rate", { scoreKey: "support" }),
-    q("hf_self_t2", "การสื่อสารเมื่อมีปัญหาหรือ delay", "rate", { scoreKey: "communication" }),
-  ]),
+  sec("teamwork", "Teamwork", C.team, "15%", rates("hf_self_team", "teamwork", [
+    "ซัพพอร์ตทีมในกองถ่ายโดยไม่รอให้สั่ง",
+    "สื่อสารกับสุไมยนาเรื่อง brief และ script ก่อนถ่าย",
+    "แจ้ง Tarmisi ทันทีเมื่อมีปัญหาที่กระทบ deadline",
+    "ทำงานร่วมกับ outsource ได้ราบรื่น",
+  ])),
   sec("creativity", "Creativity", C.lead, "10%", [
-    q("hf_self_cr1", "นำเสนอ shot/visual idea ใหม่นอกเหนือ brief", "rate", { scoreKey: "collaboration" }),
-    q("hf_self_cr2", "ผลงานชิ้นที่ภูมิใจสุดในรอบนี้ (ลิงก์หรืออธิบาย)", "text"),
+    ...rates("hf_self_creativity", "creativity", [
+      "นำเสนอ shot idea หรือ visual angle ใหม่ที่นอกเหนือ brief",
+      "ริเริ่ม format หรือ style ใหม่ที่ยังไม่เคยทำ",
+    ]),
+    ...texts("hf_self_creativity_text", [
+      "งานชิ้นที่ภูมิใจสุดในรอบนี้ (ลิงก์หรืออธิบาย)",
+      "ไอเดีย visual ที่อยากลองในรอบถัดไป",
+    ]),
   ]),
 ];
 
 const HF_PEER: KPISection[] = [
-  sec("teamwork", "Teamwork", C.team, "หลัก", [
-    q("hf_peer_t1", "ฮาฟีซสื่อสารเมื่อมีปัญหาหรือต้องการความช่วยเหลือ", "rate", { scoreKey: "communication" }),
-    q("hf_peer_t2", "ฮาฟีซพร้อมซัพพอร์ตเมื่อมีงานด่วน", "rate", { scoreKey: "support" }),
-    q("hf_peer_t3", "ฮาฟีซรับ feedback และนำไปปรับงานได้", "rate", { scoreKey: "openness" }),
+  sec("teamwork", "Teamwork & Communication", C.team, "peer", [
+    ...rates("hf_peer_team", "teamwork", [
+      "ฮาฟีซสื่อสารเมื่อมีปัญหาหรือต้องการ clarify ก่อนถ่าย",
+      "ฮาฟีซแจ้งเมื่อ shot หรืองานไม่ตรง brief ก่อนที่จะแก้ยาก",
+      "ฮาฟีซพร้อมซัพพอร์ตเมื่อมีงานด่วนหรืองานนอกขอบเขต",
+      "ฮาฟีซรับ feedback แล้วนำไปปรับงานได้จริง",
+      "ฮาฟีซทำงานร่วมกับคนอื่นในทีมได้ดี",
+      "งานของฮาฟีซตรงตามที่ brief ระบุไว้",
+      "ฮาฟีซส่งงานตรงเวลาที่ตกลงกัน",
+      "ไฟล์งานจัดระเบียบและตั้งชื่อถูกต้อง",
+    ]),
+    ...texts("hf_peer_text", ["สิ่งที่ฮาฟีซทำได้ดีมากในรอบนี้", "สิ่งที่อยากให้ฮาฟีซพัฒนาเพิ่มในรอบถัดไป"]),
   ]),
-  sec("job_peer", "Job (peer view)", C.job, "รอง", [
-    q("hf_peer_j1", "งานของฮาฟีซตรงตามที่ brief ไว้", "rate", { scoreKey: "quality" }),
-    q("hf_peer_j2", "ฮาฟีซส่งงานตรงเวลาที่ตกลงกัน", "rate", { scoreKey: "punctuality" }),
-    q("hf_peer_j3", "สิ่งที่ฮาฟีซทำได้ดีมากในรอบนี้", "text"),
-    q("hf_peer_j4", "สิ่งที่อยากให้ฮาฟีซพัฒนาเพิ่ม", "text"),
-  ]),
-  sec("hidden", "Hidden", "transparent", "hidden", [
-    q("hf_peer_h1", "Competency technical", "hidden"),
-    q("hf_peer_h2", "Creativity score", "hidden"),
+  sec("hidden", "ซ่อนจาก peer", "transparent", "hidden", [
+    q("hf_peer_hidden_1", "Competency technical ทั้งหมด", "hidden"),
+    q("hf_peer_hidden_2", "Creativity score", "hidden"),
   ]),
 ];
 
 const HF_SUP: KPISection[] = [
-  sec("auto_data", "Auto Data", C.auto, "Read-only", [
-    q("hf_sup_a1", "Task done ก่อน D-0 (%)", "auto", { autoId: "tasks_ontime_pct" }),
-    q("hf_sup_a2", "Revision count เฉลี่ยต่อ task", "auto", { autoId: "revision_avg" }),
-    q("hf_sup_a3", "จำนวน task รับผิดชอบในรอบ", "auto", { autoId: "tasks_done_count" }),
+  sec("auto_data", "Auto Data", C.auto, "read-only", [
+    q("hf_sup_auto_1", "Task done ก่อน D-0 (%)", "auto", { autoId: "on_time_rate" }),
+    q("hf_sup_auto_2", "Revision count เฉลี่ยต่อ task", "auto", { autoId: "avg_revision" }),
+    q("hf_sup_auto_3", "จำนวน task รับผิดชอบในรอบ", "auto", { autoId: "total_tasks" }),
   ]),
-  sec("job_performance", "Job Performance", C.job, "40%", [
-    q("hf_sup_j1", "คุณภาพงานโดยรวมเทียบกับ brief", "rate", { scoreKey: "quality" }),
-    q("hf_sup_j2", "ความรับผิดชอบต่ออุปกรณ์และไฟล์งาน", "rate", { scoreKey: "accountability" }),
-  ]),
-  sec("competency", "Competency", C.comp, "35%", [
-    q("hf_sup_c1", "ระดับทักษะการถ่ายทำในรอบนี้", "rate", { scoreKey: "technical" }),
-    q("hf_sup_c2", "ระดับทักษะการตัดต่อ/graphic", "rate", { scoreKey: "problem_solving" }),
-    q("hf_sup_c3", "การพัฒนาจากรอบที่แล้ว", "rate", { scoreKey: "learning" }),
-  ]),
-  sec("creativity_growth", "Creativity & Growth", C.lead, "10%", [
-    q("hf_sup_cr1", "มี initiative ในงาน creative", "rate", { scoreKey: "creativity" }),
-    q("hf_sup_cr2", "เป้าหมายที่ต้องการเห็นในรอบถัดไป", "text"),
+  sec("job_performance", "Job Performance", C.job, "40%", rates("hf_sup_job", "job_performance", [
+    "คุณภาพงานโดยรวมเทียบกับ brief",
+    "ความรับผิดชอบต่ออุปกรณ์และไฟล์งาน",
+    "ความตรงต่อเวลาในการส่งงาน",
+    "ทำตาม production checklist ได้ครบ",
+  ])),
+  sec("competency", "Competency", C.comp, "35%", rates("hf_sup_comp", "competency", [
+    "ระดับทักษะการถ่ายทำในรอบนี้",
+    "ระดับทักษะการตัดต่อและ post production",
+    "ทักษะ graphic และ motion design",
+    "การแก้ปัญหาในกองถ่ายหรือ post",
+    "พัฒนาจากรอบที่แล้วได้จริง (สังเกตได้)",
+  ])),
+  sec("teamwork", "Teamwork", C.team, "15%", rates("hf_sup_team", "teamwork", [
+    "ซัพพอร์ตทีมโดยไม่ต้องรอให้สั่ง",
+    "สื่อสารและประสานงานกับสุไมยนาก่อนถ่าย",
+    "ทำงานกับ outsource ได้ราบรื่น",
+  ])),
+  sec("creativity", "Creativity", C.lead, "10%", [
+    ...rates("hf_sup_creativity", "creativity", ["มี initiative นำเสนอ visual idea ใหม่"]),
+    ...texts("hf_sup_creativity_text", ["เป้าหมายที่ต้องการเห็นในรอบถัดไป"]),
   ]),
 ];
 
-// ─── SUMAYNA (สุไมยนา) ────────────────────────────────────────────────────────
-
 const SY_SELF: KPISection[] = [
   sec("job_performance", "Job Performance", C.job, "35%", [
-    q("sy_self_j1", "Script/caption ที่ส่งตรงเวลาตาม production timeline", "auto", { autoId: "scripts_ontime_pct" }),
-    q("sy_self_j2", "จำนวน revision ที่ client ขอหลัง submit", "auto", { autoId: "revision_avg" }),
-    q("sy_self_j3", "ความครบถ้วนของ client brief ที่รับมาและสรุปให้ทีม", "rate", { scoreKey: "quality" }),
-    q("sy_self_j4", "การจัดการ task coordinator ในแต่ละโปรเจกต์", "rate", { scoreKey: "accountability" }),
+    q("sy_self_auto_1", "Script และ caption ที่ส่งตรงเวลาตาม production timeline", "auto", { autoId: "script_on_time" }),
+    q("sy_self_auto_2", "จำนวน revision ที่ client ขอหลัง submit", "auto", { autoId: "client_revision_avg" }),
+    ...rates("sy_self_job", "job_performance", [
+      "สรุป client brief ให้ทีมได้ครบถ้วนก่อนเริ่มงาน",
+      "จัดการ task และ to-do ของ coordinator role ได้ครบทุกโปรเจกต์",
+      "ติดตาม client และ follow up งานได้ทันเวลา",
+      "บันทึก meeting note และ change request จาก client ได้ครบ",
+      "ประสานงาน timeline ระหว่าง client และทีมได้ smooth",
+    ]),
   ]),
   sec("competency", "Competency", C.comp, "30%", [
-    q("sy_self_c1", "คุณภาพการเขียน script/caption (tone, clarity)", "rate", { scoreKey: "technical" }),
-    q("sy_self_c2", "ความเข้าใจ brand ของ client แต่ละเจ้า", "rate", { scoreKey: "problem_solving" }),
-    q("sy_self_c3", "การสื่อสารกับ client (ความมั่นใจ, ความชัดเจน)", "rate", { scoreKey: "learning" }),
-    q("sy_self_c4", "การติดตามเทรนด์ content ที่เกี่ยวข้อง", "rate", { scoreKey: "creativity" }),
-    q("sy_self_c5", "สิ่งที่เรียนรู้หรือพัฒนาได้ในรอบนี้", "text"),
+    ...rates("sy_self_comp", "competency", [
+      "เขียน script ที่อ่านแล้วเห็นภาพและ flow ดี",
+      "เขียน caption ที่ตรง tone ของ brand client แต่ละเจ้า",
+      "เขียน hook ที่ดึงดูดใน 3 วินาทีแรก",
+      "ปรับ copy ให้เหมาะกับ platform (TikTok vs Instagram vs Facebook)",
+      "เขียน content ภาษาไทยถูกต้องและอ่านลื่น",
+      "เข้าใจ brand identity และ target audience ของ client แต่ละเจ้า",
+      "เสนอ content angle ที่ตอบโจทย์ objective ของ client",
+      "สื่อสารกับ client ได้ชัดเจนและมั่นใจ",
+      "จัดการเมื่อ client เปลี่ยน direction กลางคันได้",
+      "ติดตามเทรนด์ content และนำมาปรับใช้กับงาน client",
+      "วิเคราะห์ผลลัพธ์ content (view, engagement) แล้วเสนอ insight",
+    ]),
+    ...texts("sy_self_comp_text", ["สิ่งที่เรียนรู้หรือพัฒนาได้ในรอบนี้"]),
   ]),
-  sec("teamwork", "Teamwork", C.team, "25%", [
-    q("sy_self_t1", "การส่งต่อ brief ให้ฮาฟีซครบและชัดเจน", "rate", { scoreKey: "communication" }),
-    q("sy_self_t2", "การแจ้ง update/change จาก client ให้ทีมทันเวลา", "rate", { scoreKey: "support" }),
-    q("sy_self_t3", "การช่วยทีมเมื่อมีงานอื่นกระทบ", "rate", { scoreKey: "collaboration" }),
-  ]),
+  sec("teamwork", "Teamwork", C.team, "25%", rates("sy_self_team", "teamwork", [
+    "ส่ง brief ให้ฮาฟีซได้ครบก่อนเริ่มถ่ายทุกครั้ง",
+    "แจ้ง Tarmisi เมื่อ client ขอ change ที่กระทบ scope",
+    "แจ้งทีมเมื่อมีข้อมูลใหม่จาก client ที่กระทบ deadline",
+    "ช่วยทีมเมื่อมีงานอื่นกระทบหรือมีคนขาด",
+    "ทำงานกับ outsource ได้ราบรื่น",
+  ])),
   sec("creativity", "Creativity", C.lead, "10%", [
-    q("sy_self_cr1", "นำเสนอ content angle หรือ format ใหม่ในรอบนี้", "rate", { scoreKey: "openness" }),
-    q("sy_self_cr2", "content ชิ้นที่ภูมิใจสุด (ลิงก์หรืออธิบาย)", "text"),
+    ...rates("sy_self_creativity", "creativity", [
+      "นำเสนอ content format หรือ series idea ใหม่ที่ยังไม่เคยทำ",
+      "เสนอ content angle ที่แตกต่างจาก brief เดิม",
+    ]),
+    ...texts("sy_self_creativity_text", [
+      "content ชิ้นที่ภูมิใจสุดในรอบนี้ (ลิงก์หรืออธิบาย)",
+      "ไอเดีย content ที่อยากลองในรอบถัดไป",
+    ]),
   ]),
 ];
 
 const SY_PEER: KPISection[] = [
-  sec("coordination", "Coordination", C.team, "หลัก", [
-    q("sy_peer_c1", "สุไมยนาส่ง brief ให้ทีมชัดเจนและครบก่อนเริ่มถ่าย", "rate", { scoreKey: "communication" }),
-    q("sy_peer_c2", "สุไมยนาแจ้ง change จาก client ได้ทันเวลา", "rate", { scoreKey: "support" }),
-    q("sy_peer_c3", "สุไมยนาเป็น buffer ที่ดีระหว่าง client กับทีม", "rate", { scoreKey: "collaboration" }),
+  sec("coordination", "Communication & Coordination", C.team, "peer", [
+    ...rates("sy_peer_coord", "teamwork", [
+      "สุไมยนาส่ง brief ให้ทีมชัดเจนและครบก่อนเริ่มถ่ายทุกครั้ง",
+      "สุไมยนาระบุ deadline และ priority ของงานให้ชัดเจน",
+      "สุไมยนาแจ้ง change จาก client ให้ทีมทราบทันเวลา",
+      "สุไมยนาเป็น buffer ที่ดีระหว่าง client กับทีม",
+      "สุไมยนา follow up งานและไม่ปล่อยให้หาย",
+      "สุไมยนาช่วยทีมเมื่อมีปัญหาเฉพาะหน้า",
+      "สุไมยนารับ feedback และนำไปปรับได้จริง",
+      "สุไมยนาทำงานร่วมกับทีมได้ราบรื่น ไม่สร้าง friction",
+    ]),
+    ...texts("sy_peer_text", ["สิ่งที่สุไมยนาทำได้ดีมากในรอบนี้", "สิ่งที่อยากให้สุไมยนาพัฒนาเพิ่มในรอบถัดไป"]),
   ]),
-  sec("teamwork", "Teamwork", C.job, "รอง", [
-    q("sy_peer_t1", "สุไมยนาช่วยทีมเมื่อมีปัญหาเฉพาะหน้า", "rate", { scoreKey: "openness" }),
-    q("sy_peer_t2", "สุไมยนารับ feedback และนำไปปรับได้", "rate", { scoreKey: "quality" }),
-    q("sy_peer_t3", "สิ่งที่สุไมยนาทำได้ดีมากในรอบนี้", "text"),
-    q("sy_peer_t4", "สิ่งที่อยากให้สุไมยนาพัฒนาเพิ่ม", "text"),
-  ]),
-  sec("hidden", "Hidden", "transparent", "hidden", [
-    q("sy_peer_h1", "Competency การเขียน", "hidden"),
-    q("sy_peer_h2", "Creativity score", "hidden"),
+  sec("hidden", "ซ่อนจาก peer", "transparent", "hidden", [
+    q("sy_peer_hidden_1", "Competency การเขียน script/caption ทั้งหมด", "hidden"),
+    q("sy_peer_hidden_2", "Creativity score", "hidden"),
   ]),
 ];
 
 const SY_SUP: KPISection[] = [
-  sec("auto_data", "Auto Data", C.auto, "Read-only", [
-    q("sy_sup_a1", "Script/caption ที่ on-time (%)", "auto", { autoId: "scripts_ontime_pct" }),
-    q("sy_sup_a2", "Revision จาก client เฉลี่ย", "auto", { autoId: "revision_avg" }),
-    q("sy_sup_a3", "จำนวน client ที่ดูแลในรอบ", "auto", { autoId: "client_count" }),
+  sec("auto_data", "Auto Data", C.auto, "read-only", [
+    q("sy_sup_auto_1", "Script/caption on-time (%)", "auto", { autoId: "script_on_time" }),
+    q("sy_sup_auto_2", "Client revision เฉลี่ยต่อโปรเจกต์", "auto", { autoId: "client_revision_avg" }),
+    q("sy_sup_auto_3", "จำนวน client ที่ดูแลในรอบ", "auto", { autoId: "total_clients" }),
   ]),
-  sec("job_performance", "Job Performance", C.job, "35%", [
-    q("sy_sup_j1", "คุณภาพ brief ที่ส่งต่อให้ทีม", "rate", { scoreKey: "quality" }),
-    q("sy_sup_j2", "การจัดการ client relationship โดยรวม", "rate", { scoreKey: "accountability" }),
-  ]),
-  sec("competency", "Competency", C.comp, "30%", [
-    q("sy_sup_c1", "ระดับทักษะการเขียน script/caption", "rate", { scoreKey: "technical" }),
-    q("sy_sup_c2", "ความเข้าใจ brand และ target audience ของ client", "rate", { scoreKey: "problem_solving" }),
-    q("sy_sup_c3", "การพัฒนาจากรอบที่แล้ว", "rate", { scoreKey: "learning" }),
-  ]),
-  sec("teamwork_creativity", "Teamwork+Creativity", C.lead, "25%+10%", [
-    q("sy_sup_tc1", "ทำหน้าที่ coordinator ได้ smooth", "rate", { scoreKey: "collaboration" }),
-    q("sy_sup_tc2", "มี initiative ในงาน content strategy", "rate", { scoreKey: "creativity" }),
-    q("sy_sup_tc3", "เป้าหมายที่ต้องการเห็นในรอบถัดไป", "text"),
+  sec("job_performance", "Job Performance", C.job, "35%", rates("sy_sup_job", "job_performance", [
+    "คุณภาพ brief ที่ส่งต่อให้ทีมก่อนถ่าย",
+    "การติดตาม client และ follow up งาน",
+    "บันทึก change request และ meeting note ได้ครบ",
+    "ประสานงาน timeline ระหว่าง client และทีม",
+  ])),
+  sec("competency", "Competency", C.comp, "30%", rates("sy_sup_comp", "competency", [
+    "ระดับทักษะการเขียน script/caption",
+    "เข้าใจ brand และ target audience ของ client",
+    "สื่อสารและจัดการ client ได้มืออาชีพ",
+    "เสนอ content strategy ที่ตอบโจทย์ objective จริง",
+    "พัฒนาจากรอบที่แล้ว (สังเกตได้จริง)",
+  ])),
+  sec("teamwork", "Teamwork", C.team, "25%", rates("sy_sup_team", "teamwork", [
+    "ทำหน้าที่ coordinator ได้ smooth ไม่ให้ทีมรอข้อมูล",
+    "แจ้ง Tarmisi เมื่อมี scope change จาก client",
+    "ทำงานกับ outsource ได้ราบรื่น",
+  ])),
+  sec("creativity", "Creativity", C.lead, "10%", [
+    ...rates("sy_sup_creativity", "creativity", [
+      "มี initiative นำเสนอ content idea ใหม่",
+      "ริเริ่ม format หรือ series ที่ทำให้งานโดดเด่น",
+    ]),
+    ...texts("sy_sup_creativity_text", ["เป้าหมายที่ต้องการเห็นในรอบถัดไป"]),
   ]),
 ];
 
-// ─── Default (fallback) ───────────────────────────────────────────────────────
+const OS_SELF: KPISection[] = [
+  sec("job_performance", "Job Performance", C.job, "45%", [
+    q("os_self_auto_1", "ส่งงานตรงตาม deadline ที่ตกลงกัน", "auto", { autoId: "on_time_rate" }),
+    q("os_self_auto_2", "จำนวน revision หลังส่งงาน", "auto", { autoId: "avg_revision" }),
+    ...rates("os_self_job", "job_performance", [
+      "งานตรงตาม brief ที่ได้รับ",
+      "ความรับผิดชอบต่อไฟล์งานและ asset ที่ได้รับ",
+    ]),
+  ]),
+  sec("competency", "Competency", C.comp, "40%", [
+    ...rates("os_self_comp", "competency", [
+      "ทักษะเฉพาะทางที่ได้รับมอบหมายในโปรเจกต์นี้",
+      "แก้ปัญหาได้โดยไม่ต้องรอให้ทีม WatSUB! ช่วย",
+      "สื่อสารเมื่อมีปัญหาหรือต้องการ clarify brief",
+      "คุณภาพงานเทียบกับมาตรฐานที่ตกลงไว้ตั้งแต่ต้น",
+    ]),
+    ...texts("os_self_comp_text", ["สิ่งที่พัฒนาหรือเรียนรู้จากโปรเจกต์นี้"]),
+  ]),
+  sec("collaboration", "Collaboration", C.team, "15%", [
+    ...rates("os_self_collab", "collaboration", [
+      "ทำงานร่วมกับทีม WatSUB! ได้ราบรื่น",
+      "ตอบสนองต่อ feedback ได้เร็วและตรงประเด็น",
+    ]),
+    ...texts("os_self_collab_text", [
+      "ผลงานที่ภูมิใจสุดในโปรเจกต์นี้ (ลิงก์หรืออธิบาย)",
+    ]),
+  ]),
+];
+
+const OS_PEER: KPISection[] = [
+  sec("collaboration", "Collaboration", C.team, "peer", [
+    ...rates("os_peer_collab", "collaboration", [
+      "ส่งงานตรงเวลาที่ตกลงกัน",
+      "งานตรง brief ไม่ต้องอธิบายซ้ำ",
+      "สื่อสารและตอบกลับได้ทันเวลา",
+      "รับ feedback และปรับงานได้ดี",
+    ]),
+    ...texts("os_peer_text", ["สิ่งที่ทำได้ดีในโปรเจกต์นี้", "สิ่งที่ควรปรับสำหรับโปรเจกต์ถัดไป"]),
+  ]),
+];
+
+const OS_SUP: KPISection[] = [
+  sec("auto_data", "Auto Data", C.auto, "read-only", [
+    q("os_sup_auto_1", "Task done ก่อน deadline (%)", "auto", { autoId: "on_time_rate" }),
+    q("os_sup_auto_2", "Revision count รวมทั้งโปรเจกต์", "auto", { autoId: "avg_revision" }),
+    q("os_sup_auto_3", "จำนวน project ที่ร่วมในรอบ", "auto", { autoId: "closed_projects" }),
+  ]),
+  sec("job_performance", "Job Performance", C.job, "45%", rates("os_sup_job", "job_performance", [
+    "คุณภาพงานโดยรวมเทียบ brief",
+    "ความรับผิดชอบและ reliability",
+    "ส่งงานตรงเวลาและแจ้งล่วงหน้าเมื่อมีปัญหา",
+  ])),
+  sec("competency", "Competency", C.comp, "40%", rates("os_sup_comp", "competency", [
+    "ทักษะเฉพาะทางในงานที่ได้รับ",
+    "พัฒนาจากโปรเจกต์ที่แล้ว",
+  ])),
+  sec("collaboration", "Collaboration", C.team, "15%", [
+    ...rates("os_sup_collab", "collaboration", [
+      "ทำงานกับทีมได้ smooth ไม่กินเวลา",
+      "อยากทำงานด้วยในโปรเจกต์ถัดไป",
+    ]),
+    ...texts("os_sup_collab_text", ["เป้าหมายหรือ feedback สำหรับโปรเจกต์ถัดไป"]),
+  ]),
+];
 
 const DEFAULT_CONFIG: Record<ReviewerType, KPIFormConfig> = {
-  self: {
-    note: "แบบประเมินตนเองทั่วไป",
-    sections: [
-      sec("job_performance", "Job Performance", C.job, "100%", [
-        q("df_self_j1", "คุณภาพงานโดยรวม", "rate", { scoreKey: "quality" }),
-      ]),
-    ],
-  },
-  peer: {
-    note: "แบบประเมิน peer ทั่วไป",
-    sections: [
-      sec("teamwork", "Teamwork", C.team, "100%", [
-        q("df_peer_j1", "การทำงานร่วมกัน", "rate", { scoreKey: "communication" }),
-      ]),
-    ],
-  },
-  supervisor: {
-    note: "แบบประเมิน supervisor ทั่วไป",
-    sections: [
-      sec("auto_data", "Auto Data", C.auto, "100%", [
-        q("df_sup_a1", "งานที่ส่งตรงเวลา", "auto", { autoId: "tasks_ontime_pct" }),
-      ]),
-    ],
-  },
+  self: { note: "แบบประเมินตนเองทั่วไป", sections: [sec("job_performance", "Job Performance", C.job, "100%", [q("df_self_1", "คุณภาพงานโดยรวม", "rate", { scoreKey: "quality" })])] },
+  peer: { note: "แบบประเมิน peer ทั่วไป", sections: [sec("teamwork", "Teamwork", C.team, "100%", [q("df_peer_1", "การทำงานร่วมกัน", "rate", { scoreKey: "communication" })])] },
+  supervisor: { note: "แบบประเมิน supervisor ทั่วไป", sections: [sec("auto_data", "Auto Data", C.auto, "100%", [q("df_sup_1", "งานที่ส่งตรงเวลา", "auto", { autoId: "on_time_rate" })])] },
 };
-
-// ─── Main export ──────────────────────────────────────────────────────────────
 
 export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>> = {
   ta: {
@@ -350,6 +515,11 @@ export const KPI_QUESTIONS: Record<RoleKey, Record<ReviewerType, KPIFormConfig>>
     self: { note: "Strategy self evaluation", sections: SY_SELF },
     peer: { note: "ต้า + ฮาฟีซ ประเมินสุไมยนา", sections: SY_PEER },
     supervisor: { note: "Supervisor review ของสุไมยนา", sections: SY_SUP },
+  },
+  outsource: {
+    self: { note: "Outsource self evaluation", sections: OS_SELF },
+    peer: { note: "ทีม WatSUB ประเมิน outsource", sections: OS_PEER },
+    supervisor: { note: "Director supervisor review for outsource", sections: OS_SUP },
   },
   default: DEFAULT_CONFIG,
 };
