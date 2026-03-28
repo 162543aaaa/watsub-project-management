@@ -19,6 +19,8 @@ import { canSeePeerIdentity, resolveRoleKey, getEligiblePeerReviewers, ROLE_WEIG
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
   !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
+const getReviewType = (e: { reviewer_type?: string | null; type?: string | null }) =>
+  (e.reviewer_type ?? e.type ?? "").toLowerCase();
 
 function avgScores(evals: KpiEvaluation[]): KpiSubScores | null {
   if (!evals.length) return null;
@@ -82,12 +84,12 @@ export default function KpiReport() {
   function getBreakdown(periodId: string) {
     const evals = allEvals.filter(e => e.period_id === periodId && e.evaluatee_id === memberId && e.submitted_at);
     return {
-      self: avgWeighted(evals.filter(e => e.type === "self"), member),
-      peer: avgWeighted(evals.filter(e => e.type === "peer"), member),
-      supervisor: avgWeighted(evals.filter(e => e.type === "supervisor"), member),
+      self: avgWeighted(evals.filter(e => getReviewType(e) === "self"), member),
+      peer: avgWeighted(evals.filter(e => getReviewType(e) === "peer"), member),
+      supervisor: avgWeighted(evals.filter(e => getReviewType(e) === "supervisor"), member),
       allScores: avgScores(evals),
-      peerCount: evals.filter(e => e.type === "peer").length,
-      peerEvaluators: evals.filter(e => e.type === "peer").map((e) => employees.find((emp) => emp.id === e.evaluator_id)?.name).filter(Boolean) as string[],
+      peerCount: evals.filter(e => getReviewType(e) === "peer").length,
+      peerEvaluators: evals.filter(e => getReviewType(e) === "peer").map((e) => employees.find((emp) => emp.id === e.evaluator_id)?.name).filter(Boolean) as string[],
     };
   }
 
@@ -141,7 +143,7 @@ export default function KpiReport() {
   const trendData = useMemo(() =>
     closedPeriods.slice(-5).map(p => {
       const b = getBreakdown(p.id);
-      const pCount = allEvals.filter(e => e.period_id === p.id && e.evaluatee_id === memberId && e.type === "peer" && e.submitted_at).length;
+      const pCount = allEvals.filter(e => e.period_id === p.id && e.evaluatee_id === memberId && getReviewType(e) === "peer" && e.submitted_at).length;
       if (pCount < Math.min(2, eligiblePeerCount)) return { period: p.label, คะแนนรวม: null };
       const f = b ? calcFinalScore(autoScore ?? 0, b.self, b.peer, b.supervisor) : null;
       return { period: p.label, คะแนนรวม: f !== null ? parseFloat(f.toFixed(2)) : null };
