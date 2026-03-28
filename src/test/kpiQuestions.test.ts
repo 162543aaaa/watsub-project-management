@@ -23,6 +23,15 @@ describe("kpiQuestions helpers", () => {
     expect(resolveRoleKey("Unknown")).toBe("default");
   });
 
+  it("resolves outsource role from member metadata when name aliases are unavailable", () => {
+    expect(resolveRoleKey({
+      name: "Faheem Yusoh",
+      role: "employee",
+      type: "fulltime",
+      position: "Outsource",
+    })).toBe("outsource");
+  });
+
   it("maps TA self evaluation to supervisor key", () => {
     expect(getSelfEvaluationType("ta")).toBe("supervisor");
     expect(getSelfEvaluationType("hafeez")).toBe("self");

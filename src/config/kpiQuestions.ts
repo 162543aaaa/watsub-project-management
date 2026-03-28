@@ -88,7 +88,7 @@ const ROLE_ALIASES: Record<RoleKey, string[]> = {
 export function resolveRoleKey(input?:
   | string
   | null
-  | { name?: string | null; kpi_role?: string | null; role?: string | null; type?: string | null }): RoleKey {
+  | { name?: string | null; position?: string | null; kpi_role?: string | null; role?: string | null; type?: string | null }): RoleKey {
   const normalize = (v?: string | null) => (v ?? "").trim().toLowerCase();
   if (!input) return "default";
 
@@ -102,7 +102,7 @@ export function resolveRoleKey(input?:
 
   const text = typeof input === "string"
     ? normalize(input)
-    : [normalize(input.role), normalize(input.type), normalize(input.name)].join(" ");
+    : [normalize(input.kpi_role), normalize(input.role), normalize(input.type), normalize(input.position), normalize(input.name)].join(" ");
 
   if (!text) return "default";
   if (text.includes("outsource")) return "outsource";
@@ -116,7 +116,7 @@ export function getSelfEvaluationType(roleKey: RoleKey): ReviewerType {
   return roleKey === "ta" ? "supervisor" : "self";
 }
 
-export function getEligiblePeerReviewers<T extends { id: string; name?: string; kpi_role?: string; role?: string; type?: string }>(
+export function getEligiblePeerReviewers<T extends { id: string; name?: string; position?: string; kpi_role?: string; role?: string; type?: string }>(
   evaluatee: T,
   employees: T[],
 ): T[] {
