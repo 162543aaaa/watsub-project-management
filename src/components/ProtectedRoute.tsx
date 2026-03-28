@@ -12,7 +12,8 @@ export default function ProtectedRoute() {
   // Admin-only pages
   if (location.pathname === "/admin" && !isAdmin) return <Navigate to="/" replace />;
   if (location.pathname === "/kpi/admin" && !isAdmin) return <Navigate to="/kpi/overview" replace />;
-  if (!canAccessPage(location.pathname)) {
+  const kpiDashboardPath = location.pathname === "/kpi/dashboard";
+  if (!kpiDashboardPath && !canAccessPage(location.pathname)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center">

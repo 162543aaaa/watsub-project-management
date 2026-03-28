@@ -56,6 +56,7 @@ export type Database = {
           evaluator_id: string
           evaluatee_id: string
           type: string
+          reviewer_type: string
           scores: Json
           notes_strength: string | null
           notes_improve: string | null
@@ -68,6 +69,7 @@ export type Database = {
           evaluator_id: string
           evaluatee_id: string
           type: string
+          reviewer_type?: string
           scores?: Json
           notes_strength?: string | null
           notes_improve?: string | null
@@ -80,6 +82,7 @@ export type Database = {
           evaluator_id?: string
           evaluatee_id?: string
           type?: string
+          reviewer_type?: string
           scores?: Json
           notes_strength?: string | null
           notes_improve?: string | null
@@ -118,6 +121,7 @@ export type Database = {
           teamwork: number
           leadership: number
           creativity: number
+          collaboration: number
         }
         Insert: {
           role: string
@@ -126,6 +130,7 @@ export type Database = {
           teamwork?: number
           leadership?: number
           creativity?: number
+          collaboration?: number
         }
         Update: {
           role?: string
@@ -134,8 +139,56 @@ export type Database = {
           teamwork?: number
           leadership?: number
           creativity?: number
+          collaboration?: number
         }
         Relationships: []
+      }
+      kpi_question_templates: {
+        Row: {
+          id: string
+          role: string | null
+          reviewer_type: string | null
+          section_id: string | null
+          section_title: string | null
+          section_weight: string | null
+          question_text: string | null
+          question_type: string | null
+          auto_source: string | null
+          order_index: number | null
+        }
+        Insert: {
+          id?: string
+          role?: string | null
+          reviewer_type?: string | null
+          section_id?: string | null
+          section_title?: string | null
+          section_weight?: string | null
+          question_text?: string | null
+          question_type?: string | null
+          auto_source?: string | null
+          order_index?: number | null
+        }
+        Update: {
+          id?: string
+          role?: string | null
+          reviewer_type?: string | null
+          section_id?: string | null
+          section_title?: string | null
+          section_weight?: string | null
+          question_text?: string | null
+          question_type?: string | null
+          auto_source?: string | null
+          order_index?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_question_templates_role_fkey"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "kpi_role_weights"
+            referencedColumns: ["role"]
+          },
+        ]
       }
       customers: {
         Row: {
@@ -181,10 +234,12 @@ export type Database = {
       }
       employees: {
         Row: {
+          active: boolean | null
           avatar: string | null
           created_at: string
           email: string
           id: string
+          kpi_role: string | null
           name: string
           note: string | null
           phone: string | null
@@ -192,13 +247,16 @@ export type Database = {
           promptpay_qr: string | null
           role: string
           start_date: string | null
+          type: string | null
           updated_at: string
         }
         Insert: {
+          active?: boolean | null
           avatar?: string | null
           created_at?: string
           email?: string
           id?: string
+          kpi_role?: string | null
           name: string
           note?: string | null
           phone?: string | null
@@ -206,13 +264,16 @@ export type Database = {
           promptpay_qr?: string | null
           role?: string
           start_date?: string | null
+          type?: string | null
           updated_at?: string
         }
         Update: {
+          active?: boolean | null
           avatar?: string | null
           created_at?: string
           email?: string
           id?: string
+          kpi_role?: string | null
           name?: string
           note?: string | null
           phone?: string | null
@@ -220,6 +281,7 @@ export type Database = {
           promptpay_qr?: string | null
           role?: string
           start_date?: string | null
+          type?: string | null
           updated_at?: string
         }
         Relationships: []
