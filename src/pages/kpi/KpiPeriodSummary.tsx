@@ -93,21 +93,26 @@ function EvalBlock({
         onClick={() => setOpen((v) => !v)}
         className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-muted/20 transition-colors text-left"
       >
-        <div className="flex items-center gap-2">
-          {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+        <div className="flex items-center gap-2 min-w-0">
+          {open ? <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
           <span
-            className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+            className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
             style={{ background: `${color}18`, color }}
           >
             {TYPE_LABEL[evalType]}
           </span>
           {evaluator && evalType !== "self" && (
-            <span className="text-sm font-medium text-foreground">{evaluator.name}</span>
+            <span className="text-sm font-medium text-foreground truncate">{evaluator.name}</span>
           )}
         </div>
-        <span className="text-xs text-muted-foreground flex-shrink-0">
-          {qaPairs.length} คำตอบ
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {eval_.submitted_at ? (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">ส่งแล้ว</span>
+          ) : (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">draft</span>
+          )}
+          <span className="text-xs text-muted-foreground">{qaPairs.length} คำตอบ</span>
+        </div>
       </button>
 
       {open && (
@@ -172,7 +177,9 @@ function EvaluateeCard({
           <p className="text-xs text-muted-foreground">{evaluatee.position}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs text-muted-foreground">{sorted.length} การประเมิน</span>
+          <span className="text-xs text-muted-foreground">
+            {sorted.filter(e => e.submitted_at).length}/{sorted.length} ส่งแล้ว
+          </span>
           {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
         </div>
       </button>
@@ -240,21 +247,19 @@ export default function KpiPeriodSummary() {
     });
   }, [employees]);
 
-  // Only show submitted evaluations, grouped by evaluatee
-  const submittedEvals = useMemo(
-    () => evaluations.filter((e) => e.submitted_at),
-    [evaluations],
-  );
-
+  // Show ALL evaluations (including drafts) for admin — grouped by evaluatee
   const evalsByEvaluatee = useMemo(() => {
     const map = new Map<string, KpiEvaluation[]>();
-    for (const ev of submittedEvals) {
+    for (const ev of evaluations) {
+      // Skip records with no answers at all
+      const scores = ev.scores as Record<string, unknown>;
+      if (!scores || Object.keys(scores).length === 0) continue;
       const arr = map.get(ev.evaluatee_id) ?? [];
       arr.push(ev);
       map.set(ev.evaluatee_id, arr);
     }
     return map;
-  }, [submittedEvals]);
+  }, [evaluations]);
 
   if (authLoading) {
     return (
