@@ -12,7 +12,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
   !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
 const getReviewType = (e: { reviewer_type?: string | null; type?: string | null }) =>
-  (e.reviewer_type ?? e.type ?? "").toLowerCase();
+  (e.reviewer_type || e.type || "").toLowerCase();
 
 function Avatar({ emp }: { emp: Employee }) {
   const url = avatarUrl(emp.avatar);
@@ -97,7 +97,18 @@ export default function KpiOverview() {
       return { emp, selfDone, supDone, peersDone, peersTotal, myEval, myPeerEval, mySupEval, myRole };
     });
 
-    return { period, rows, submitted };
+    const allDoneCount = rows.filter(
+      (r) => r.selfDone && r.supDone && (r.peersTotal === 0 || r.peersDone === r.peersTotal),
+    ).length;
+
+    const myPendingCount = rows.filter((r) => {
+      if (!r.myRole) return false;
+      if (r.myRole === "หัวหน้า+เพื่อน")
+        return !r.myPeerEval?.submitted_at || !r.mySupEval?.submitted_at;
+      return !r.myEval?.submitted_at;
+    }).length;
+
+    return { period, rows, submitted, allDoneCount, myPendingCount };
   }), [openPeriods, evaluations, employees, me]);
 
   // Notify ต้า when all evaluations for a period are complete
@@ -207,7 +218,7 @@ export default function KpiOverview() {
 
       {/* Periods */}
       <div className="space-y-6">
-        {periodData.map(({ period, rows, submitted }) => (
+        {periodData.map(({ period, rows, submitted, allDoneCount, myPendingCount }) => (
           <div key={period.id} className="bg-card border border-border/60 rounded-2xl overflow-hidden">
             {/* Period header */}
             <div className="px-5 py-4 border-b border-border/40 flex items-center justify-between gap-3"
@@ -217,12 +228,22 @@ export default function KpiOverview() {
                 <p className="text-xs text-muted-foreground">
                   {period.type === "project" ? "ประเมินโปรเจกต์" : "ประเมินรายไตรมาส"}
                   {" · "}ส่งแล้ว {submitted} รายการ
+                  {" · "}ครบทุกรายการ {allDoneCount}/{rows.length} คน
                 </p>
               </div>
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0"
-                style={{ background: "hsl(142 71% 45% / 0.12)", color: "hsl(142 71% 35%)" }}>
-                เปิดอยู่
-              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {myPendingCount > 0 && (
+                  <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: "hsl(38 92% 50% / 0.12)", color: "hsl(38 92% 40%)" }}>
+                    <Bell className="w-3 h-3" />
+                    คุณยังเหลือ {myPendingCount} คน
+                  </span>
+                )}
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full"
+                  style={{ background: "hsl(142 71% 45% / 0.12)", color: "hsl(142 71% 35%)" }}>
+                  เปิดอยู่
+                </span>
+              </div>
             </div>
 
             {/* Rows */}
