@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronRight, ClipboardCheck, Info, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -262,7 +262,8 @@ function ProgressBar({ percent }: { percent: number }) {
 export default function KpiEvaluate() {
   const { evaluateeId, periodId } = useParams<{ evaluateeId: string; periodId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthContext();
+  const [searchParams] = useSearchParams();
+  const typeOverride = searchParams.get("type") as ReviewerType | null;
 
   const { periods } = useKpiPeriods();
   const { evaluations, upsertEvaluation } = useKpiEvaluations(periodId);
@@ -301,12 +302,18 @@ export default function KpiEvaluate() {
     [evaluatee],
   );
 
+  const isDirector = Boolean(evaluator?.role?.toLowerCase().includes("director"));
+
   const evalType = useMemo((): ReviewerType => {
     if (!evaluator || !evaluatee) return "peer";
     if (evaluator.id === evaluatee.id) return getSelfEvaluationType(roleKey);
-    if (evaluator.role?.toLowerCase().includes("director")) return "supervisor";
+    if (isDirector) {
+      // Director can evaluate as either peer or supervisor — honour URL param
+      if (typeOverride === "peer" || typeOverride === "supervisor") return typeOverride;
+      return "supervisor";
+    }
     return "peer";
-  }, [evaluator, evaluatee, roleKey]);
+  }, [evaluator, evaluatee, roleKey, isDirector, typeOverride]);
 
   const isPeerAllowed = useMemo(() => {
     if (!evaluatee || !evaluator || evalType !== "peer") return true;

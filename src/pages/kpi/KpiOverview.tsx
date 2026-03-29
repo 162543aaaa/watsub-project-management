@@ -72,18 +72,28 @@ export default function KpiOverview() {
         .filter(peer => pEvals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && getReviewType(e) === "peer" && e.submitted_at))
         .length;
 
-      // My evaluation for this evaluatee
-      const myEval = me ? pEvals.find(e => e.evaluator_id === me.id && e.evaluatee_id === emp.id) : null;
+      const meIsDirector = me ? me.role?.toLowerCase().includes("director") : false;
+
+      // My evaluation(s) for this evaluatee
+      const myEval = me && !meIsDirector
+        ? pEvals.find(e => e.evaluator_id === me.id && e.evaluatee_id === emp.id)
+        : null;
+      const myPeerEval = me && meIsDirector && me.id !== emp.id
+        ? pEvals.find(e => e.evaluator_id === me.id && e.evaluatee_id === emp.id && getReviewType(e) === "peer")
+        : null;
+      const mySupEval = me && meIsDirector && me.id !== emp.id
+        ? pEvals.find(e => e.evaluator_id === me.id && e.evaluatee_id === emp.id && getReviewType(e) === "supervisor")
+        : null;
 
       // My role when evaluating this person
       let myRole: string | null = null;
       if (me) {
         if (me.id === emp.id) myRole = "ตนเอง";
-        else if (me.role?.toLowerCase().includes("director")) myRole = "หัวหน้า";
+        else if (meIsDirector) myRole = "หัวหน้า+เพื่อน";
         else myRole = "เพื่อน";
       }
 
-      return { emp, selfDone, supDone, peersDone, peersTotal, myEval, myRole };
+      return { emp, selfDone, supDone, peersDone, peersTotal, myEval, myPeerEval, mySupEval, myRole };
     });
 
     return { period, rows, submitted };
@@ -216,7 +226,7 @@ export default function KpiOverview() {
 
             {/* Rows */}
             <div className="divide-y divide-border/30">
-              {rows.map(({ emp, selfDone, supDone, peersDone, peersTotal, myEval, myRole }) => (
+              {rows.map(({ emp, selfDone, supDone, peersDone, peersTotal, myEval, myPeerEval, mySupEval, myRole }) => (
                 <div key={emp.id} className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
                   {/* Employee info */}
                   <div className="flex items-center gap-3 sm:w-44 flex-shrink-0">
@@ -235,7 +245,44 @@ export default function KpiOverview() {
                   </div>
 
                   {/* My action */}
-                  {myRole && (
+                  {myRole && myRole === "หัวหน้า+เพื่อน" ? (
+                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                      {(["supervisor", "peer"] as const).map((evalType) => {
+                        const label = evalType === "supervisor" ? "หัวหน้า" : "เพื่อน";
+                        const ev = evalType === "supervisor" ? mySupEval : myPeerEval;
+                        return (
+                          <div key={evalType} className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">{label}:</span>
+                            {ev?.submitted_at ? (
+                              <>
+                                <span className="flex items-center gap-1 text-xs font-medium text-success">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> ส่งแล้ว
+                                </span>
+                                <Link to={`/kpi/evaluate/${emp.id}/${period.id}?type=${evalType}`}>
+                                  <button className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors">
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                </Link>
+                                <button
+                                  onClick={() => setConfirmDelete({ id: ev.id, name: `${emp.name} (${label})` })}
+                                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </>
+                            ) : (
+                              <Link to={`/kpi/evaluate/${emp.id}/${period.id}?type=${evalType}`}>
+                                <button className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all hover:scale-105 active:scale-95"
+                                  style={{ background: "hsl(191 91% 37% / 0.12)", color: "hsl(191 91% 40%)" }}>
+                                  เริ่ม <ChevronRight className="w-3 h-3" />
+                                </button>
+                              </Link>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : myRole ? (
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs text-muted-foreground hidden sm:block">{myRole}:</span>
                       {myEval?.submitted_at ? (
@@ -264,7 +311,7 @@ export default function KpiOverview() {
                         </Link>
                       )}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
