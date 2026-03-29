@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronRight, Star } from "lucide-react";
 
-import { useKpiPeriods, useKpiEvaluations, type KpiEvaluation } from "@/hooks/useKpi";
+import { useKpiPeriods, useKpiEvaluations, KPI_CATEGORIES, type KpiEvaluation } from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import {
@@ -14,22 +14,46 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
   !p ? null : p.startsWith("http") ? p : `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${p}`;
 
+// Bug fix: use || not ?? so empty string "" falls through to the next value
 const getReviewType = (e: KpiEvaluation): ReviewerType =>
-  ((e.reviewer_type ?? e.type ?? "").toLowerCase()) as ReviewerType;
+  ((e.reviewer_type || e.type || "").toLowerCase()) as ReviewerType;
 
-const TYPE_LABEL: Record<ReviewerType, string> = {
+const TYPE_LABEL: Record<string, string> = {
   self: "ตนเอง",
   peer: "เพื่อนร่วมงาน",
   supervisor: "หัวหน้า",
 };
 
-const TYPE_COLOR: Record<ReviewerType, string> = {
+const TYPE_COLOR: Record<string, string> = {
   self: "hsl(191 91% 37%)",
   peer: "hsl(142 71% 45%)",
   supervisor: "hsl(38 92% 50%)",
 };
 
-// ─── Mini components ──────────────────────────────────────────────────────────
+// Label for old-format score keys (e.g. "communication" → "การสื่อสาร")
+function labelForOldKey(key: string): string {
+  for (const cat of KPI_CATEGORIES) {
+    const item = cat.items.find((i) => i.key === key);
+    if (item) return item.labelTh;
+  }
+  return key.replace(/_/g, " ");
+}
+
+// Parse notes_strength / notes_improve which may be a JSON object from old format
+function parseNotesField(raw: string | null): Array<{ key: string; text: string }> {
+  if (!raw) return [];
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    return Object.entries(obj)
+      .filter(([, v]) => typeof v === "string" && (v as string).trim())
+      .map(([k, v]) => ({ key: k, text: (v as string).trim() }));
+  } catch {
+    // plain text
+    return raw.trim() ? [{ key: "", text: raw.trim() }] : [];
+  }
+}
+
+// ─── Star display ─────────────────────────────────────────────────────────────
 
 function StarDisplay({ value }: { value: number }) {
   return (
@@ -49,7 +73,9 @@ function StarDisplay({ value }: { value: number }) {
   );
 }
 
-// ─── Single evaluation accordion item ────────────────────────────────────────
+// ─── Single evaluation accordion block ───────────────────────────────────────
+
+type QAPair = { question: string; answer: number | string; type: "rate" | "text" };
 
 function EvalBlock({
   eval_,
@@ -65,26 +91,66 @@ function EvalBlock({
   const [open, setOpen] = useState(defaultOpen ?? false);
   const evalType = getReviewType(eval_);
   const scores = eval_.scores as Record<string, number | string>;
+  const color = TYPE_COLOR[evalType] ?? "hsl(215 14% 45%)";
+  const typeLabel = TYPE_LABEL[evalType] ?? evalType ?? "ไม่ระบุ";
 
-  const qaPairs = useMemo(() => {
-    if (!formConfig) return [];
-    const pairs: Array<{ question: string; answer: number | string; type: "rate" | "text" }> = [];
-    for (const sec of formConfig.sections) {
-      for (const q of sec.questions) {
-        if (q.type === "hidden" || q.type === "auto") continue;
-        const val =
-          q.type === "rate" && q.scoreKey
-            ? scores[q.scoreKey]
-            : scores[q.id];
-        if (val !== undefined && val !== null && val !== "") {
-          pairs.push({ question: q.question, answer: val, type: q.type as "rate" | "text" });
+  const qaPairs = useMemo((): QAPair[] => {
+    const pairs: QAPair[] = [];
+
+    // ── 1. Try matching via form config (new format keys) ──────────────────
+    if (formConfig) {
+      for (const sec of formConfig.sections) {
+        for (const q of sec.questions) {
+          if (q.type === "hidden" || q.type === "auto") continue;
+          const val = q.type === "rate" && q.scoreKey ? scores[q.scoreKey] : scores[q.id];
+          if (val !== undefined && val !== null && val !== "" && val !== 0) {
+            pairs.push({ question: q.question, answer: val, type: q.type as "rate" | "text" });
+          }
         }
       }
     }
-    return pairs;
-  }, [formConfig, scores]);
 
-  const color = TYPE_COLOR[evalType] ?? "hsl(215 14% 45%)";
+    // ── 2. Fallback: show raw stored scores (old format data) ───────────────
+    // Only kick in if form-config matching found nothing but there ARE numeric scores
+    const hasMatchedScores = pairs.some((p) => p.type === "rate");
+    const rawScoreKeys = Object.entries(scores).filter(
+      ([, v]) => typeof v === "number" && (v as number) > 0,
+    );
+    if (!hasMatchedScores && rawScoreKeys.length > 0) {
+      for (const [key, val] of rawScoreKeys) {
+        if (key === "communication" && (val as number) === 0) continue; // stale default
+        pairs.push({ question: labelForOldKey(key), answer: val as number, type: "rate" });
+      }
+    }
+
+    // Also show any text strings stored directly in scores (old or new format)
+    const matchedTextIds = new Set(
+      formConfig?.sections.flatMap((s) => s.questions.filter((q) => q.type === "text").map((q) => q.id)) ?? [],
+    );
+    for (const [key, val] of Object.entries(scores)) {
+      if (typeof val !== "string" || !val.trim()) continue;
+      if (matchedTextIds.has(key)) continue; // already shown via form config
+      pairs.push({ question: labelForOldKey(key), answer: val, type: "text" });
+    }
+
+    // ── 3. Parse notes_strength / notes_improve (old text storage) ─────────
+    const notesStrength = parseNotesField((eval_ as KpiEvaluation & { notes_strength?: string | null }).notes_strength ?? null);
+    const notesImprove = parseNotesField((eval_ as KpiEvaluation & { notes_improve?: string | null }).notes_improve ?? null);
+
+    for (const { text } of notesStrength) {
+      // Avoid duplicating if already shown via scores
+      if (!pairs.some((p) => p.answer === text)) {
+        pairs.push({ question: "สิ่งที่ทำได้ดี / ข้อดี", answer: text, type: "text" });
+      }
+    }
+    for (const { text } of notesImprove) {
+      if (!pairs.some((p) => p.answer === text)) {
+        pairs.push({ question: "สิ่งที่ควรพัฒนา", answer: text, type: "text" });
+      }
+    }
+
+    return pairs;
+  }, [formConfig, scores, eval_]);
 
   return (
     <div className="border border-border/40 rounded-xl overflow-hidden">
@@ -94,12 +160,14 @@ function EvalBlock({
         className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-muted/20 transition-colors text-left"
       >
         <div className="flex items-center gap-2 min-w-0">
-          {open ? <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+          {open
+            ? <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            : <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
           <span
             className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
             style={{ background: `${color}18`, color }}
           >
-            {TYPE_LABEL[evalType]}
+            {typeLabel}
           </span>
           {evaluator && evalType !== "self" && (
             <span className="text-sm font-medium text-foreground truncate">{evaluator.name}</span>
@@ -107,9 +175,13 @@ function EvalBlock({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {eval_.submitted_at ? (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">ส่งแล้ว</span>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">
+              ส่งแล้ว
+            </span>
           ) : (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">draft</span>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">
+              draft
+            </span>
           )}
           <span className="text-xs text-muted-foreground">{qaPairs.length} คำตอบ</span>
         </div>
@@ -155,13 +227,13 @@ function EvaluateeCard({
   const roleKey = resolveRoleKey(evaluatee);
   const url = avatarUrl(evaluatee.avatar);
 
-  // Sort: self first, supervisor last
-  const ORDER: Record<ReviewerType, number> = { self: 0, peer: 1, supervisor: 2 };
-  const sorted = [...evals].sort((a, b) => ORDER[getReviewType(a)] - ORDER[getReviewType(b)]);
+  const ORDER: Record<string, number> = { self: 0, peer: 1, supervisor: 2 };
+  const sorted = [...evals].sort(
+    (a, b) => (ORDER[getReviewType(a)] ?? 9) - (ORDER[getReviewType(b)] ?? 9),
+  );
 
   return (
     <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
-      {/* Employee header */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -178,16 +250,18 @@ function EvaluateeCard({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-xs text-muted-foreground">
-            {sorted.filter(e => e.submitted_at).length}/{sorted.length} ส่งแล้ว
+            {sorted.filter((e) => e.submitted_at).length}/{sorted.length} ส่งแล้ว
           </span>
-          {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+          {open
+            ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
         </div>
       </button>
 
       {open && (
         <div className="p-4 space-y-3">
           {sorted.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">ยังไม่มีการประเมินที่ส่งแล้ว</p>
+            <p className="text-xs text-muted-foreground text-center py-4">ยังไม่มีการประเมิน</p>
           )}
           {sorted.map((ev) => {
             const evalType = getReviewType(ev);
@@ -247,11 +321,10 @@ export default function KpiPeriodSummary() {
     });
   }, [employees]);
 
-  // Show ALL evaluations (including drafts) for admin — grouped by evaluatee
+  // Group all evaluations with at least one answer by evaluatee
   const evalsByEvaluatee = useMemo(() => {
     const map = new Map<string, KpiEvaluation[]>();
     for (const ev of evaluations) {
-      // Skip records with no answers at all
       const scores = ev.scores as Record<string, unknown>;
       if (!scores || Object.keys(scores).length === 0) continue;
       const arr = map.get(ev.evaluatee_id) ?? [];
@@ -297,18 +370,15 @@ export default function KpiPeriodSummary() {
 
       {!loading && (
         <div className="space-y-5">
-          {employees.map((emp) => {
-            const empEvals = evalsByEvaluatee.get(emp.id) ?? [];
-            return (
-              <EvaluateeCard
-                key={emp.id}
-                evaluatee={emp}
-                evals={empEvals}
-                employees={employees}
-                formConfigs={formConfigs}
-              />
-            );
-          })}
+          {employees.map((emp) => (
+            <EvaluateeCard
+              key={emp.id}
+              evaluatee={emp}
+              evals={evalsByEvaluatee.get(emp.id) ?? []}
+              employees={employees}
+              formConfigs={formConfigs}
+            />
+          ))}
         </div>
       )}
     </div>
