@@ -268,6 +268,7 @@ export default function KpiEvaluate() {
   const { periods } = useKpiPeriods();
   const { evaluations, upsertEvaluation } = useKpiEvaluations(periodId);
   const { employees } = useEmployees();
+  const { user } = useAuthContext();
 
   const [scores, setScores] = useState<KpiSubScores>({});
   const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
@@ -302,7 +303,7 @@ export default function KpiEvaluate() {
     [evaluatee],
   );
 
-  const isDirector = Boolean(evaluator?.role?.toLowerCase().includes("director"));
+  const isDirector = evaluator ? resolveRoleKey(evaluator) === "ta" : false;
 
   const evalType = useMemo((): ReviewerType => {
     if (!evaluator || !evaluatee) return "peer";

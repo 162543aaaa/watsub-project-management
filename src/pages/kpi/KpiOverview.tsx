@@ -72,10 +72,11 @@ export default function KpiOverview() {
         .filter(peer => pEvals.some(e => e.evaluator_id === peer.id && e.evaluatee_id === emp.id && getReviewType(e) === "peer" && e.submitted_at))
         .length;
 
-      const meIsDirector = me ? me.role?.toLowerCase().includes("director") : false;
+      const meIsDirector = me ? resolveRoleKey(me) === "ta" : false;
 
       // My evaluation(s) for this evaluatee
-      const myEval = me && !meIsDirector
+      // For self-eval row always track it; for director evaluating others, track peer+supervisor separately
+      const myEval = me && (me.id === emp.id || !meIsDirector)
         ? pEvals.find(e => e.evaluator_id === me.id && e.evaluatee_id === emp.id)
         : null;
       const myPeerEval = me && meIsDirector && me.id !== emp.id
