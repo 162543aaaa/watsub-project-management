@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { ArrowLeft, ChevronDown, ChevronRight, Star } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Star, Download } from "lucide-react";
 
 import { useKpiPeriods, useKpiEvaluations, KPI_CATEGORIES, type KpiEvaluation } from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
@@ -53,8 +53,119 @@ function parseNotesField(raw: string | null): Array<{ key: string; text: string 
   }
 }
 
-// ─── Star display ─────────────────────────────────────────────────────────────
+// ─── Build Q&A pairs (pure, reused by EvalBlock and CSV export) ───────────────
 
+type QAPair = { question: string; answer: number | string; type: "rate" | "text" };
+
+function buildQAPairs(eval_: KpiEvaluation, formConfig: KPIFormConfig | undefined): QAPair[] {
+  const pairs: QAPair[] = [];
+  const scores = eval_.scores as Record<string, number | string>;
+
+  // 1. Match via form config (new format keys)
+  if (formConfig) {
+    for (const sec of formConfig.sections) {
+      for (const q of sec.questions) {
+        if (q.type === "hidden" || q.type === "auto") continue;
+        const val = q.type === "rate" && q.scoreKey ? scores[q.scoreKey] : scores[q.id];
+        if (val !== undefined && val !== null && val !== "" && val !== 0) {
+          pairs.push({ question: q.question, answer: val, type: q.type as "rate" | "text" });
+        }
+      }
+    }
+  }
+
+  // 2. Fallback: raw old-format numeric scores
+  const hasMatchedScores = pairs.some((p) => p.type === "rate");
+  const rawScoreKeys = Object.entries(scores).filter(([, v]) => typeof v === "number" && (v as number) > 0);
+  if (!hasMatchedScores && rawScoreKeys.length > 0) {
+    for (const [key, val] of rawScoreKeys) {
+      if (key === "communication" && (val as number) === 0) continue;
+      pairs.push({ question: labelForOldKey(key), answer: val as number, type: "rate" });
+    }
+  }
+
+  // Also show text strings stored in scores
+  const matchedTextIds = new Set(
+    formConfig?.sections.flatMap((s) => s.questions.filter((q) => q.type === "text").map((q) => q.id)) ?? [],
+  );
+  for (const [key, val] of Object.entries(scores)) {
+    if (typeof val !== "string" || !val.trim()) continue;
+    if (matchedTextIds.has(key)) continue;
+    pairs.push({ question: labelForOldKey(key), answer: val, type: "text" });
+  }
+
+  // 3. Parse notes_strength / notes_improve (old text storage)
+  const notesStrength = parseNotesField((eval_ as KpiEvaluation & { notes_strength?: string | null }).notes_strength ?? null);
+  const notesImprove = parseNotesField((eval_ as KpiEvaluation & { notes_improve?: string | null }).notes_improve ?? null);
+  for (const { text } of notesStrength) {
+    if (!pairs.some((p) => p.answer === text))
+      pairs.push({ question: "สิ่งที่ทำได้ดี / ข้อดี", answer: text, type: "text" });
+  }
+  for (const { text } of notesImprove) {
+    if (!pairs.some((p) => p.answer === text))
+      pairs.push({ question: "สิ่งที่ควรพัฒนา", answer: text, type: "text" });
+  }
+
+  return pairs;
+}
+
+// ─── CSV export ────────────────────────────────────────────────────────────────
+
+function exportToCsv(
+  evaluatees: Employee[],
+  evalsByEvaluatee: Map<string, KpiEvaluation[]>,
+  employees: Employee[],
+  formConfigs: Map<string, KPIFormConfig>,
+  periodLabel: string,
+) {
+  const BOM = "\uFEFF";
+  const header = ["ผู้ถูกประเมิน", "ตำแหน่ง", "ประเภท", "ผู้ประเมิน", "คำถาม", "คำตอบ", "สถานะ"];
+  const rows: string[][] = [header];
+
+  for (const emp of evaluatees) {
+    const evals = evalsByEvaluatee.get(emp.id) ?? [];
+    const roleKey = resolveRoleKey(emp);
+    const ORDER: Record<string, number> = { self: 0, peer: 1, supervisor: 2 };
+    const sorted = [...evals].sort((a, b) => (ORDER[getReviewType(a)] ?? 9) - (ORDER[getReviewType(b)] ?? 9));
+
+    for (const ev of sorted) {
+      const evalType = getReviewType(ev);
+      const cfg = formConfigs.get(`${roleKey}:${evalType}`);
+      const evaluator = employees.find((e) => e.id === ev.evaluator_id);
+      const evaluatorName = evalType === "self" ? emp.name : (evaluator?.name ?? "");
+      const typeLabel = TYPE_LABEL[evalType] ?? evalType;
+      const status = ev.submitted_at ? "ส่งแล้ว" : "draft";
+      const pairs = buildQAPairs(ev, cfg);
+
+      if (pairs.length === 0) {
+        rows.push([emp.name, emp.position ?? "", typeLabel, evaluatorName, "", "", status]);
+      } else {
+        for (const pair of pairs) {
+          rows.push([
+            emp.name,
+            emp.position ?? "",
+            typeLabel,
+            evaluatorName,
+            pair.question,
+            typeof pair.answer === "number" ? String(pair.answer) : pair.answer,
+            status,
+          ]);
+        }
+      }
+    }
+  }
+
+  const csv = BOM + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `kpi-summary-${periodLabel.replace(/\s+/g, "-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Star display ─────────────────────────────────────────────────────────────
 function StarDisplay({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-0.5 mt-1">
@@ -75,8 +186,6 @@ function StarDisplay({ value }: { value: number }) {
 
 // ─── Single evaluation accordion block ───────────────────────────────────────
 
-type QAPair = { question: string; answer: number | string; type: "rate" | "text" };
-
 function EvalBlock({
   eval_,
   evaluator,
@@ -90,67 +199,10 @@ function EvalBlock({
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const evalType = getReviewType(eval_);
-  const scores = eval_.scores as Record<string, number | string>;
   const color = TYPE_COLOR[evalType] ?? "hsl(215 14% 45%)";
   const typeLabel = TYPE_LABEL[evalType] ?? evalType ?? "ไม่ระบุ";
 
-  const qaPairs = useMemo((): QAPair[] => {
-    const pairs: QAPair[] = [];
-
-    // ── 1. Try matching via form config (new format keys) ──────────────────
-    if (formConfig) {
-      for (const sec of formConfig.sections) {
-        for (const q of sec.questions) {
-          if (q.type === "hidden" || q.type === "auto") continue;
-          const val = q.type === "rate" && q.scoreKey ? scores[q.scoreKey] : scores[q.id];
-          if (val !== undefined && val !== null && val !== "" && val !== 0) {
-            pairs.push({ question: q.question, answer: val, type: q.type as "rate" | "text" });
-          }
-        }
-      }
-    }
-
-    // ── 2. Fallback: show raw stored scores (old format data) ───────────────
-    // Only kick in if form-config matching found nothing but there ARE numeric scores
-    const hasMatchedScores = pairs.some((p) => p.type === "rate");
-    const rawScoreKeys = Object.entries(scores).filter(
-      ([, v]) => typeof v === "number" && (v as number) > 0,
-    );
-    if (!hasMatchedScores && rawScoreKeys.length > 0) {
-      for (const [key, val] of rawScoreKeys) {
-        if (key === "communication" && (val as number) === 0) continue; // stale default
-        pairs.push({ question: labelForOldKey(key), answer: val as number, type: "rate" });
-      }
-    }
-
-    // Also show any text strings stored directly in scores (old or new format)
-    const matchedTextIds = new Set(
-      formConfig?.sections.flatMap((s) => s.questions.filter((q) => q.type === "text").map((q) => q.id)) ?? [],
-    );
-    for (const [key, val] of Object.entries(scores)) {
-      if (typeof val !== "string" || !val.trim()) continue;
-      if (matchedTextIds.has(key)) continue; // already shown via form config
-      pairs.push({ question: labelForOldKey(key), answer: val, type: "text" });
-    }
-
-    // ── 3. Parse notes_strength / notes_improve (old text storage) ─────────
-    const notesStrength = parseNotesField((eval_ as KpiEvaluation & { notes_strength?: string | null }).notes_strength ?? null);
-    const notesImprove = parseNotesField((eval_ as KpiEvaluation & { notes_improve?: string | null }).notes_improve ?? null);
-
-    for (const { text } of notesStrength) {
-      // Avoid duplicating if already shown via scores
-      if (!pairs.some((p) => p.answer === text)) {
-        pairs.push({ question: "สิ่งที่ทำได้ดี / ข้อดี", answer: text, type: "text" });
-      }
-    }
-    for (const { text } of notesImprove) {
-      if (!pairs.some((p) => p.answer === text)) {
-        pairs.push({ question: "สิ่งที่ควรพัฒนา", answer: text, type: "text" });
-      }
-    }
-
-    return pairs;
-  }, [formConfig, scores, eval_]);
+  const qaPairs = useMemo(() => buildQAPairs(eval_, formConfig), [eval_, formConfig]);
 
   return (
     <div className="border border-border/40 rounded-xl overflow-hidden">
@@ -354,12 +406,21 @@ export default function KpiPeriodSummary() {
         <ArrowLeft className="w-4 h-4" /> กลับ KPI Admin
       </button>
 
-      <div className="mb-6">
-        <h1 className="text-xl font-bold">สรุปคำตอบทั้งหมด</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {period ? period.label : periodId}
-          {period?.type === "project" ? " · ตามโปรเจกต์" : " · รายไตรมาส"}
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold">สรุปคำตอบทั้งหมด</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {period ? period.label : periodId}
+            {period?.type === "project" ? " · ตามโปรเจกต์" : " · รายไตรมาส"}
+          </p>
+        </div>
+        <button
+          onClick={() => exportToCsv(employees, evalsByEvaluatee, employees, formConfigs, period?.label ?? periodId ?? "kpi")}
+          disabled={loading}
+          className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors disabled:opacity-40 flex-shrink-0"
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </button>
       </div>
 
       {loading && (
