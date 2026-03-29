@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
-import { CheckCircle2, Clock, ExternalLink, FileDown, Lock, Plus, Shield, Trash2, Unlock } from "lucide-react";
+import { CheckCircle2, Clock, ClipboardList, ExternalLink, FileDown, Lock, Plus, Shield, Trash2, Unlock } from "lucide-react";
 
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -222,6 +222,11 @@ export default function KpiAdmin() {
                 <p className="text-xs text-muted-foreground mt-0.5">ครบถ้วน {completedTotal}/{expectedTotal}</p>
               </div>
               <div className="flex items-center gap-2">
+                <Link to={`/kpi/admin/summary/${period.id}`}>
+                  <button className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
+                    <ClipboardList className="w-3.5 h-3.5" /> ดูคำตอบ
+                  </button>
+                </Link>
                 {allCompleted && (
                   <button
                     onClick={() => handleExportPeriodPdf(period.label, rows)}
