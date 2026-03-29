@@ -30,6 +30,7 @@ import KpiEvaluate from "./pages/kpi/KpiEvaluate";
 import KpiReport from "./pages/kpi/KpiReport";
 import KpiAdmin from "./pages/kpi/KpiAdmin";
 import KpiDashboard from "./pages/kpi/KpiDashboard";
+import KpiPeriodSummary from "./pages/kpi/KpiPeriodSummary";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -73,6 +74,7 @@ const App = () => (
                 <Route path="/kpi/report/:memberId" element={<KpiReport />} />
                 <Route path="/kpi/admin" element={<KpiAdmin />} />
                 <Route path="/kpi/admin/new-period" element={<KpiAdmin />} />
+                <Route path="/kpi/admin/summary/:periodId" element={<KpiPeriodSummary />} />
                 <Route path="/kpi/dashboard" element={<KpiDashboard />} />
               </Route>
             </Route>
