@@ -260,6 +260,7 @@ export default function Customers() {
           onSave={handleAddCustomer}
           onClose={() => setShowAdd(false)}
           monthNames={monthNames}
+          employees={employees}
         />
       )}
 
