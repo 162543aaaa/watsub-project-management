@@ -14,6 +14,13 @@ export interface Customer {
   month: number;
   created_at?: string;
   sort_order?: number;
+  contact_name?: string;
+  contact_info?: string;
+  feedback_channel?: string;
+  job_description?: string;
+  responsible_person?: string[];
+  start_date?: string;
+  deadline?: string;
   tasks: Task[];
 }
 
