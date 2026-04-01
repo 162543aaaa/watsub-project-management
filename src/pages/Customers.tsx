@@ -68,12 +68,12 @@ export default function Customers() {
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1 });
+  const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [] as string[], start_date: "", deadline: "" });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ customerId: string; task?: Task } | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTask);
-  const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; link: string; month: number } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; link: string; month: number; contact_name: string; contact_info: string; feedback_channel: string; job_description: string; responsible_person: string[]; start_date: string; deadline: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -94,13 +94,13 @@ export default function Customers() {
 
   const handleAddCustomer = async () => {
     if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month });
-    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1 });
+    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month, contact_name: form.contact_name, contact_info: form.contact_info, feedback_channel: form.feedback_channel, job_description: form.job_description, responsible_person: form.responsible_person, start_date: form.start_date, deadline: form.deadline });
+    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [], start_date: "", deadline: "" });
     setShowAdd(false);
   };
 
   const openEditCustomer = (cust: typeof customers[0]) => {
-    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: cust.link || "", month: cust.month });
+    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: cust.link || "", month: cust.month, contact_name: (cust as any).contact_name || "", contact_info: (cust as any).contact_info || "", feedback_channel: (cust as any).feedback_channel || "", job_description: (cust as any).job_description || "", responsible_person: (cust as any).responsible_person || [], start_date: (cust as any).start_date || "", deadline: (cust as any).deadline || "" });
   };
 
   const handleEditCustomer = async () => {
@@ -260,6 +260,7 @@ export default function Customers() {
           onSave={handleAddCustomer}
           onClose={() => setShowAdd(false)}
           monthNames={monthNames}
+          employees={employees}
         />
       )}
 
@@ -268,10 +269,11 @@ export default function Customers() {
         <CustomerModal
           title="Edit Customer"
           form={editModal}
-          setForm={(f: any) => setEditModal({ ...editModal, ...f })}
+          setForm={(f: any) => setEditModal({ ...editModal!, ...f })}
           onSave={handleEditCustomer}
           onClose={() => setEditModal(null)}
           monthNames={monthNames}
+          employees={employees}
         />
       )}
 
@@ -471,55 +473,120 @@ function SortableCustCard({ id, children }: { id: string; children: React.ReactN
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function CustomerModal({ title, form, setForm, onSave, onClose, monthNames }: {
+function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, employees }: {
   title: string;
   form: any;
   setForm: (f: any) => void;
   onSave: () => void;
   onClose: () => void;
   monthNames: string[];
+  employees?: { name: string; avatar?: string }[];
 }) {
-  const fields = [
-    { label: "Customer Name", key: "name", placeholder: "Customer name..." },
-    { label: "Project Title", key: "project_title", placeholder: "Project title..." },
-    { label: "Payment Fee", key: "payment_fee", placeholder: "e.g. 25000" },
-    { label: "Detail", key: "detail", placeholder: "Project details..." },
-    { label: "Link", key: "link", placeholder: "https://..." },
-    { label: "Note", key: "note", placeholder: "Notes..." },
-  ];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-bold">{title}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
-        </div>
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">กรอกข้อมูลลูกค้า</DialogDescription>
+        </DialogHeader>
         <div className="space-y-4">
-          {fields.map(f => (
-            <div key={f.key}>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">{f.label}</label>
-              <input
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                value={form[f.key] || ""}
-                onChange={e => setForm({ ...form, [f.key]: e.target.value })}
-                placeholder={f.placeholder}
+          {/* === Basic Information === */}
+          <div className="text-xs font-bold text-primary uppercase tracking-wider">ข้อมูลพื้นฐาน</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Customer Name</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="ชื่อลูกค้า..." autoFocus />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Project Title</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                value={form.project_title || ""} onChange={e => setForm({ ...form, project_title: e.target.value })} placeholder="ชื่อโปรเจกต์..." />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Start Date</label>
+              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={form.start_date || ""} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Deadline</label>
+              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={form.deadline || ""} onChange={e => setForm({ ...form, deadline: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Month</label>
+              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={form.month} onChange={e => setForm({ ...form, month: Number(e.target.value) })}>
+                {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Payment Fee</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={form.payment_fee || ""} onChange={e => setForm({ ...form, payment_fee: e.target.value })} placeholder="e.g. 25,000" />
+            </div>
+          </div>
+
+          {/* === Job Information === */}
+          <div className="text-xs font-bold text-primary uppercase tracking-wider pt-2">ข้อมูลงาน</div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Job Description / Deliverables</label>
+            <textarea rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
+              value={form.job_description || ""} onChange={e => setForm({ ...form, job_description: e.target.value })} placeholder="รายละเอียดงานที่ต้องส่ง..." />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Detail</label>
+            <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
+              value={form.detail || ""} onChange={e => setForm({ ...form, detail: e.target.value })} placeholder="รายละเอียดเพิ่มเติม..." />
+          </div>
+          {employees && (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Responsible Person</label>
+              <MultiSelectAssignee
+                selected={form.responsible_person || []}
+                onChange={val => setForm({ ...form, responsible_person: val })}
+                employees={employees}
               />
             </div>
-          ))}
+          )}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
-            <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-              value={form.month} onChange={e => setForm({ ...form, month: Number(e.target.value) })}>
-              {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-            </select>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Link</label>
+            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+              value={form.link || ""} onChange={e => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
+          </div>
+
+          {/* === Client Contact === */}
+          <div className="text-xs font-bold text-primary uppercase tracking-wider pt-2">ข้อมูลติดต่อลูกค้า</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Contact Name</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={form.contact_name || ""} onChange={e => setForm({ ...form, contact_name: e.target.value })} placeholder="ชื่อผู้ติดต่อ..." />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Contact Info (Phone / Line)</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={form.contact_info || ""} onChange={e => setForm({ ...form, contact_info: e.target.value })} placeholder="เบอร์โทร / Line ID..." />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Feedback Channel</label>
+              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                value={form.feedback_channel || ""} onChange={e => setForm({ ...form, feedback_channel: e.target.value })} placeholder="Line / Email / อื่นๆ..." />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Note</label>
+            <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
+              value={form.note || ""} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="โน้ตเพิ่มเติม..." />
           </div>
         </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
+        <div className="flex gap-3 mt-2">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all">Cancel</button>
           <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

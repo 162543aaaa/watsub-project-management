@@ -14,232 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
-      kpi_periods: {
-        Row: {
-          id: string
-          label: string
-          project_id: string | null
-          type: string
-          status: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          label: string
-          project_id?: string | null
-          type: string
-          status?: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          label?: string
-          project_id?: string | null
-          type?: string
-          status?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kpi_periods_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kpi_evaluations: {
-        Row: {
-          id: string
-          period_id: string
-          evaluator_id: string
-          evaluatee_id: string
-          type: string
-          reviewer_type: string
-          scores: Json
-          notes_strength: string | null
-          notes_improve: string | null
-          submitted_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          period_id: string
-          evaluator_id: string
-          evaluatee_id: string
-          type: string
-          reviewer_type?: string
-          scores?: Json
-          notes_strength?: string | null
-          notes_improve?: string | null
-          submitted_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          period_id?: string
-          evaluator_id?: string
-          evaluatee_id?: string
-          type?: string
-          reviewer_type?: string
-          scores?: Json
-          notes_strength?: string | null
-          notes_improve?: string | null
-          submitted_at?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kpi_evaluations_period_id_fkey"
-            columns: ["period_id"]
-            isOneToOne: false
-            referencedRelation: "kpi_periods"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kpi_evaluations_evaluator_id_fkey"
-            columns: ["evaluator_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kpi_evaluations_evaluatee_id_fkey"
-            columns: ["evaluatee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kpi_role_weights: {
-        Row: {
-          role: string
-          job_performance: number
-          competency: number
-          teamwork: number
-          leadership: number
-          creativity: number
-          collaboration: number
-        }
-        Insert: {
-          role: string
-          job_performance?: number
-          competency?: number
-          teamwork?: number
-          leadership?: number
-          creativity?: number
-          collaboration?: number
-        }
-        Update: {
-          role?: string
-          job_performance?: number
-          competency?: number
-          teamwork?: number
-          leadership?: number
-          creativity?: number
-          collaboration?: number
-        }
-        Relationships: []
-      }
-      kpi_question_templates: {
-        Row: {
-          id: string
-          role: string | null
-          reviewer_type: string | null
-          section_id: string | null
-          section_title: string | null
-          section_weight: string | null
-          question_text: string | null
-          question_type: string | null
-          auto_source: string | null
-          order_index: number | null
-        }
-        Insert: {
-          id?: string
-          role?: string | null
-          reviewer_type?: string | null
-          section_id?: string | null
-          section_title?: string | null
-          section_weight?: string | null
-          question_text?: string | null
-          question_type?: string | null
-          auto_source?: string | null
-          order_index?: number | null
-        }
-        Update: {
-          id?: string
-          role?: string | null
-          reviewer_type?: string | null
-          section_id?: string | null
-          section_title?: string | null
-          section_weight?: string | null
-          question_text?: string | null
-          question_type?: string | null
-          auto_source?: string | null
-          order_index?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kpi_question_templates_role_fkey"
-            columns: ["role"]
-            isOneToOne: false
-            referencedRelation: "kpi_role_weights"
-            referencedColumns: ["role"]
-          },
-        ]
-      }
       customers: {
         Row: {
+          contact_info: string | null
+          contact_name: string | null
           created_at: string
+          deadline: string | null
           detail: string | null
+          feedback_channel: string | null
           id: string
+          job_description: string | null
           link: string | null
           month: number
           name: string
           note: string | null
           payment_fee: string | null
           project_title: string | null
+          responsible_person: string[] | null
           sort_order: number | null
+          start_date: string | null
           updated_at: string
         }
         Insert: {
+          contact_info?: string | null
+          contact_name?: string | null
           created_at?: string
+          deadline?: string | null
           detail?: string | null
+          feedback_channel?: string | null
           id?: string
+          job_description?: string | null
           link?: string | null
           month?: number
           name: string
           note?: string | null
           payment_fee?: string | null
           project_title?: string | null
+          responsible_person?: string[] | null
           sort_order?: number | null
+          start_date?: string | null
           updated_at?: string
         }
         Update: {
+          contact_info?: string | null
+          contact_name?: string | null
           created_at?: string
+          deadline?: string | null
           detail?: string | null
+          feedback_channel?: string | null
           id?: string
+          job_description?: string | null
           link?: string | null
           month?: number
           name?: string
           note?: string | null
           payment_fee?: string | null
           project_title?: string | null
+          responsible_person?: string[] | null
           sort_order?: number | null
+          start_date?: string | null
           updated_at?: string
         }
         Relationships: []
       }
       employees: {
         Row: {
-          active: boolean | null
           avatar: string | null
           created_at: string
           email: string
           id: string
-          kpi_role: string | null
           name: string
           note: string | null
           phone: string | null
@@ -247,16 +90,13 @@ export type Database = {
           promptpay_qr: string | null
           role: string
           start_date: string | null
-          type: string | null
           updated_at: string
         }
         Insert: {
-          active?: boolean | null
           avatar?: string | null
           created_at?: string
           email?: string
           id?: string
-          kpi_role?: string | null
           name: string
           note?: string | null
           phone?: string | null
@@ -264,16 +104,13 @@ export type Database = {
           promptpay_qr?: string | null
           role?: string
           start_date?: string | null
-          type?: string | null
           updated_at?: string
         }
         Update: {
-          active?: boolean | null
           avatar?: string | null
           created_at?: string
           email?: string
           id?: string
-          kpi_role?: string | null
           name?: string
           note?: string | null
           phone?: string | null
@@ -281,7 +118,6 @@ export type Database = {
           promptpay_qr?: string | null
           role?: string
           start_date?: string | null
-          type?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -355,6 +191,132 @@ export type Database = {
           name?: string
           start_date?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      kpi_evaluations: {
+        Row: {
+          created_at: string
+          evaluatee_id: string
+          evaluator_id: string
+          id: string
+          notes_improve: string | null
+          notes_strength: string | null
+          period_id: string
+          reviewer_type: string | null
+          scores: Json
+          submitted_at: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          evaluatee_id: string
+          evaluator_id: string
+          id?: string
+          notes_improve?: string | null
+          notes_strength?: string | null
+          period_id: string
+          reviewer_type?: string | null
+          scores?: Json
+          submitted_at?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          evaluatee_id?: string
+          evaluator_id?: string
+          id?: string
+          notes_improve?: string | null
+          notes_strength?: string | null
+          period_id?: string
+          reviewer_type?: string | null
+          scores?: Json
+          submitted_at?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_evaluations_evaluatee_id_fkey"
+            columns: ["evaluatee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_evaluations_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_periods: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          project_id: string | null
+          status: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          project_id?: string | null
+          status?: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          project_id?: string | null
+          status?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_periods_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_role_weights: {
+        Row: {
+          competency: number
+          creativity: number
+          job_performance: number
+          leadership: number
+          role: string
+          teamwork: number
+        }
+        Insert: {
+          competency?: number
+          creativity?: number
+          job_performance?: number
+          leadership?: number
+          role: string
+          teamwork?: number
+        }
+        Update: {
+          competency?: number
+          creativity?: number
+          job_performance?: number
+          leadership?: number
+          role?: string
+          teamwork?: number
         }
         Relationships: []
       }
