@@ -269,10 +269,11 @@ export default function Customers() {
         <CustomerModal
           title="Edit Customer"
           form={editModal}
-          setForm={(f: any) => setEditModal({ ...editModal, ...f })}
+          setForm={(f: any) => setEditModal({ ...editModal!, ...f })}
           onSave={handleEditCustomer}
           onClose={() => setEditModal(null)}
           monthNames={monthNames}
+          employees={employees}
         />
       )}
 
