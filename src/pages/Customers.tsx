@@ -484,12 +484,17 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
 }) {
   return (
     <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="sr-only">กรอกข้อมูลลูกค้า</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
+      <DialogContent className="sm:max-w-2xl p-0 flex flex-col max-h-[90vh] md:max-h-[85vh]">
+        {/* --- Header (fixed) --- */}
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
+          <DialogHeader className="space-y-0">
+            <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+            <DialogDescription className="sr-only">กรอกข้อมูลลูกค้า</DialogDescription>
+          </DialogHeader>
+        </div>
+
+        {/* --- Scrollable Body --- */}
+        <div className="p-6 pt-4 overflow-y-auto flex-1 overscroll-contain space-y-5">
           {/* === Basic Information === */}
           <div className="text-xs font-bold text-primary uppercase tracking-wider">ข้อมูลพื้นฐาน</div>
           <div className="grid grid-cols-2 gap-3">
@@ -580,8 +585,11 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
             <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
               value={form.note || ""} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="โน้ตเพิ่มเติม..." />
           </div>
+          <div className="pb-2" />
         </div>
-        <div className="flex gap-3 mt-2">
+
+        {/* --- Footer (fixed) --- */}
+        <div className="flex justify-end gap-3 p-6 pt-4 border-t border-border shrink-0">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all">Cancel</button>
           <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
         </div>
