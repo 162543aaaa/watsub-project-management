@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle } from "lucide-react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
-import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -10,6 +9,8 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { Task, Pillar } from "@/hooks/useProjects";
 import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
+import EditTaskModal from "@/components/EditTaskModal";
+import EditProjectModal from "@/components/EditProjectModal";
 
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const YEARS = [2025, 2026, 2027];
@@ -20,8 +21,6 @@ const PILLAR_CONFIG: Record<Pillar, { label: string; color: string; textColor: s
   JOINT: { label: "#JOINT", color: "#FF6B35", textColor: "#FFFFFF" },
 };
 const PILLARS: Pillar[] = ["VIBES", "SOUL", "JOINT"];
-
-const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "", category: "none" };
 
 function ProgressBar({ tasks }: { tasks: Task[] }) {
   const done = tasks.filter(t => t.status === "Done").length;
@@ -79,7 +78,6 @@ export default function Projects() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
-  const [taskForm, setTaskForm] = useState(emptyTask);
   const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string; link: string; pillar: Pillar } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -103,28 +101,26 @@ export default function Projects() {
     setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "", link: proj.link || "", pillar: proj.pillar });
   };
 
-  const handleEditProject = async () => {
-    if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    await updateProject(editModal.id, { name: editModal.name, month: editModal.month, note: editModal.note, link: editModal.link, pillar: editModal.pillar });
+  const handleEditProject = async (formData: { name: string; month: number; pillar: Pillar; link: string; note: string }) => {
+    if (!editModal) return;
+    await updateProject(editModal.id, formData);
     setEditModal(null);
   };
 
   const openAddTask = (projectId: string) => {
-    setTaskForm(emptyTask);
     setTaskModal({ projectId });
   };
 
   const openEditTask = (projectId: string, task: Task) => {
-    setTaskForm({ name: task.name, status: task.status, priority: task.priority, assigned_to: task.assigned_to || [], due_date: task.due_date || "", start_date: task.start_date || "", link: task.link || "", comments: task.comments || "", category: task.category || "none" });
     setTaskModal({ projectId, task });
   };
 
-  const handleSaveTask = async () => {
-    if (!taskModal || !taskForm.name.trim()) { toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" }); return; }
+  const handleSaveTask = async (formData: Partial<Task>) => {
+    if (!taskModal) return;
     if (taskModal.task) {
-      await updateTask(taskModal.task.id, taskForm);
+      await updateTask(taskModal.task.id, formData);
     } else {
-      await addTask({ ...taskForm, task_type: "project", project_id: taskModal.projectId });
+      await addTask({ ...formData, task_type: "project", project_id: taskModal.projectId });
     }
     setTaskModal(null);
   };
@@ -305,130 +301,20 @@ export default function Projects() {
         </div>
       )}
 
-      {/* Edit Project Modal */}
-      {editModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold">Edit Project</h3>
-              <button onClick={() => setEditModal(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Project Name</label>
-                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                  value={editModal.name} onChange={e => setEditModal({ ...editModal, name: e.target.value })} autoFocus />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={editModal.month} onChange={e => setEditModal({ ...editModal, month: Number(e.target.value) })}>
-                  {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Pillar <span className="text-destructive">*</span></label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={editModal.pillar} onChange={e => setEditModal({ ...editModal, pillar: e.target.value as Pillar })}>
-                  {PILLARS.map(p => <option key={p} value={p}>{PILLAR_CONFIG[p].label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
-                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none transition-all"
-                  value={editModal.link} onChange={e => setEditModal({ ...editModal, link: e.target.value })} placeholder="https://..." />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Note</label>
-                <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
-                  value={editModal.note} onChange={e => setEditModal({ ...editModal, note: e.target.value })} />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setEditModal(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
-              <button onClick={handleEditProject} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditProjectModal
+        isOpen={!!editModal}
+        project={editModal}
+        onClose={() => setEditModal(null)}
+        onSave={handleEditProject}
+      />
 
-      {/* Task Modal */}
-      {taskModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg animate-scale-in overflow-y-auto max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold">{taskModal.task ? "Edit Task" : "Add Task"}</h3>
-              <button onClick={() => setTaskModal(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Task Name</label>
-                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                  value={taskForm.name} onChange={e => setTaskForm({ ...taskForm, name: e.target.value })} placeholder="Task name..." autoFocus />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Status</label>
-                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value as Task["status"] })}>
-                    <option>To Do</option><option>In Progress</option><option>Done</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Priority</label>
-                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value as Task["priority"] })}>
-                    <option>High</option><option>Medium</option><option>Low</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Category</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={taskForm.category || "none"} onChange={e => setTaskForm({ ...taskForm, category: e.target.value })}>
-                  <option value="none">— ไม่ระบุ —</option>
-                  <option value="meeting">🗓 Meetings</option>
-                  <option value="onsite">📍 On-site Work</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Assigned To</label>
-                <MultiSelectAssignee
-                  selected={taskForm.assigned_to}
-                  onChange={val => setTaskForm({ ...taskForm, assigned_to: val })}
-                  employees={employees}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Start Date</label>
-                  <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={taskForm.start_date} onChange={e => setTaskForm({ ...taskForm, start_date: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Due Date</label>
-                  <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={taskForm.due_date} onChange={e => setTaskForm({ ...taskForm, due_date: e.target.value })} />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Link</label>
-                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={taskForm.link} onChange={e => setTaskForm({ ...taskForm, link: e.target.value })} placeholder="https://..." />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Note</label>
-                <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
-                  value={taskForm.comments} onChange={e => setTaskForm({ ...taskForm, comments: e.target.value })} placeholder="Optional note..." />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setTaskModal(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
-              <button onClick={handleSaveTask} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {taskModal.task ? "Save" : "Add Task"}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditTaskModal
+        isOpen={!!taskModal}
+        task={taskModal?.task ?? null}
+        employees={employees}
+        onClose={() => setTaskModal(null)}
+        onSave={handleSaveTask}
+      />
 
       {/* Projects by month */}
       <div className="space-y-8">
