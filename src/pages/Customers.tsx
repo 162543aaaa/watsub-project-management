@@ -94,8 +94,8 @@ export default function Customers() {
 
   const handleAddCustomer = async () => {
     if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month });
-    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1 });
+    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month, contact_name: form.contact_name, contact_info: form.contact_info, feedback_channel: form.feedback_channel, job_description: form.job_description, responsible_person: form.responsible_person, start_date: form.start_date, deadline: form.deadline });
+    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [], start_date: "", deadline: "" });
     setShowAdd(false);
   };
 
