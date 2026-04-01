@@ -32,7 +32,7 @@ const getReviewType = (e: { reviewer_type?: string | null; type?: string | null 
 
 async function computeAutoValues(empId: string, periodId: string): Promise<AutoValues> {
   const fetchTasks = async () => {
-    const withPeriod = await supabase
+    const withPeriod = await (supabase as any)
       .from("tasks")
       .select("status,due_date,comments,customer_id")
       .contains("assigned_to", [empId])
@@ -46,13 +46,13 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 
   const fetchProjects = async () => {
-    const withPeriod = await supabase
+    const withPeriod = await (supabase as any)
       .from("projects")
       .select("id,status")
       .contains("member_ids", [empId])
       .eq("period_id", periodId);
     if (!withPeriod.error) return withPeriod.data ?? [];
-    const fallback = await supabase
+    const fallback = await (supabase as any)
       .from("projects")
       .select("id,status")
       .contains("member_ids", [empId]);
