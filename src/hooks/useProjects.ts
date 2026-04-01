@@ -54,6 +54,7 @@ export function useProjects() {
 
     const projects = (projData || []).map(p => ({
       ...p,
+      pillar: p.pillar as Pillar,
       tasks: (taskData || []).filter(t => t.project_id === p.id) as Task[],
     }));
     setProjects(projects);
@@ -65,7 +66,7 @@ export function useProjects() {
   const addProject = async (proj: { name: string; month: number; note?: string; link?: string; pillar: Pillar }) => {
     const { data, error } = await supabase.from("projects").insert(proj).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
-    setProjects(prev => [...prev, { ...data, tasks: [] }]);
+    setProjects(prev => [...prev, { ...data, pillar: data.pillar as Pillar, tasks: [] }]);
     toast({ title: "สร้างโปรเจกต์สำเร็จ!" });
     return data;
   };
@@ -73,7 +74,7 @@ export function useProjects() {
   const updateProject = async (id: string, updates: Partial<Omit<Project, "id" | "created_at" | "tasks">>) => {
     const { data, error } = await supabase.from("projects").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data } : p));
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data, pillar: (data.pillar as Pillar) } : p));
     toast({ title: "อัปเดตโปรเจกต์สำเร็จ!" });
   };
 

@@ -560,7 +560,7 @@ export async function loadKpiFormConfig(
 
   if (!dbRole) return fallback;
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("kpi_question_templates")
     .select("section_id, section_title, section_weight, question_text, question_type, auto_source, order_index")
     .eq("role", dbRole)
