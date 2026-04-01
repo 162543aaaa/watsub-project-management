@@ -144,6 +144,21 @@ export default function Dashboard() {
     setEditForm({});
   };
 
+  const enterEditModeFor = (task: Task) => {
+    setSelectedTask(task);
+    setEditForm({
+      name: task.name,
+      status: task.status,
+      priority: task.priority,
+      assigned_to: [...(task.assigned_to ?? [])],
+      start_date: task.start_date ?? "",
+      due_date: task.due_date ?? "",
+      link: task.link ?? "",
+      comments: task.comments ?? "",
+    });
+    setIsEditMode(true);
+  };
+
   const enterEditMode = () => {
     if (!selectedTask) return;
     setEditForm({
