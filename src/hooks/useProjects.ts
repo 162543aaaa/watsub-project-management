@@ -74,7 +74,7 @@ export function useProjects() {
   const updateProject = async (id: string, updates: Partial<Omit<Project, "id" | "created_at" | "tasks">>) => {
     const { data, error } = await supabase.from("projects").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data } : p));
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data, pillar: (data.pillar as Pillar) } : p));
     toast({ title: "อัปเดตโปรเจกต์สำเร็จ!" });
   };
 
