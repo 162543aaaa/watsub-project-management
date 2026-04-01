@@ -60,7 +60,7 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 
   const fetchCustomers = async () => {
-    const withPeriod = await supabase
+    const withPeriod = await (supabase as any)
       .from("customers")
       .select("id,payment_fee")
       .eq("period_id", periodId);
@@ -70,7 +70,7 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 
   const fetchGoals = async () => {
-    const withPeriod = await supabase
+    const withPeriod = await (supabase as any)
       .from("goals")
       .select("target_value,assigned_to")
       .eq("period_id", periodId);
