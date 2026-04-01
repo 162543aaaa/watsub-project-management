@@ -297,21 +297,30 @@ export default function Dashboard() {
                     ) : (
                       filteredTasks.map(task => {
                         const cfg = STATUS_CONFIG[task.status];
-                        const isOverdue = task.status !== "Done" && task.due_date && new Date(task.due_date) < today;
+                        const dueDateObj = task.due_date ? new Date(task.due_date) : null;
+                        let deadlineBadge: React.ReactNode = null;
+                        if (dueDateObj && task.status !== "Done") {
+                          const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+                          const dueMs = new Date(dueDateObj.getFullYear(), dueDateObj.getMonth(), dueDateObj.getDate()).getTime();
+                          const diffDays = Math.floor((dueMs - todayMs) / (1000 * 60 * 60 * 24));
+                          if (diffDays < 0) {
+                            deadlineBadge = <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 animate-pulse" style={{ background: "hsl(0 84% 60% / 0.12)", color: "hsl(0 84% 50%)" }}>เกิน {Math.abs(diffDays)} วัน</span>;
+                          } else if (diffDays <= 5) {
+                            deadlineBadge = <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ background: "hsl(38 92% 50% / 0.12)", color: "hsl(38 92% 40%)" }}>อีก {diffDays} วัน</span>;
+                          } else {
+                            deadlineBadge = <span className="text-[10px] text-muted-foreground flex-shrink-0 hidden sm:block">{dueDateObj.toLocaleDateString("th-TH", { day: "numeric", month: "short" })}</span>;
+                          }
+                        }
                         return (
                           <div
                             key={task.id}
                             className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/60 cursor-pointer group transition-colors"
-                            onClick={() => openTaskDetail(task)}
+                            onClick={() => { enterEditModeFor(task); }}
                           >
                             <span className="text-[11px] flex-shrink-0" style={{ color: cfg.color }}>{cfg.icon}</span>
                             <span className="text-xs text-foreground flex-1 truncate group-hover:text-primary transition-colors">{task.name}</span>
-                            {isOverdue && <span className="text-[10px] text-red-400 flex-shrink-0">เกินกำหนด</span>}
-                            {task.due_date && !isOverdue && (
-                              <span className="text-[10px] text-muted-foreground flex-shrink-0 hidden sm:block">
-                                {new Date(task.due_date).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
-                              </span>
-                            )}
+                            <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"} style={{ fontSize: "9px", padding: "1px 6px" }}>{task.status}</span>
+                            {deadlineBadge}
                           </div>
                         );
                       })
