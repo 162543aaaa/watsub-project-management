@@ -16,42 +16,63 @@ export type Database = {
     Tables: {
       customers: {
         Row: {
+          contact_info: string | null
+          contact_name: string | null
           created_at: string
+          deadline: string | null
           detail: string | null
+          feedback_channel: string | null
           id: string
+          job_description: string | null
           link: string | null
           month: number
           name: string
           note: string | null
           payment_fee: string | null
           project_title: string | null
+          responsible_person: string[] | null
           sort_order: number | null
+          start_date: string | null
           updated_at: string
         }
         Insert: {
+          contact_info?: string | null
+          contact_name?: string | null
           created_at?: string
+          deadline?: string | null
           detail?: string | null
+          feedback_channel?: string | null
           id?: string
+          job_description?: string | null
           link?: string | null
           month?: number
           name: string
           note?: string | null
           payment_fee?: string | null
           project_title?: string | null
+          responsible_person?: string[] | null
           sort_order?: number | null
+          start_date?: string | null
           updated_at?: string
         }
         Update: {
+          contact_info?: string | null
+          contact_name?: string | null
           created_at?: string
+          deadline?: string | null
           detail?: string | null
+          feedback_channel?: string | null
           id?: string
+          job_description?: string | null
           link?: string | null
           month?: number
           name?: string
           note?: string | null
           payment_fee?: string | null
           project_title?: string | null
+          responsible_person?: string[] | null
           sort_order?: number | null
+          start_date?: string | null
           updated_at?: string
         }
         Relationships: []
