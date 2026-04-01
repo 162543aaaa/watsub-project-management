@@ -54,6 +54,7 @@ export function useProjects() {
 
     const projects = (projData || []).map(p => ({
       ...p,
+      pillar: p.pillar as Pillar,
       tasks: (taskData || []).filter(t => t.project_id === p.id) as Task[],
     }));
     setProjects(projects);
