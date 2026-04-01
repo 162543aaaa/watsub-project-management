@@ -88,21 +88,10 @@ export interface Notification {
 
 // ========= MOCK DATA =========
 
- codex/refactor-kpi-questions-and-evaluations-nq11eu
 export const employees: Employee[] = TEAM_ROSTER.map((member, idx) => ({
   id: `emp${idx + 1}`,
   ...member,
 }));
-=======
-export const employees: Employee[] = [
-  { id: "emp1", name: "TARMISI WANI", position: "Founding Director", email: "tamisiwani@gmail.com", role: "director" },
-  { id: "emp2", name: "สุไมยนา หวังเบ็ญหมัด", position: "Content Strategist & Client Coordinator", email: "dudhjjui@gmail.com", role: "employee" },
-  { id: "emp3", name: "ฮาฟีซ ดอเลาะ", position: "Videographer & Graphic Designer", email: "fisdoloh00@gmail.com", role: "employee" },
-  { id: "emp4", name: "Faheem Yusoh", position: "Production Assistant", email: "faheem.yusoh@watsub.local", role: "employee" },
-  { id: "emp5", name: "zuhariya yato", position: "Content Assistant", email: "zuhariya.yato@watsub.local", role: "employee" },
-  { id: "emp6", name: "Natdia Benyakat", position: "Content Coordinator", email: "natdia.benyakat@watsub.local", role: "employee" },
-];
- main
 
 export const projects: Project[] = [
   {
