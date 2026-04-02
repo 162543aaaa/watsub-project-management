@@ -444,7 +444,6 @@ function OnsiteFormModal({ item, employees, onSave, onAdd, onClose }: {
     onClose();
   };
 
-  return (
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overscroll-contain" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
