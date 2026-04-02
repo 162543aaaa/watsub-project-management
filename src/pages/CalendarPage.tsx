@@ -321,12 +321,15 @@ function HolidayFormModal({ onClose, onSubmit, initial }: {
 }
 
 /* ── Meeting Add/Edit Modal ── */
-function MeetingFormModal({ item, employees, onSave, onAdd, onClose }: {
+function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd, onClose, onCreateLinkedTask }: {
   item?: CalendarItem | null;
   employees: { name: string; avatar?: string }[];
+  projects?: { id: string; name: string }[];
+  customers?: { id: string; name: string }[];
   onSave?: (id: string, updates: Record<string, any>) => void;
   onAdd?: (data: Record<string, any>) => void;
   onClose: () => void;
+  onCreateLinkedTask?: (task: Record<string, any>) => void;
 }) {
   const isEdit = !!item;
   const [form, setForm] = useState({
@@ -338,6 +341,8 @@ function MeetingFormModal({ item, employees, onSave, onAdd, onClose }: {
     note: item?.note || "",
     participants: item?.participants || [],
   });
+  const [linkType, setLinkType] = useState<"none" | "project" | "customer">("none");
+  const [linkId, setLinkId] = useState("");
 
   const save = () => {
     if (!form.title.trim()) { toast({ title: "กรุณากรอกหัวข้อการประชุม", variant: "destructive" }); return; }
@@ -347,12 +352,30 @@ function MeetingFormModal({ item, employees, onSave, onAdd, onClose }: {
     } else if (onAdd) {
       onAdd(form);
     }
+    // Create linked task if selected
+    if (linkType !== "none" && linkId && onCreateLinkedTask) {
+      onCreateLinkedTask({
+        name: form.title,
+        status: "To Do",
+        priority: "Medium",
+        assigned_to: form.participants,
+        due_date: form.meeting_date,
+        start_date: form.meeting_date,
+        comments: form.note || "",
+        link: "",
+        category: "meeting",
+        task_type: linkType === "project" ? "project" : "customer",
+        project_id: linkType === "project" ? linkId : null,
+        customer_id: linkType === "customer" ? linkId : null,
+        sort_order: 0,
+      });
+    }
     onClose();
   };
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overscroll-contain" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
           <h3 className="text-lg font-bold">{isEdit ? "Edit Meeting" : "เพิ่ม Meeting"}</h3>
@@ -401,6 +424,36 @@ function MeetingFormModal({ item, employees, onSave, onAdd, onClose }: {
               <textarea rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
                 value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Meeting agenda or notes..." />
             </div>
+
+            {/* Link to Project/Customer */}
+            {!isEdit && (
+              <div className="border-t border-border pt-4 space-y-3">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">เชื่อมโยงกับ Project / Customer</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={linkType} onChange={e => { setLinkType(e.target.value as any); setLinkId(""); }}>
+                  <option value="none">— ไม่เชื่อมโยง —</option>
+                  <option value="project">🚀 Project</option>
+                  <option value="customer">💼 Customer</option>
+                </select>
+                {linkType === "project" && projects && projects.length > 0 && (
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                    value={linkId} onChange={e => setLinkId(e.target.value)}>
+                    <option value="">— เลือก Project —</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                )}
+                {linkType === "customer" && customers && customers.length > 0 && (
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                    value={linkId} onChange={e => setLinkId(e.target.value)}>
+                    <option value="">— เลือก Customer —</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                )}
+                {linkType !== "none" && linkId && (
+                  <p className="text-xs text-muted-foreground">💡 จะสร้าง Task หมวด Meeting ในหน้า {linkType === "project" ? "Projects" : "Customers"} ด้วย</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
         {/* Fixed Footer */}
@@ -417,12 +470,15 @@ function MeetingFormModal({ item, employees, onSave, onAdd, onClose }: {
 }
 
 /* ── On-site Add/Edit Modal ── */
-function OnsiteFormModal({ item, employees, onSave, onAdd, onClose }: {
+function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, onClose, onCreateLinkedTask }: {
   item?: CalendarItem | null;
   employees: { name: string; avatar?: string }[];
+  projects?: { id: string; name: string }[];
+  customers?: { id: string; name: string }[];
   onSave?: (id: string, updates: Record<string, any>) => void;
   onAdd?: (data: Record<string, any>) => void;
   onClose: () => void;
+  onCreateLinkedTask?: (task: Record<string, any>) => void;
 }) {
   const isEdit = !!item;
   const [form, setForm] = useState({
@@ -432,6 +488,8 @@ function OnsiteFormModal({ item, employees, onSave, onAdd, onClose }: {
     note: item?.note || "",
     participants: item?.participants || [],
   });
+  const [linkType, setLinkType] = useState<"none" | "project" | "customer">("none");
+  const [linkId, setLinkId] = useState("");
 
   const save = () => {
     if (!form.title.trim()) { toast({ title: "กรุณากรอกหัวข้อ On-site", variant: "destructive" }); return; }
@@ -441,12 +499,30 @@ function OnsiteFormModal({ item, employees, onSave, onAdd, onClose }: {
     } else if (onAdd) {
       onAdd(form);
     }
+    // Create linked task if selected
+    if (linkType !== "none" && linkId && onCreateLinkedTask) {
+      onCreateLinkedTask({
+        name: form.title,
+        status: "To Do",
+        priority: "Medium",
+        assigned_to: form.participants,
+        due_date: form.work_date,
+        start_date: form.work_date,
+        comments: form.note || "",
+        link: "",
+        category: "onsite",
+        task_type: linkType === "project" ? "project" : "customer",
+        project_id: linkType === "project" ? linkId : null,
+        customer_id: linkType === "customer" ? linkId : null,
+        sort_order: 0,
+      });
+    }
     onClose();
   };
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overscroll-contain" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
           <h3 className="text-lg font-bold">{isEdit ? "Edit On-site Work" : "เพิ่ม On-site Work"}</h3>
@@ -483,6 +559,36 @@ function OnsiteFormModal({ item, employees, onSave, onAdd, onClose }: {
               <textarea rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
                 value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Work details or notes..." />
             </div>
+
+            {/* Link to Project/Customer */}
+            {!isEdit && (
+              <div className="border-t border-border pt-4 space-y-3">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">เชื่อมโยงกับ Project / Customer</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={linkType} onChange={e => { setLinkType(e.target.value as any); setLinkId(""); }}>
+                  <option value="none">— ไม่เชื่อมโยง —</option>
+                  <option value="project">🚀 Project</option>
+                  <option value="customer">💼 Customer</option>
+                </select>
+                {linkType === "project" && projects && projects.length > 0 && (
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                    value={linkId} onChange={e => setLinkId(e.target.value)}>
+                    <option value="">— เลือก Project —</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                )}
+                {linkType === "customer" && customers && customers.length > 0 && (
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                    value={linkId} onChange={e => setLinkId(e.target.value)}>
+                    <option value="">— เลือก Customer —</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                )}
+                {linkType !== "none" && linkId && (
+                  <p className="text-xs text-muted-foreground">💡 จะสร้าง Task หมวด On-site ในหน้า {linkType === "project" ? "Projects" : "Customers"} ด้วย</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
         {/* Fixed Footer */}
@@ -532,14 +638,16 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 pb-0">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overscroll-contain" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+        {/* Fixed Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
           <h3 className="text-lg font-bold">Edit Task</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
         </div>
-        <div className="overflow-y-auto flex-1 p-6 pt-5 scrollbar-hide">
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto flex-1 p-6 overscroll-contain">
           <div className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
@@ -603,14 +711,16 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
             </div>
           </div>
         </div>
-        <div className="sticky bottom-0 flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        {/* Fixed Footer */}
+        <div className="flex gap-3 p-6 border-t border-border shrink-0">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
             <Save className="w-4 h-4" /> Save Task
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -632,8 +742,8 @@ export default function CalendarPage() {
   const [editingOnsite, setEditingOnsite] = useState<CalendarItem | null>(null);
 
   const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
-  const { projects, updateTask: updateProjectTask } = useProjects();
-  const { customers, updateTask: updateCustomerTask } = useCustomers();
+  const { projects, updateTask: updateProjectTask, addTask: addProjectTask } = useProjects();
+  const { customers, updateTask: updateCustomerTask, addTask: addCustomerTask } = useCustomers();
   const { meetings, addMeeting, updateMeeting } = useMeetings();
   const { onsiteWork, addOnsiteWork, updateOnsiteWork } = useOnsiteWork();
   const { holidays, addHoliday, updateHoliday, deleteHoliday } = useHolidays();
@@ -811,6 +921,29 @@ export default function CalendarPage() {
     toast({ title: "บันทึก On-site สำเร็จ!" });
   };
 
+  const handleCreateLinkedTask = async (taskData: Record<string, any>) => {
+    const payload = {
+      name: taskData.name || "",
+      status: taskData.status || "To Do",
+      priority: taskData.priority || "Medium",
+      assigned_to: taskData.assigned_to || [],
+      due_date: taskData.due_date || null,
+      start_date: taskData.start_date || null,
+      comments: taskData.comments || "",
+      link: taskData.link || "",
+      category: taskData.category || "none",
+      task_type: taskData.task_type || "standalone",
+      project_id: taskData.project_id || null,
+      customer_id: taskData.customer_id || null,
+      sort_order: taskData.sort_order || 0,
+    } as Omit<import("@/hooks/useProjects").Task, "id" | "created_at">;
+    if (taskData.task_type === "project" && taskData.project_id) {
+      await addProjectTask(payload);
+    } else if (taskData.task_type === "customer" && taskData.customer_id) {
+      await addCustomerTask(payload);
+    }
+  };
+
   const handleTaskDoubleClick = (item: CalendarItem) => {
     if (item.type === "meeting") {
       // Actual meeting from meetings table
@@ -974,15 +1107,21 @@ export default function CalendarPage() {
       {showAddMeeting && (
         <MeetingFormModal
           employees={employees}
+          projects={projects.map(p => ({ id: p.id, name: p.name }))}
+          customers={customers.map(c => ({ id: c.id, name: c.name }))}
           onAdd={async (data) => { await addMeeting(data as any); }}
           onClose={() => setShowAddMeeting(false)}
+          onCreateLinkedTask={handleCreateLinkedTask}
         />
       )}
       {showAddOnsite && (
         <OnsiteFormModal
           employees={employees}
+          projects={projects.map(p => ({ id: p.id, name: p.name }))}
+          customers={customers.map(c => ({ id: c.id, name: c.name }))}
           onAdd={async (data) => { await addOnsiteWork(data as any); }}
           onClose={() => setShowAddOnsite(false)}
+          onCreateLinkedTask={handleCreateLinkedTask}
         />
       )}
       {showAddHoliday && <HolidayFormModal onClose={() => setShowAddHoliday(false)} onSubmit={addHoliday} />}
