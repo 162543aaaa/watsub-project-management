@@ -921,6 +921,29 @@ export default function CalendarPage() {
     toast({ title: "บันทึก On-site สำเร็จ!" });
   };
 
+  const handleCreateLinkedTask = async (taskData: Record<string, any>) => {
+    const payload = {
+      name: taskData.name || "",
+      status: taskData.status || "To Do",
+      priority: taskData.priority || "Medium",
+      assigned_to: taskData.assigned_to || [],
+      due_date: taskData.due_date || null,
+      start_date: taskData.start_date || null,
+      comments: taskData.comments || "",
+      link: taskData.link || "",
+      category: taskData.category || "none",
+      task_type: taskData.task_type || "standalone",
+      project_id: taskData.project_id || null,
+      customer_id: taskData.customer_id || null,
+      sort_order: taskData.sort_order || 0,
+    } as Omit<import("@/hooks/useProjects").Task, "id" | "created_at">;
+    if (taskData.task_type === "project" && taskData.project_id) {
+      await addProjectTask(payload);
+    } else if (taskData.task_type === "customer" && taskData.customer_id) {
+      await addCustomerTask(payload);
+    }
+  };
+
   const handleTaskDoubleClick = (item: CalendarItem) => {
     if (item.type === "meeting") {
       // Actual meeting from meetings table
