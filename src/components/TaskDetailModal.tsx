@@ -26,8 +26,10 @@ export default function TaskDetailModal({ isOpen, onClose, task, employees, onSa
   if (task !== prevTask) {
     setPrevTask(task);
     setForm(task ? {
+      name: task.name,
       status: task.status,
       priority: task.priority,
+      category: task.category ?? "none",
       assigned_to: [...(task.assigned_to ?? [])],
       start_date: task.start_date ?? "",
       due_date: task.due_date ?? "",
@@ -73,6 +75,17 @@ export default function TaskDetailModal({ isOpen, onClose, task, employees, onSa
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 px-6 pb-2 pt-5">
           <div className="space-y-4">
+            {/* Task Name */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
+              <input
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                value={form.name ?? task?.name ?? ""}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                autoFocus
+              />
+            </div>
+
             {/* Status & Priority */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -99,6 +112,20 @@ export default function TaskDetailModal({ isOpen, onClose, task, employees, onSa
                   <option>Low</option>
                 </select>
               </div>
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
+              <select
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={form.category ?? task?.category ?? "none"}
+                onChange={e => setForm({ ...form, category: e.target.value })}
+              >
+                <option value="none">— ไม่ระบุ —</option>
+                <option value="meeting">🗓 Meetings</option>
+                <option value="onsite">📍 On-site Work</option>
+              </select>
             </div>
 
             {/* Assigned To */}
