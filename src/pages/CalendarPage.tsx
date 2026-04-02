@@ -742,8 +742,8 @@ export default function CalendarPage() {
   const [editingOnsite, setEditingOnsite] = useState<CalendarItem | null>(null);
 
   const { tasks: standaloneTasks, updateTask: updateStandaloneTask } = useTasks();
-  const { projects, updateTask: updateProjectTask } = useProjects();
-  const { customers, updateTask: updateCustomerTask } = useCustomers();
+  const { projects, updateTask: updateProjectTask, addTask: addProjectTask } = useProjects();
+  const { customers, updateTask: updateCustomerTask, addTask: addCustomerTask } = useCustomers();
   const { meetings, addMeeting, updateMeeting } = useMeetings();
   const { onsiteWork, addOnsiteWork, updateOnsiteWork } = useOnsiteWork();
   const { holidays, addHoliday, updateHoliday, deleteHoliday } = useHolidays();
