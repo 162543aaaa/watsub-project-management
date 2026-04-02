@@ -1,7 +1,7 @@
 import { useState, useMemo, forwardRef, useCallback, useRef, useEffect } from "react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
-import { Plus, Pencil, Trash2, X, Save, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle, Layers } from "lucide-react";
-import MultiSelectAssignee from "@/components/MultiSelectAssignee";
+import { Plus, Pencil, Trash2, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle, Layers } from "lucide-react";
+import EditTaskModal from "@/components/EditTaskModal";
 import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
@@ -80,111 +80,6 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
   return badges.length > 0 ? <div className="flex items-center gap-1.5 mt-1">{badges}</div> : null;
 }
 
-function TaskModal({ task, employees, onSave, onClose }: {
-  task: Partial<Task> | null;
-  employees: { name: string; avatar?: string }[];
-  onSave: (t: Partial<Task>) => void;
-  onClose: () => void;
-}) {
-  const [form, setForm] = useState<Partial<Task>>(task || {
-    name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", comments: "", category: "none"
-  });
-
-  const save = () => {
-    if (!form.name?.trim()) { toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" }); return; }
-    onSave(form);
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-0">
-          <h3 className="text-lg font-bold">{form.id ? "Edit Task" : "New Task"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
-        </div>
-        {/* Scrollable content */}
-        <div className="overflow-y-auto flex-1 p-6 pt-5">
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Enter task name..." autoFocus />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Status</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={form.status} onChange={e => setForm({ ...form, status: e.target.value as TaskStatus })}>
-                  {COLUMNS.map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Priority</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value as TaskPriority })}>
-                  <option>High</option><option>Medium</option><option>Low</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={form.category || "none"} onChange={e => setForm({ ...form, category: e.target.value })}>
-                <option value="none">— ไม่ระบุ —</option>
-                <option value="meeting">🗓 Meetings</option>
-                <option value="onsite">📍 On-site Work</option>
-              </select>
-            </div>
-
-            {/* Multi-select Assigned To */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
-                Assigned To
-              </label>
-              <MultiSelectAssignee
-                selected={form.assigned_to || []}
-                onChange={val => setForm({ ...form, assigned_to: val })}
-                employees={employees}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start Date</label>
-                <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={form.start_date || ""} onChange={e => setForm({ ...form, start_date: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due Date</label>
-                <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={form.due_date || ""} onChange={e => setForm({ ...form, due_date: e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={form.link || ""} onChange={e => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
-              <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
-                value={form.comments || ""} onChange={e => setForm({ ...form, comments: e.target.value })} placeholder="Additional notes..." />
-            </div>
-          </div>
-        </div>
-        {/* Sticky footer buttons */}
-        <div className="flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-          <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
-            <Save className="w-4 h-4" /> Save Task
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Sortable card wrapper
 function SortableCard({ id, children }: { id: string; children: React.ReactNode }) {
@@ -631,14 +526,13 @@ export default function Tasks() {
         </DragOverlay>
       </DndContext>
 
-      {modal.open && (
-        <TaskModal
-          task={modal.task}
-          employees={employees}
-          onSave={handleSave}
-          onClose={() => setModal({ open: false, task: null })}
-        />
-      )}
+      <EditTaskModal
+        isOpen={modal.open}
+        task={modal.task}
+        employees={employees}
+        onSave={handleSave}
+        onClose={() => setModal({ open: false, task: null })}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
+import EditTaskModal from "@/components/EditTaskModal";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -60,8 +61,6 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
   return badges.length > 0 ? <div className="flex items-center gap-1 flex-wrap">{badges}</div> : null;
 }
 
-const emptyTask = { name: "", status: "To Do" as Task["status"], priority: "Medium" as Task["priority"], assigned_to: [] as string[], due_date: "", start_date: "", link: "", comments: "", category: "none" };
-
 
 export default function Customers() {
   const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer } = useCustomers();
@@ -72,7 +71,6 @@ export default function Customers() {
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ customerId: string; task?: Task } | null>(null);
-  const [taskForm, setTaskForm] = useState(emptyTask);
   const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; link: string; month: number; contact_name: string; contact_info: string; feedback_channel: string; job_description: string; responsible_person: string[]; start_date: string; deadline: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -110,21 +108,19 @@ export default function Customers() {
   };
 
   const openAddTask = (customerId: string) => {
-    setTaskForm(emptyTask);
     setTaskModal({ customerId });
   };
 
   const openEditTask = (customerId: string, task: Task) => {
-    setTaskForm({ name: task.name, status: task.status, priority: task.priority, assigned_to: task.assigned_to || [], due_date: task.due_date || "", start_date: task.start_date || "", link: task.link || "", comments: task.comments || "", category: task.category || "none" });
     setTaskModal({ customerId, task });
   };
 
-  const handleSaveTask = async () => {
-    if (!taskModal || !taskForm.name.trim()) { toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" }); return; }
+  const handleSaveTask = async (formData: Partial<Task>) => {
+    if (!taskModal) return;
     if (taskModal.task) {
-      await updateTask(taskModal.task.id, taskForm);
+      await updateTask(taskModal.task.id, formData);
     } else {
-      await addTask({ ...taskForm, task_type: "customer", customer_id: taskModal.customerId });
+      await addTask({ ...formData, task_type: "customer", customer_id: taskModal.customerId });
     }
     setTaskModal(null);
   };
@@ -277,17 +273,13 @@ export default function Customers() {
         />
       )}
 
-      {/* Task Modal */}
-      {taskModal && (
-        <TaskModal
-          task={taskModal.task}
-          taskForm={taskForm}
-          setTaskForm={setTaskForm}
-          employees={employees}
-          onSave={handleSaveTask}
-          onClose={() => setTaskModal(null)}
-        />
-      )}
+      <EditTaskModal
+        isOpen={!!taskModal}
+        task={taskModal?.task ?? null}
+        employees={employees}
+        onSave={handleSaveTask}
+        onClose={() => setTaskModal(null)}
+      />
 
       {/* Customer Cards */}
       <div className="space-y-8">
@@ -598,88 +590,3 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
   );
 }
 
-function TaskModal({ task, taskForm, setTaskForm, employees, onSave, onClose }: {
-  task?: Task;
-  taskForm: any;
-  setTaskForm: (f: any) => void;
-  employees: { name: string; avatar?: string }[];
-  onSave: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{task ? "Edit Task" : "Add Task"}</DialogTitle>
-          <DialogDescription className="sr-only">กรอกข้อมูลงาน</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Task Name</label>
-            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-              value={taskForm.name} onChange={e => setTaskForm({ ...taskForm, name: e.target.value })} placeholder="Task name..." autoFocus />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Status</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value })}>
-                <option>To Do</option><option>In Progress</option><option>Done</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Priority</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}>
-                <option>High</option><option>Medium</option><option>Low</option>
-              </select>
-            </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Category</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={taskForm.category || "none"} onChange={e => setTaskForm({ ...taskForm, category: e.target.value })}>
-                <option value="none">— ไม่ระบุ —</option>
-                <option value="meeting">🗓 Meetings</option>
-                <option value="onsite">📍 On-site Work</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Assigned To</label>
-            <MultiSelectAssignee
-              selected={taskForm.assigned_to}
-              onChange={val => setTaskForm({ ...taskForm, assigned_to: val })}
-              employees={employees}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Start Date</label>
-              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={taskForm.start_date} onChange={e => setTaskForm({ ...taskForm, start_date: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Due Date</label>
-              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={taskForm.due_date} onChange={e => setTaskForm({ ...taskForm, due_date: e.target.value })} />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Link</label>
-            <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-              value={taskForm.link} onChange={e => setTaskForm({ ...taskForm, link: e.target.value })} placeholder="https://..." />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Note</label>
-            <textarea rows={2} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
-              value={taskForm.comments} onChange={e => setTaskForm({ ...taskForm, comments: e.target.value })} placeholder="Optional note..." />
-          </div>
-        </div>
-        <div className="flex gap-3 mt-2">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all">Cancel</button>
-          <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {task ? "Save" : "Add Task"}</button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
