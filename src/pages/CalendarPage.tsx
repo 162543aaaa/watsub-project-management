@@ -1107,15 +1107,21 @@ export default function CalendarPage() {
       {showAddMeeting && (
         <MeetingFormModal
           employees={employees}
+          projects={projects.map(p => ({ id: p.id, name: p.name }))}
+          customers={customers.map(c => ({ id: c.id, name: c.name }))}
           onAdd={async (data) => { await addMeeting(data as any); }}
           onClose={() => setShowAddMeeting(false)}
+          onCreateLinkedTask={handleCreateLinkedTask}
         />
       )}
       {showAddOnsite && (
         <OnsiteFormModal
           employees={employees}
+          projects={projects.map(p => ({ id: p.id, name: p.name }))}
+          customers={customers.map(c => ({ id: c.id, name: c.name }))}
           onAdd={async (data) => { await addOnsiteWork(data as any); }}
           onClose={() => setShowAddOnsite(false)}
+          onCreateLinkedTask={handleCreateLinkedTask}
         />
       )}
       {showAddHoliday && <HolidayFormModal onClose={() => setShowAddHoliday(false)} onSubmit={addHoliday} />}
