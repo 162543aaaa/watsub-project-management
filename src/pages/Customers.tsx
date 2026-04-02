@@ -120,7 +120,7 @@ export default function Customers() {
     if (taskModal.task) {
       await updateTask(taskModal.task.id, formData);
     } else {
-      await addTask({ ...formData, task_type: "customer", customer_id: taskModal.customerId });
+      await addTask({ ...formData, name: formData.name || "", task_type: "customer", customer_id: taskModal.customerId } as Omit<Task, "created_at" | "id">);
     }
     setTaskModal(null);
   };

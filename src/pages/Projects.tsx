@@ -120,7 +120,7 @@ export default function Projects() {
     if (taskModal.task) {
       await updateTask(taskModal.task.id, formData);
     } else {
-      await addTask({ ...formData, task_type: "project", project_id: taskModal.projectId });
+      await addTask({ ...formData, name: formData.name || "", task_type: "project", project_id: taskModal.projectId } as Omit<Task, "created_at" | "id">);
     }
     setTaskModal(null);
   };
