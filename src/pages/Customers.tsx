@@ -309,7 +309,9 @@ export default function Customers() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {orderedCusts.map(cust => (
                       <SortableCustCard key={cust.id} id={cust.id}>
-                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group h-full cursor-pointer" onDoubleClick={() => openEditCustomer(cust)}>
+                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group h-full cursor-pointer"
+                          onClick={() => setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] }))}
+                          onDoubleClick={() => openEditCustomer(cust)}>
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -357,11 +359,10 @@ export default function Customers() {
                           </div>
                           {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
                           <div className="flex items-center gap-3 mt-3">
-                             <button onClick={(e) => { e.stopPropagation(); setExpanded(prev => ({ ...prev, [cust.id]: !prev[cust.id] })); }}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all hover:scale-105">
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               {expanded[cust.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                               {expanded[cust.id] ? "Hide" : "Show"} tasks
-                            </button>
+                            </span>
                             <button onClick={(e) => { e.stopPropagation(); openAddTask(cust.id); }}
                               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-all hover:scale-105">
                               <Plus className="w-3.5 h-3.5" /> Add task

@@ -345,7 +345,9 @@ export default function Projects() {
                       const donePct = proj.tasks.length ? Math.round(proj.tasks.filter(t => t.status === "Done").length / proj.tasks.length * 100) : 0;
                       const isExpanded = !!expanded[proj.id];
                       return <SortableProjCard key={proj.id} id={proj.id}>
-                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer" onDoubleClick={() => openEditProject(proj)}>
+                        <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer"
+                          onClick={() => setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
+                          onDoubleClick={() => openEditProject(proj)}>
                           <div className="flex items-start gap-2 mb-3">
                             <div className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
                               style={{ background: donePct === 100 ? "hsl(142 71% 45%)" : donePct > 0 ? "hsl(191 91% 37%)" : "hsl(215 14% 75%)" }} />
@@ -388,11 +390,10 @@ export default function Projects() {
                           </div>
                           {proj.tasks.length > 0 && <div className="mb-4"><ProgressBar tasks={proj.tasks} /></div>}
                           <div className="flex items-center gap-3 mt-auto pt-1">
-                            <button onClick={(e) => { e.stopPropagation(); setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] })); }}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all hover:scale-105">
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                               {isExpanded ? "Hide" : "Show"} tasks
-                            </button>
+                            </span>
                             <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
                               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-semibold transition-all hover:scale-105">
                               <Plus className="w-3.5 h-3.5" /> Add task
