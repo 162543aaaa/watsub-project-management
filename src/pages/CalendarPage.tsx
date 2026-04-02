@@ -638,14 +638,16 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md animate-scale-in flex flex-col" style={{ boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 pb-0">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overscroll-contain" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+        {/* Fixed Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
           <h3 className="text-lg font-bold">Edit Task</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
         </div>
-        <div className="overflow-y-auto flex-1 p-6 pt-5 scrollbar-hide">
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto flex-1 p-6 overscroll-contain">
           <div className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
@@ -709,14 +711,16 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
             </div>
           </div>
         </div>
-        <div className="sticky bottom-0 flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        {/* Fixed Footer */}
+        <div className="flex gap-3 p-6 border-t border-border shrink-0">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
             <Save className="w-4 h-4" /> Save Task
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
