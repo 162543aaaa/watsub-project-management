@@ -559,34 +559,32 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
             </div>
 
             {/* Link to Project/Customer */}
-            {!isEdit && (
-              <div className="border-t border-border pt-4 space-y-3">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">เชื่อมโยงกับ Project / Customer</label>
+            <div className="border-t border-border pt-4 space-y-3">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">เชื่อมโยงกับ Project / Customer</label>
+              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={linkType} onChange={e => { setLinkType(e.target.value as any); setLinkId(""); }}>
+                <option value="none">— ไม่เชื่อมโยง —</option>
+                <option value="project">🚀 Project</option>
+                <option value="customer">💼 Customer</option>
+              </select>
+              {linkType === "project" && projects && projects.length > 0 && (
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={linkType} onChange={e => { setLinkType(e.target.value as any); setLinkId(""); }}>
-                  <option value="none">— ไม่เชื่อมโยง —</option>
-                  <option value="project">🚀 Project</option>
-                  <option value="customer">💼 Customer</option>
+                  value={linkId} onChange={e => setLinkId(e.target.value)}>
+                  <option value="">— เลือก Project —</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
-                {linkType === "project" && projects && projects.length > 0 && (
-                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                    value={linkId} onChange={e => setLinkId(e.target.value)}>
-                    <option value="">— เลือก Project —</option>
-                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                )}
-                {linkType === "customer" && customers && customers.length > 0 && (
-                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                    value={linkId} onChange={e => setLinkId(e.target.value)}>
-                    <option value="">— เลือก Customer —</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                )}
-                {linkType !== "none" && linkId && (
-                  <p className="text-xs text-muted-foreground">💡 จะสร้าง Task หมวด On-site ในหน้า {linkType === "project" ? "Projects" : "Customers"} ด้วย</p>
-                )}
-              </div>
-            )}
+              )}
+              {linkType === "customer" && customers && customers.length > 0 && (
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={linkId} onChange={e => setLinkId(e.target.value)}>
+                  <option value="">— เลือก Customer —</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
+              {linkType !== "none" && linkId && (
+                <p className="text-xs text-muted-foreground">💡 จะสร้าง Task หมวด On-site ในหน้า {linkType === "project" ? "Projects" : "Customers"} ด้วย</p>
+              )}
+            </div>
           </div>
         </div>
         {/* Fixed Footer */}
