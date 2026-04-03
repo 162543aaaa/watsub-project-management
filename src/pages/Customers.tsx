@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
