@@ -1,5 +1,6 @@
 import { useState, useMemo, forwardRef, useCallback, useRef, useEffect } from "react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import { Plus, Pencil, Trash2, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle, Layers } from "lucide-react";
 import EditTaskModal from "@/components/EditTaskModal";
 import { useNavigate } from "react-router-dom";
@@ -128,6 +129,7 @@ export default function Tasks() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [groupByProject, setGroupByProject] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<AllTask | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
 
@@ -469,7 +471,7 @@ export default function Tasks() {
                                     task={task}
                                     col={col}
                                     onEdit={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
-                                    onDelete={() => handleDeleteTask(task)}
+                                    onDelete={() => setConfirmDelete(task)}
                                     onStatusToggle={() => handleStatusToggle(task)}
                                     onNavigate={() => navigateToSource(task)}
                                     employees={employees}
@@ -489,7 +491,7 @@ export default function Tasks() {
                               task={task}
                               col={col}
                               onEdit={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
-                              onDelete={() => handleDeleteTask(task)}
+                              onDelete={() => setConfirmDelete(task)}
                               onStatusToggle={() => handleStatusToggle(task)}
                               onNavigate={() => navigateToSource(task)}
                               employees={employees}
@@ -532,6 +534,13 @@ export default function Tasks() {
         employees={employees}
         onSave={handleSave}
         onClose={() => setModal({ open: false, task: null })}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!confirmDelete}
+        onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}
+        onConfirm={() => { if (confirmDelete) { handleDeleteTask(confirmDelete); setConfirmDelete(null); } }}
+        description={`ต้องการลบงาน "${confirmDelete?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
       />
     </div>
   );

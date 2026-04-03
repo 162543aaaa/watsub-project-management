@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -74,6 +75,7 @@ export default function Customers() {
   const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; link: string; month: number; contact_name: string; contact_info: string; feedback_channel: string; job_description: string; responsible_person: string[]; start_date: string; deadline: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "customer" | "task"; id: string; name: string; parentId?: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -342,7 +344,7 @@ export default function Customers() {
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); deleteCustomer(cust.id); }}
+                              <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "customer", id: cust.id, name: cust.name }); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
                                 <Trash2 className="w-3.5 h-3.5 text-destructive" />
                               </button>
@@ -413,7 +415,7 @@ export default function Customers() {
                                           className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
                                           <Pencil className="w-3 h-3 text-primary" />
                                         </button>
-                                        <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id, cust.id); }}
+                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "task", id: task.id, name: task.name, parentId: cust.id }); }}
                                           className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
                                           <Trash2 className="w-3 h-3 text-destructive" />
                                        </button>
@@ -446,6 +448,18 @@ export default function Customers() {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteItem}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteItem(null); }}
+        onConfirm={() => {
+          if (!confirmDeleteItem) return;
+          if (confirmDeleteItem.type === "customer") deleteCustomer(confirmDeleteItem.id);
+          else if (confirmDeleteItem.parentId) deleteTask(confirmDeleteItem.id, confirmDeleteItem.parentId);
+          setConfirmDeleteItem(null);
+        }}
+        description={`ต้องการลบ${confirmDeleteItem?.type === "customer" ? "ลูกค้า" : "งาน"} "${confirmDeleteItem?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+      />
     </div>
   );
 }

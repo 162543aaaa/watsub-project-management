@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from "react";
 import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter, Users, MapPin, Briefcase, CalendarDays, FileText } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useTasks } from "@/hooks/useTasks";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -57,6 +58,7 @@ export default function Team() {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" });
   const [detail, setDetail] = useState<Employee | null>(null);
+  const [confirmDeleteEmp, setConfirmDeleteEmp] = useState<Employee | null>(null);
   const [uploading, setUploading] = useState<{ avatar?: boolean; qr?: boolean }>({});
   const avatarRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLInputElement>(null);
@@ -488,7 +490,7 @@ export default function Team() {
                   <button onClick={() => startEdit(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
-                  <button onClick={() => deleteEmployee(emp.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
+                  <button onClick={() => setConfirmDeleteEmp(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
                     <Trash2 className="w-3.5 h-3.5 text-red-400" />
                   </button>
                 </div>
@@ -566,6 +568,13 @@ export default function Team() {
           );
         })}
       </div>
+
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteEmp}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteEmp(null); }}
+        onConfirm={() => { if (confirmDeleteEmp) { deleteEmployee(confirmDeleteEmp.id); setConfirmDeleteEmp(null); } }}
+        description={`ต้องการลบพนักงาน "${confirmDeleteEmp?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+      />
     </div>
   );
 }

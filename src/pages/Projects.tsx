@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle } from "lucide-react";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
@@ -81,6 +82,7 @@ export default function Projects() {
   const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string; link: string; pillar: Pillar } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "project" | "task"; id: string; name: string; parentId?: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -378,7 +380,7 @@ export default function Projects() {
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); deleteProject(proj.id); }}
+                              <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "project", id: proj.id, name: proj.name }); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
                                 <Trash2 className="w-3.5 h-3.5 text-destructive" />
                               </button>
@@ -443,7 +445,7 @@ export default function Projects() {
                                      <button onClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
                                        <Pencil className="w-3 h-3 text-primary" />
                                      </button>
-                                     <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id, proj.id); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
+                                     <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "task", id: task.id, name: task.name, parentId: proj.id }); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
                                        <Trash2 className="w-3 h-3 text-destructive" />
                                     </button>
                                      </div>
@@ -478,6 +480,18 @@ export default function Projects() {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteItem}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteItem(null); }}
+        onConfirm={() => {
+          if (!confirmDeleteItem) return;
+          if (confirmDeleteItem.type === "project") deleteProject(confirmDeleteItem.id);
+          else if (confirmDeleteItem.parentId) deleteTask(confirmDeleteItem.id, confirmDeleteItem.parentId);
+          setConfirmDeleteItem(null);
+        }}
+        description={`ต้องการลบ${confirmDeleteItem?.type === "project" ? "โปรเจกต์" : "งาน"} "${confirmDeleteItem?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+      />
     </div>
   );
 }
