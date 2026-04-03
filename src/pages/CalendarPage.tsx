@@ -1088,16 +1088,22 @@ export default function CalendarPage() {
         <MeetingFormModal
           item={editingMeeting}
           employees={employees}
+          projects={projects.map(p => ({ id: p.id, name: p.name }))}
+          customers={customers.map(c => ({ id: c.id, name: c.name }))}
           onSave={handleEditMeetingSave}
           onClose={() => setEditingMeeting(null)}
+          onCreateLinkedTask={handleCreateLinkedTask}
         />
       )}
       {editingOnsite && (
         <OnsiteFormModal
           item={editingOnsite}
           employees={employees}
+          projects={projects.map(p => ({ id: p.id, name: p.name }))}
+          customers={customers.map(c => ({ id: c.id, name: c.name }))}
           onSave={handleEditOnsiteSave}
           onClose={() => setEditingOnsite(null)}
+          onCreateLinkedTask={handleCreateLinkedTask}
         />
       )}
       {showAddMeeting && (
