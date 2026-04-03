@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw, Plus, Trash2, Pencil, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw, Plus, Trash2, Pencil, Save, Link2 } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { useEmployees } from "@/hooks/useEmployees";
 import {
