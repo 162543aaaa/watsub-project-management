@@ -1,5 +1,6 @@
 import { useState, useMemo, forwardRef, useCallback, useRef, useEffect } from "react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import { Plus, Pencil, Trash2, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle, Layers } from "lucide-react";
 import EditTaskModal from "@/components/EditTaskModal";
 import { useNavigate } from "react-router-dom";
