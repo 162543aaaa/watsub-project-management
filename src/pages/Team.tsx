@@ -568,6 +568,13 @@ export default function Team() {
           );
         })}
       </div>
+
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteEmp}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteEmp(null); }}
+        onConfirm={() => { if (confirmDeleteEmp) { deleteEmployee(confirmDeleteEmp.id); setConfirmDeleteEmp(null); } }}
+        description={`ต้องการลบพนักงาน "${confirmDeleteEmp?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+      />
     </div>
   );
 }

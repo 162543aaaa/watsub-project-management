@@ -75,6 +75,7 @@ export default function Customers() {
   const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; link: string; month: number; contact_name: string; contact_info: string; feedback_channel: string; job_description: string; responsible_person: string[]; start_date: string; deadline: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "customer" | "task"; id: string; name: string; parentId?: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
