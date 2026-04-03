@@ -448,6 +448,18 @@ export default function Customers() {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteItem}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteItem(null); }}
+        onConfirm={() => {
+          if (!confirmDeleteItem) return;
+          if (confirmDeleteItem.type === "customer") deleteCustomer(confirmDeleteItem.id);
+          else if (confirmDeleteItem.parentId) deleteTask(confirmDeleteItem.id, confirmDeleteItem.parentId);
+          setConfirmDeleteItem(null);
+        }}
+        description={`ต้องการลบ${confirmDeleteItem?.type === "customer" ? "ลูกค้า" : "งาน"} "${confirmDeleteItem?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+      />
     </div>
   );
 }
