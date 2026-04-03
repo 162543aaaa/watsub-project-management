@@ -471,7 +471,7 @@ export default function Tasks() {
                                     task={task}
                                     col={col}
                                     onEdit={() => setModal({ open: true, task: { ...task, assigned_to: task.assigned_to || [] } })}
-                                    onDelete={() => handleDeleteTask(task)}
+                                    onDelete={() => setConfirmDelete(task)}
                                     onStatusToggle={() => handleStatusToggle(task)}
                                     onNavigate={() => navigateToSource(task)}
                                     employees={employees}
