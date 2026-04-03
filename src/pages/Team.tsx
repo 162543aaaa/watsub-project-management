@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from "react";
 import { Plus, Pencil, Trash2, X, Save, Mail, Phone, Upload, QrCode, Eye, ArrowLeft, Camera, Filter, Users, MapPin, Briefcase, CalendarDays, FileText } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useTasks } from "@/hooks/useTasks";
 import { useCustomers } from "@/hooks/useCustomers";
