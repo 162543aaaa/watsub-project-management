@@ -129,6 +129,7 @@ export default function Tasks() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [groupByProject, setGroupByProject] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<AllTask | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
 
