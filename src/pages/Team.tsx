@@ -489,7 +489,7 @@ export default function Team() {
                   <button onClick={() => startEdit(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
-                  <button onClick={() => deleteEmployee(emp.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
+                  <button onClick={() => setConfirmDeleteEmp(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
                     <Trash2 className="w-3.5 h-3.5 text-red-400" />
                   </button>
                 </div>

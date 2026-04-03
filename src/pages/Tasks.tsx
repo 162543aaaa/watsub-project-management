@@ -535,6 +535,13 @@ export default function Tasks() {
         onSave={handleSave}
         onClose={() => setModal({ open: false, task: null })}
       />
+
+      <ConfirmDeleteDialog
+        open={!!confirmDelete}
+        onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}
+        onConfirm={() => { if (confirmDelete) { handleDeleteTask(confirmDelete); setConfirmDelete(null); } }}
+        description={`ต้องการลบงาน "${confirmDelete?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+      />
     </div>
   );
 }
