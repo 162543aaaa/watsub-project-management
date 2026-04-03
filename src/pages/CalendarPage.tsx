@@ -427,30 +427,38 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
 
             {/* Link to Project/Customer */}
             <div className="border-t border-border pt-4 space-y-3">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">เชื่อมโยงกับ Project / Customer</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={linkType} onChange={e => { setLinkType(e.target.value as any); setLinkId(""); }}>
-                <option value="none">— ไม่เชื่อมโยง —</option>
-                <option value="project">🚀 Project</option>
-                <option value="customer">💼 Customer</option>
-              </select>
-              {linkType === "project" && projects && projects.length > 0 && (
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={linkId} onChange={e => setLinkId(e.target.value)}>
-                  <option value="">— เลือก Project —</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <div className="flex items-center gap-2 mb-2">
+                <Link2 className="w-4 h-4 text-primary" />
+                <label className="text-xs font-semibold text-foreground uppercase tracking-wide">เชื่อมโยงกับ Project / Customer</label>
+              </div>
+              <div className="bg-muted/40 rounded-xl p-3 space-y-3">
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                  value={linkType} onChange={e => { setLinkType(e.target.value as any); setLinkId(""); }}>
+                  <option value="none">— ไม่เชื่อมโยง —</option>
+                  <option value="project">🚀 Project</option>
+                  <option value="customer">💼 Customer</option>
                 </select>
-              )}
-              {linkType === "customer" && customers && customers.length > 0 && (
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={linkId} onChange={e => setLinkId(e.target.value)}>
-                  <option value="">— เลือก Customer —</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              )}
-              {linkType !== "none" && linkId && (
-                <p className="text-xs text-muted-foreground">💡 จะสร้าง Task หมวด Meeting ในหน้า {linkType === "project" ? "Projects" : "Customers"} ด้วย</p>
-              )}
+                {linkType === "project" && projects && projects.length > 0 && (
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                    value={linkId} onChange={e => setLinkId(e.target.value)}>
+                    <option value="">— เลือก Project —</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                )}
+                {linkType === "customer" && customers && customers.length > 0 && (
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                    value={linkId} onChange={e => setLinkId(e.target.value)}>
+                    <option value="">— เลือก Customer —</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                )}
+                {linkType !== "none" && linkId && (
+                  <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+                    <span>💡</span>
+                    <span>จะสร้าง Task หมวด Meeting ในหน้า {linkType === "project" ? "Projects" : "Customers"} ด้วย</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
