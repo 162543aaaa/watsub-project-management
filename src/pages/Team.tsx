@@ -58,6 +58,7 @@ export default function Team() {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" });
   const [detail, setDetail] = useState<Employee | null>(null);
+  const [confirmDeleteEmp, setConfirmDeleteEmp] = useState<Employee | null>(null);
   const [uploading, setUploading] = useState<{ avatar?: boolean; qr?: boolean }>({});
   const avatarRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLInputElement>(null);
