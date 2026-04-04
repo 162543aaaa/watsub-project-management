@@ -66,7 +66,7 @@ export type KpiSubScoreKey =
   | "communication" | "support" | "openness" | "collaboration"
   | "presentation" | "decision_making" | "management" | "strategic";
 
-export type KpiSubScores = Record<string, number>;
+export type KpiSubScores = Record<string, number | string>;
 
 // ─── Score calculations ───────────────────────────────────────────────────────
 
@@ -75,15 +75,21 @@ export function calcCategoryScore(scores: KpiSubScores, catKey: KpiCategoryKey):
   const prefix = `${catKey}__`;
   const newVals = Object.entries(scores)
     .filter(([k]) => k.startsWith(prefix))
-    .map(([, v]) => v)
-    .filter(v => v > 0);
+    .map(([, v]) => Number(v)) // FIX: Parse string to Number before calculating
+    .filter(v => !isNaN(v) && v > 0);
+    
   if (newVals.length > 0) {
     return newVals.reduce((a, b) => a + b, 0) / newVals.length;
   }
+  
   // Old format: specific sub-score keys e.g. "quality", "technical" (backward compat)
   const cat = KPI_CATEGORIES.find(c => c.key === catKey);
   if (!cat) return 0;
-  const oldVals = cat.items.map(i => scores[i.key] ?? 0).filter(v => v > 0);
+  
+  const oldVals = cat.items
+    .map(i => Number(scores[i.key]) || 0) // FIX: Parse string to Number
+    .filter(v => !isNaN(v) && v > 0);
+    
   if (!oldVals.length) return 0;
   return oldVals.reduce((a, b) => a + b, 0) / oldVals.length;
 }
@@ -106,11 +112,15 @@ export function calcFinalScore(
   peer: number | null,
   sup: number | null,
 ): number {
+  // FIX: Dynamic weight normalization to prevent score loss if an evaluation is missing
   let s = auto * 0.3;
-  if (self !== null) s += self * 0.1;
-  if (peer !== null) s += peer * 0.2;
-  if (sup !== null)  s += sup  * 0.4;
-  return s;
+  let totalWeight = 0.3; // Base weight
+
+  if (self !== null) { s += self * 0.1; totalWeight += 0.1; }
+  if (peer !== null) { s += peer * 0.2; totalWeight += 0.2; }
+  if (sup !== null)  { s += sup  * 0.4; totalWeight += 0.4; }
+  
+  return totalWeight > 0 ? s / totalWeight : 0;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
