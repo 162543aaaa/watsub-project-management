@@ -385,7 +385,7 @@ export default function KpiEvaluate() {
       for (const q of sec.questions) {
         if (q.type === "rate" && q.scoreKey) {
           total++;
-          if ((scores[q.scoreKey] ?? 0) > 0) filled++;
+          if ((Number(scores[q.scoreKey]) || 0) > 0) filled++;
         }
         if (q.type === "text") {
           total++;
