@@ -28,66 +28,73 @@ export function useAuth() {
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const [profileRes, rolesRes] = await Promise.all([
-        // ใช้ maybeSingle() แทน single() ป้องกัน Error 406 หากค้นหาไม่เจอ
         supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
         supabase.from("user_roles").select("*").eq("user_id", userId),
       ]);
-      if (profileRes.data) setProfile(profileRes.data as Profile);
-      if (rolesRes.data) setRoles(rolesRes.data as UserRole[]);
+
+      return {
+        profile: (profileRes.data ?? null) as Profile | null,
+        roles: (rolesRes.data ?? []) as UserRole[],
+      };
     } catch (error) {
       console.error("Error fetching profile data:", error);
+      return {
+        profile: null,
+        roles: [] as UserRole[],
+      };
     }
   }, []);
 
   useEffect(() => {
-    let mounted = true; // ป้องกันการอัปเดต state ตอนที่ component ถูกทำลายไปแล้ว
+    let mounted = true;
+    let requestId = 0;
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          }
-        }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-      } finally {
-        // การันตีว่าต้องปิด loading เสมอ ไม่ว่าจะสำเร็จหรือพัง
-        if (mounted) setLoading(false); 
+    const syncAuthState = async (nextSession: Session | null) => {
+      const currentRequestId = ++requestId;
+      const nextUser = nextSession?.user ?? null;
+
+      if (mounted) {
+        setSession(nextSession);
+        setUser(nextUser);
       }
+
+      if (!nextUser) {
+        if (mounted) {
+          setProfile(null);
+          setRoles([]);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const { profile: nextProfile, roles: nextRoles } = await fetchProfile(nextUser.id);
+
+      if (!mounted || currentRequestId !== requestId) return;
+
+      setProfile(nextProfile);
+      setRoles(nextRoles);
+      setLoading(false);
     };
 
-    initializeAuth();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted || event === "INITIAL_SESSION") return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        // ข้าม INITIAL_SESSION เพราะเราจัดการด้วย initializeAuth() ไปแล้วเพื่อไม่ให้ทำซ้ำซ้อน
-        if (!mounted || event === 'INITIAL_SESSION') return;
-        
-        try {
-          setLoading(true); // เปิดโหลดตอนมีการเปลี่ยน user
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          } else {
-            setProfile(null);
-            setRoles([]);
-          }
-        } catch (error) {
-          console.error("Auth state change error:", error);
-        } finally {
-          // การันตีว่าต้องปิด loading
-          if (mounted) setLoading(false); 
-        }
-      }
-    );
+      setLoading(true);
+      window.setTimeout(() => {
+        void syncAuthState(nextSession);
+      }, 0);
+    });
+
+    void supabase.auth
+      .getSession()
+      .then(async ({ data: { session }, error }) => {
+        if (error) throw error;
+        await syncAuthState(session);
+      })
+      .catch((error) => {
+        console.error("Auth initialization error:", error);
+        if (mounted) setLoading(false);
+      });
 
     return () => {
       mounted = false;
@@ -117,15 +124,15 @@ export function useAuth() {
     setRoles([]);
   };
 
-  const isAdmin = roles.some(r => r.role === "admin");
+  const isAdmin = roles.some((r) => r.role === "admin");
   const isApproved = profile?.is_approved ?? false;
 
   const canAccessPage = (path: string) => {
     if (isAdmin) return true;
     if (!isApproved) return false;
     const pages = profile?.allowed_pages ?? [];
-    if (pages.length === 0) return false; 
-    return pages.some(p => {
+    if (pages.length === 0) return false;
+    return pages.some((p) => {
       if (path === p) return true;
       const topSection = "/" + p.split("/").filter(Boolean)[0];
       return path.startsWith(topSection + "/");
@@ -133,9 +140,22 @@ export function useAuth() {
   };
 
   return {
-    user, session, profile, roles, loading,
-    signUp, signIn, signOut,
-    isAdmin, isApproved, canAccessPage,
-    refetchProfile: () => user ? fetchProfile(user.id) : Promise.resolve(),
+    user,
+    session,
+    profile,
+    roles,
+    loading,
+    signUp,
+    signIn,
+    signOut,
+    isAdmin,
+    isApproved,
+    canAccessPage,
+    refetchProfile: async () => {
+      if (!user) return;
+      const { profile: nextProfile, roles: nextRoles } = await fetchProfile(user.id);
+      setProfile(nextProfile);
+      setRoles(nextRoles);
+    },
   };
 }
