@@ -210,7 +210,7 @@ function SectionCard({
                       {q.question} <span className="text-destructive">*</span>
                     </p>
                     {q.helperText && <p className="text-xs text-muted-foreground mb-2">{q.helperText}</p>}
-                    <StarRating value={scores[q.scoreKey!] ?? 0} onChange={(v) => onRate(q.scoreKey!, v)} disabled={disabled} />
+                    <StarRating value={Number(scores[q.scoreKey!]) || 0} onChange={(v) => onRate(q.scoreKey!, v)} disabled={disabled} />
                   </div>
                 );
               case "text":
