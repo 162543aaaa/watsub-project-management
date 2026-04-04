@@ -40,8 +40,8 @@ export function useAuth() {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid potential deadlocks with Supabase auth
-          setTimeout(() => fetchProfile(session.user.id), 0);
+          // Await fetchProfile before finishing loading to prevent redirect bugs
+          await fetchProfile(session.user.id);
         } else {
           setProfile(null);
           setRoles([]);
@@ -50,11 +50,11 @@ export function useAuth() {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       }
       setLoading(false);
     });
@@ -91,7 +91,8 @@ export function useAuth() {
     if (isAdmin) return true;
     if (!isApproved) return false;
     const pages = profile?.allowed_pages ?? [];
-    if (pages.length === 0) return true; // no restrictions = all access
+    // SECURITY FIX: Default deny if no permissions are explicitly set
+    if (pages.length === 0) return false; 
     return pages.some(p => {
       if (path === p) return true;
       // Allow sub-routes: if user has /kpi/overview, also allow /kpi/evaluate/... /kpi/report/...
