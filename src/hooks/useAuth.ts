@@ -26,40 +26,73 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const [profileRes, rolesRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", userId).single(),
-      supabase.from("user_roles").select("*").eq("user_id", userId),
-    ]);
-    if (profileRes.data) setProfile(profileRes.data as Profile);
-    if (rolesRes.data) setRoles(rolesRes.data as UserRole[]);
+    try {
+      const [profileRes, rolesRes] = await Promise.all([
+        // ใช้ maybeSingle() แทน single() ป้องกัน Error 406 หากค้นหาไม่เจอ
+        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+        supabase.from("user_roles").select("*").eq("user_id", userId),
+      ]);
+      if (profileRes.data) setProfile(profileRes.data as Profile);
+      if (rolesRes.data) setRoles(rolesRes.data as UserRole[]);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    }
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          // Await fetchProfile before finishing loading to prevent redirect bugs
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setRoles([]);
+    let mounted = true; // ป้องกันการอัปเดต state ตอนที่ component ถูกทำลายไปแล้ว
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
         }
-        setLoading(false);
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+      } finally {
+        // การันตีว่าต้องปิด loading เสมอ ไม่ว่าจะสำเร็จหรือพัง
+        if (mounted) setLoading(false); 
+      }
+    };
+
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        // ข้าม INITIAL_SESSION เพราะเราจัดการด้วย initializeAuth() ไปแล้วเพื่อไม่ให้ทำซ้ำซ้อน
+        if (!mounted || event === 'INITIAL_SESSION') return;
+        
+        try {
+          setLoading(true); // เปิดโหลดตอนมีการเปลี่ยน user
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          } else {
+            setProfile(null);
+            setRoles([]);
+          }
+        } catch (error) {
+          console.error("Auth state change error:", error);
+        } finally {
+          // การันตีว่าต้องปิด loading
+          if (mounted) setLoading(false); 
+        }
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const signUp = async (email: string, password: string, displayName: string) => {
@@ -91,11 +124,9 @@ export function useAuth() {
     if (isAdmin) return true;
     if (!isApproved) return false;
     const pages = profile?.allowed_pages ?? [];
-    // SECURITY FIX: Default deny if no permissions are explicitly set
     if (pages.length === 0) return false; 
     return pages.some(p => {
       if (path === p) return true;
-      // Allow sub-routes: if user has /kpi/overview, also allow /kpi/evaluate/... /kpi/report/...
       const topSection = "/" + p.split("/").filter(Boolean)[0];
       return path.startsWith(topSection + "/");
     });
