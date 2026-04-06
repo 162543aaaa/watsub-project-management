@@ -34,6 +34,7 @@ export type Database = {
           sort_order: number | null
           start_date: string | null
           updated_at: string
+          year: number
         }
         Insert: {
           contact_info?: string | null
@@ -54,6 +55,7 @@ export type Database = {
           sort_order?: number | null
           start_date?: string | null
           updated_at?: string
+          year?: number
         }
         Update: {
           contact_info?: string | null
@@ -74,6 +76,7 @@ export type Database = {
           sort_order?: number | null
           start_date?: string | null
           updated_at?: string
+          year?: number
         }
         Relationships: []
       }
@@ -499,6 +502,7 @@ export type Database = {
           pillar: string
           sort_order: number | null
           updated_at: string
+          year: number
         }
         Insert: {
           created_at?: string
@@ -510,6 +514,7 @@ export type Database = {
           pillar?: string
           sort_order?: number | null
           updated_at?: string
+          year?: number
         }
         Update: {
           created_at?: string
@@ -521,6 +526,7 @@ export type Database = {
           pillar?: string
           sort_order?: number | null
           updated_at?: string
+          year?: number
         }
         Relationships: []
       }
