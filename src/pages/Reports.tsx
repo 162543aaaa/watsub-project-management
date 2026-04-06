@@ -80,10 +80,7 @@ export default function Reports() {
   }, [tasks, filterYear, filterMonth]);
 
   const filteredProjects = useMemo(() => {
-    const yearFiltered = projects.filter(p => {
-      const year = p.created_at ? new Date(p.created_at).getFullYear() : 2026;
-      return year === filterYear;
-    });
+    const yearFiltered = projects.filter(p => p.year === filterYear);
     if (filterMonth === "all") return yearFiltered;
     return yearFiltered.filter(p => p.month === filterMonth);
   }, [projects, filterMonth, filterYear]);
