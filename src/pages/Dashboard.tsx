@@ -178,7 +178,7 @@ export default function Dashboard() {
         <StatCard label="Completion Rate" value={`${stats.rate}%`} sub={`${stats.completed}/${stats.total} tasks`} icon={TrendingUp} gradient="bg-gradient-primary" trend={stats.rate >= 50 ? "up" : "down"} />
         <StatCard label="Active Tasks" value={stats.inProgress} sub="In Progress" icon={Clock} gradient="bg-gradient-success" trend="neutral" />
         <StatCard label="Overdue Tasks" value={stats.overdue} sub="Past due date" icon={AlertCircle} gradient="bg-gradient-danger" trend={stats.overdue > 0 ? "down" : "up"} trendLabel={stats.overdue > 0 ? "Needs attention" : "All on track"} />
-        <StatCard label="Team Size" value={employees.length} sub={`${projects.length} active projects`} icon={Users} gradient="bg-gradient-warning" trend="neutral" />
+        <StatCard label="Team Size" value={employees.length} sub={`${filteredProjects.length} active projects`} icon={Users} gradient="bg-gradient-warning" trend="neutral" />
         <StatCard label="Meetings" value={meetings.length + allTasks.filter(t => t.category === "meeting").length} sub="การประชุมทั้งหมด" icon={Video} gradient="bg-gradient-to-br from-violet-500 to-purple-600" trend="neutral" />
         <StatCard label="On-site Work" value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length} sub="งานออกกองทั้งหมด" icon={MapPin} gradient="bg-gradient-to-br from-rose-500 to-pink-600" trend="neutral" />
       </div>
