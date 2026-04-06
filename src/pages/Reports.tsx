@@ -86,11 +86,7 @@ export default function Reports() {
   }, [projects, filterMonth, filterYear]);
 
   const filteredCustomers = useMemo(() => {
-    const yearFiltered = customers.filter(c => {
-      const dateStr = c.start_date || c.created_at;
-      const year = dateStr ? new Date(dateStr).getFullYear() : 2026;
-      return year === filterYear;
-    });
+    const yearFiltered = customers.filter(c => c.year === filterYear);
     if (filterMonth === "all") return yearFiltered;
     return yearFiltered.filter(c => c.month === filterMonth);
   }, [customers, filterMonth, filterYear]);

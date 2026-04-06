@@ -523,13 +523,21 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
               <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
                 value={form.deadline || ""} onChange={e => setForm({ ...form, deadline: e.target.value })} />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Month</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={form.month} onChange={e => setForm({ ...form, month: Number(e.target.value) })}>
-                {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-              </select>
-            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Year</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={form.year ?? new Date().getFullYear()} onChange={e => setForm({ ...form, year: Number(e.target.value) })}>
+                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Month</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={form.month} onChange={e => setForm({ ...form, month: Number(e.target.value) })}>
+                  {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                </select>
+              </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Payment Fee</label>
               <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
