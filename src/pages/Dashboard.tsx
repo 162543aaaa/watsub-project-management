@@ -80,6 +80,7 @@ export default function Dashboard() {
 
   const [empStatusFilter, setEmpStatusFilter] = useState<Record<string, StatusFilter>>({});
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
 
   const allTasks = useMemo(() => {
     const projectTasks = projects.flatMap(p => p.tasks);
