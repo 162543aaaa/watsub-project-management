@@ -13,6 +13,7 @@ import EmployeeAvatar from "@/components/EmployeeAvatar";
 import TaskDetailModal from "@/components/TaskDetailModal";
 
 const today = new Date();
+const YEARS = [2025, 2026, 2027];
 
 const greeting = (() => {
   const h = today.getHours();
