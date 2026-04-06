@@ -200,7 +200,7 @@ export default function Tasks() {
       );
     }
     return result;
-  }, [allTasks, search, priorityFilter, filterMonth, filterSource]);
+  }, [allTasks, search, priorityFilter, filterMonth, filterSource, filterYear]);
 
   const loading = loadingTasks || loadingProjects || loadingCustomers;
 
