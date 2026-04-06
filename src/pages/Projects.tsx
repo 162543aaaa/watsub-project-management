@@ -79,7 +79,7 @@ export default function Projects() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
-  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string; link: string; pillar: Pillar } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; year: number; note: string; link: string; pillar: Pillar } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "project" | "task"; id: string; name: string; parentId?: string } | null>(null);
