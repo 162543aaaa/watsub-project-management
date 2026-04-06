@@ -271,12 +271,21 @@ export default function Projects() {
                 <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
                   value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })} placeholder="Project name..." autoFocus />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={newProject.month} onChange={e => setNewProject({ ...newProject, month: Number(e.target.value) })}>
-                  {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Year</label>
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={newProject.year} onChange={e => setNewProject({ ...newProject, year: Number(e.target.value) })}>
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={newProject.month} onChange={e => setNewProject({ ...newProject, month: Number(e.target.value) })}>
+                    {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Pillar <span className="text-destructive">*</span></label>
