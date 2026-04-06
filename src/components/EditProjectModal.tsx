@@ -32,14 +32,13 @@ interface EditProjectModalProps {
 }
 
 export default function EditProjectModal({ isOpen, onClose, project, onSave }: EditProjectModalProps) {
-  const [form, setForm] = useState<ProjectFormData>(
-    project ?? { name: "", month: new Date().getMonth() + 1, pillar: "JOINT", link: "", note: "" }
-  );
+  const defaultForm: ProjectFormData = { name: "", month: new Date().getMonth() + 1, year: new Date().getFullYear(), pillar: "JOINT", link: "", note: "" };
+  const [form, setForm] = useState<ProjectFormData>(project ?? defaultForm);
 
   const [prevProject, setPrevProject] = useState(project);
   if (project !== prevProject) {
     setPrevProject(project);
-    setForm(project ?? { name: "", month: new Date().getMonth() + 1, pillar: "JOINT", link: "", note: "" });
+    setForm(project ?? defaultForm);
   }
 
   if (!isOpen) return null;
