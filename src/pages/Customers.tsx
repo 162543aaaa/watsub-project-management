@@ -523,7 +523,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
               <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
                 value={form.deadline || ""} onChange={e => setForm({ ...form, deadline: e.target.value })} />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Year</label>
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
@@ -538,12 +538,12 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
                   {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
                 </select>
               </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Payment Fee</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={form.payment_fee || ""} onChange={e => setForm({ ...form, payment_fee: e.target.value })} placeholder="e.g. 25,000" />
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Payment Fee</label>
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={form.payment_fee || ""} onChange={e => setForm({ ...form, payment_fee: e.target.value })} placeholder="e.g. 25,000" />
+              </div>
             </div>
-          </div>
 
           {/* === Job Information === */}
           <div className="text-xs font-bold text-primary uppercase tracking-wider pt-2">ข้อมูลงาน</div>
