@@ -326,8 +326,8 @@ export default function Dashboard() {
                 <h2 className="text-sm font-semibold text-foreground">Task Status</h2>
                 <div className="flex items-center gap-4">
                   {[
-                    { label: "Projects", value: projects.length },
-                    { label: "Customers", value: customers.length },
+                    { label: "Projects", value: filteredProjects.length },
+                    { label: "Customers", value: filteredCustomers.length },
                     { label: "Overdue", value: stats.overdue },
                   ].map(s => (
                     <div key={s.label} className="text-center hidden sm:block">
