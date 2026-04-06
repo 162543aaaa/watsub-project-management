@@ -14,8 +14,8 @@ type Task = {
   task_type: string; project_id?: string | null; customer_id?: string | null;
   link?: string | null; comments?: string | null;
 };
-type Project = { id: string; name: string; month: number; created_at?: string };
-type Customer = { id: string; name: string; month: number; start_date?: string | null; created_at?: string };
+type Project = { id: string; name: string; month: number; year: number; created_at?: string };
+type Customer = { id: string; name: string; month: number; year: number; start_date?: string | null; created_at?: string };
 type Employee = { id: string; name: string; avatar?: string | null };
 type LeaveRequest = { id: string; status: string; requested_by: string; leave_type: string; leave_start: string; leave_end: string };
 
