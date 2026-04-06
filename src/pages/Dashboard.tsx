@@ -83,10 +83,19 @@ export default function Dashboard() {
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
 
   const allTasks = useMemo(() => {
-    const projectTasks = projects.flatMap(p => p.tasks);
-    const customerTasks = customers.flatMap(c => c.tasks);
-    return [...standaloneTasks, ...projectTasks, ...customerTasks];
-  }, [standaloneTasks, projects, customers]);
+    const projectTasks = projects.filter(p => p.year === filterYear).flatMap(p => p.tasks);
+    const customerTasks = customers.filter(c => c.year === filterYear).flatMap(c => c.tasks);
+    // Filter standalone tasks by year using start_date/due_date/created_at
+    const filteredStandalone = standaloneTasks.filter(t => {
+      const dateStr = t.start_date || t.due_date || t.created_at;
+      const year = dateStr ? new Date(dateStr).getFullYear() : 2026;
+      return year === filterYear;
+    });
+    return [...filteredStandalone, ...projectTasks, ...customerTasks];
+  }, [standaloneTasks, projects, customers, filterYear]);
+
+  const filteredProjects = useMemo(() => projects.filter(p => p.year === filterYear), [projects, filterYear]);
+  const filteredCustomers = useMemo(() => customers.filter(c => c.year === filterYear), [customers, filterYear]);
 
   const stats = useMemo(() => {
     const completed = allTasks.filter(t => t.status === "Done").length;
