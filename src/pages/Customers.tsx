@@ -81,8 +81,10 @@ export default function Customers() {
 
   // Filter by year AND month
   const filtered = customers.filter(c => {
-    // Year filter: use month to determine year context — customers with month field belong to filterYear
-    // Since customers don't have a year field, we show all for selected year
+    // Year filter using start_date, fallback to created_at, fallback to 2026
+    const dateStr = c.start_date || c.created_at;
+    const year = dateStr ? new Date(dateStr).getFullYear() : 2026;
+    if (year !== filterYear) return false;
     // Month filter
     if (filterMonth !== "all" && c.month !== filterMonth) return false;
     return true;

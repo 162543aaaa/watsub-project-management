@@ -177,6 +177,12 @@ export default function Tasks() {
 
   const filtered = useMemo(() => {
     let result = allTasks;
+    // Year filter using start_date, due_date, or created_at; fallback to 2026
+    result = result.filter(t => {
+      const dateStr = t.start_date || t.due_date || t.created_at;
+      const year = dateStr ? new Date(dateStr).getFullYear() : 2026;
+      return year === filterYear;
+    });
     if (filterMonth !== "all") result = result.filter(t => t._month === filterMonth);
     if (priorityFilter !== "all") result = result.filter(t => t.priority === priorityFilter);
     if (filterSource !== "all") {

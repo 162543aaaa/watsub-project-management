@@ -80,14 +80,23 @@ export default function Reports() {
   }, [tasks, filterYear, filterMonth]);
 
   const filteredProjects = useMemo(() => {
-    if (filterMonth === "all") return projects;
-    return projects.filter(p => p.month === filterMonth);
-  }, [projects, filterMonth]);
+    const yearFiltered = projects.filter(p => {
+      const year = p.created_at ? new Date(p.created_at).getFullYear() : 2026;
+      return year === filterYear;
+    });
+    if (filterMonth === "all") return yearFiltered;
+    return yearFiltered.filter(p => p.month === filterMonth);
+  }, [projects, filterMonth, filterYear]);
 
   const filteredCustomers = useMemo(() => {
-    if (filterMonth === "all") return customers;
-    return customers.filter(c => c.month === filterMonth);
-  }, [customers, filterMonth]);
+    const yearFiltered = customers.filter(c => {
+      const dateStr = c.start_date || c.created_at;
+      const year = dateStr ? new Date(dateStr).getFullYear() : 2026;
+      return year === filterYear;
+    });
+    if (filterMonth === "all") return yearFiltered;
+    return yearFiltered.filter(c => c.month === filterMonth);
+  }, [customers, filterMonth, filterYear]);
 
   const allTasks = filteredTasks;
 
