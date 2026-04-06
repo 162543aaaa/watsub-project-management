@@ -98,7 +98,7 @@ export default function Customers() {
   };
 
   const openEditCustomer = (cust: typeof customers[0]) => {
-    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: cust.link || "", month: cust.month, contact_name: (cust as any).contact_name || "", contact_info: (cust as any).contact_info || "", feedback_channel: (cust as any).feedback_channel || "", job_description: (cust as any).job_description || "", responsible_person: (cust as any).responsible_person || [], start_date: (cust as any).start_date || "", deadline: (cust as any).deadline || "" });
+    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: cust.link || "", month: cust.month, year: cust.year, contact_name: cust.contact_name || "", contact_info: cust.contact_info || "", feedback_channel: cust.feedback_channel || "", job_description: cust.job_description || "", responsible_person: cust.responsible_person || [], start_date: cust.start_date || "", deadline: cust.deadline || "" });
   };
 
   const handleEditCustomer = async () => {
