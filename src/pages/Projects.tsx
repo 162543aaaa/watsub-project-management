@@ -74,7 +74,7 @@ export default function Projects() {
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", month: 1, note: "", link: "", pillar: "SOUL" as Pillar });
+  const [newProject, setNewProject] = useState({ name: "", month: 1, year: new Date().getFullYear(), note: "", link: "", pillar: "SOUL" as Pillar });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
