@@ -26,6 +26,7 @@ export interface Project {
   id: string;
   name: string;
   month: number;
+  year: number;
   note?: string;
   link?: string;
   pillar: Pillar;
