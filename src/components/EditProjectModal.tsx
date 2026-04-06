@@ -13,9 +13,12 @@ const PILLAR_CONFIG: Record<Pillar, { label: string }> = {
 };
 const PILLARS: Pillar[] = ["VIBES", "SOUL", "JOINT"];
 
+const YEARS = [2025, 2026, 2027];
+
 interface ProjectFormData {
   name: string;
   month: number;
+  year: number;
   pillar: Pillar;
   link: string;
   note: string;
