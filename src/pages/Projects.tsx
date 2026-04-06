@@ -88,10 +88,7 @@ export default function Projects() {
 
   const months = [...new Set(projects.map(p => p.month))].sort();
   const afterPillar = filterPillar === "all" ? projects : projects.filter(p => p.pillar === filterPillar);
-  const afterYear = afterPillar.filter(p => {
-    const year = p.created_at ? new Date(p.created_at).getFullYear() : 2026;
-    return year === filterYear;
-  });
+  const afterYear = afterPillar.filter(p => p.year === filterYear);
   const filtered = filterMonth === "all" ? afterYear : afterYear.filter(p => p.month === filterMonth);
   const grouped: Record<number, typeof projects> = {};
   filtered.forEach(p => { if (!grouped[p.month]) grouped[p.month] = []; grouped[p.month].push(p); });
