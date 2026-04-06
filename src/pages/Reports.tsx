@@ -44,8 +44,8 @@ export default function Reports() {
       setLoading(true);
       const [tasksRes, projsRes, custsRes, empsRes, leavesRes] = await Promise.all([
         supabase.from("tasks").select("*"),
-        supabase.from("projects").select("id, name, month"),
-        supabase.from("customers").select("id, name, month"),
+        supabase.from("projects").select("id, name, month, created_at"),
+        supabase.from("customers").select("id, name, month, start_date, created_at"),
         supabase.from("employees").select("id, name, avatar"),
         supabase.from("leave_requests").select("*"),
       ]);
