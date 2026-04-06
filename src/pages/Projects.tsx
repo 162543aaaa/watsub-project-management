@@ -101,7 +101,7 @@ export default function Projects() {
   };
 
   const openEditProject = (proj: typeof projects[0]) => {
-    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "", link: proj.link || "", pillar: proj.pillar });
+    setEditModal({ id: proj.id, name: proj.name, month: proj.month, year: proj.year, note: proj.note || "", link: proj.link || "", pillar: proj.pillar });
   };
 
   const handleEditProject = async (formData: { name: string; month: number; pillar: Pillar; link: string; note: string }) => {
