@@ -95,8 +95,8 @@ export default function Projects() {
 
   const handleAddProject = async () => {
     if (!newProject.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    await addProject({ name: newProject.name, month: newProject.month, note: newProject.note, link: newProject.link, pillar: newProject.pillar });
-    setNewProject({ name: "", month: 1, note: "", link: "", pillar: "SOUL" });
+    await addProject({ name: newProject.name, month: newProject.month, year: newProject.year, note: newProject.note, link: newProject.link, pillar: newProject.pillar });
+    setNewProject({ name: "", month: 1, year: new Date().getFullYear(), note: "", link: "", pillar: "SOUL" });
     setShowAddProject(false);
   };
 
