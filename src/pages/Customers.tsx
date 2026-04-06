@@ -544,7 +544,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
                   value={form.payment_fee || ""} onChange={e => setForm({ ...form, payment_fee: e.target.value })} placeholder="e.g. 25,000" />
               </div>
             </div>
-
+          </div>
           {/* === Job Information === */}
           <div className="text-xs font-bold text-primary uppercase tracking-wider pt-2">ข้อมูลงาน</div>
           <div>
