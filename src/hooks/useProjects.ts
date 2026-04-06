@@ -26,6 +26,7 @@ export interface Project {
   id: string;
   name: string;
   month: number;
+  year: number;
   note?: string;
   link?: string;
   pillar: Pillar;
@@ -63,7 +64,7 @@ export function useProjects() {
 
   useEffect(() => { fetchProjects(); }, []);
 
-  const addProject = async (proj: { name: string; month: number; note?: string; link?: string; pillar: Pillar }) => {
+  const addProject = async (proj: { name: string; month: number; year?: number; note?: string; link?: string; pillar: Pillar }) => {
     const { data, error } = await supabase.from("projects").insert(proj).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setProjects(prev => [...prev, { ...data, pillar: data.pillar as Pillar, tasks: [] }]);

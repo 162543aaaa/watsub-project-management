@@ -13,6 +13,7 @@ import EmployeeAvatar from "@/components/EmployeeAvatar";
 import TaskDetailModal from "@/components/TaskDetailModal";
 
 const today = new Date();
+const YEARS = [2025, 2026, 2027];
 
 const greeting = (() => {
   const h = today.getHours();
@@ -79,12 +80,22 @@ export default function Dashboard() {
 
   const [empStatusFilter, setEmpStatusFilter] = useState<Record<string, StatusFilter>>({});
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
 
   const allTasks = useMemo(() => {
-    const projectTasks = projects.flatMap(p => p.tasks);
-    const customerTasks = customers.flatMap(c => c.tasks);
-    return [...standaloneTasks, ...projectTasks, ...customerTasks];
-  }, [standaloneTasks, projects, customers]);
+    const projectTasks = projects.filter(p => p.year === filterYear).flatMap(p => p.tasks);
+    const customerTasks = customers.filter(c => c.year === filterYear).flatMap(c => c.tasks);
+    // Filter standalone tasks by year using start_date/due_date/created_at
+    const filteredStandalone = standaloneTasks.filter(t => {
+      const dateStr = t.start_date || t.due_date || t.created_at;
+      const year = dateStr ? new Date(dateStr).getFullYear() : 2026;
+      return year === filterYear;
+    });
+    return [...filteredStandalone, ...projectTasks, ...customerTasks];
+  }, [standaloneTasks, projects, customers, filterYear]);
+
+  const filteredProjects = useMemo(() => projects.filter(p => p.year === filterYear), [projects, filterYear]);
+  const filteredCustomers = useMemo(() => customers.filter(c => c.year === filterYear), [customers, filterYear]);
 
   const stats = useMemo(() => {
     const completed = allTasks.filter(t => t.status === "Done").length;
@@ -139,6 +150,14 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground mt-0.5">{thaiDate}</p>
         </div>
         <div className="flex gap-2">
+          <div className="flex gap-1 mr-2">
+            {YEARS.map(y => (
+              <button key={y} onClick={() => setFilterYear(y)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterYear === y ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
+                {y}
+              </button>
+            ))}
+          </div>
           {unreadCount > 0 && (
             <Link to="/notifications" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all hover:scale-105"
               style={{ borderColor: "hsl(0 84% 60% / 0.3)", background: "hsl(0 84% 60% / 0.06)", color: "hsl(0 84% 55%)" }}>
@@ -159,7 +178,7 @@ export default function Dashboard() {
         <StatCard label="Completion Rate" value={`${stats.rate}%`} sub={`${stats.completed}/${stats.total} tasks`} icon={TrendingUp} gradient="bg-gradient-primary" trend={stats.rate >= 50 ? "up" : "down"} />
         <StatCard label="Active Tasks" value={stats.inProgress} sub="In Progress" icon={Clock} gradient="bg-gradient-success" trend="neutral" />
         <StatCard label="Overdue Tasks" value={stats.overdue} sub="Past due date" icon={AlertCircle} gradient="bg-gradient-danger" trend={stats.overdue > 0 ? "down" : "up"} trendLabel={stats.overdue > 0 ? "Needs attention" : "All on track"} />
-        <StatCard label="Team Size" value={employees.length} sub={`${projects.length} active projects`} icon={Users} gradient="bg-gradient-warning" trend="neutral" />
+        <StatCard label="Team Size" value={employees.length} sub={`${filteredProjects.length} active projects`} icon={Users} gradient="bg-gradient-warning" trend="neutral" />
         <StatCard label="Meetings" value={meetings.length + allTasks.filter(t => t.category === "meeting").length} sub="การประชุมทั้งหมด" icon={Video} gradient="bg-gradient-to-br from-violet-500 to-purple-600" trend="neutral" />
         <StatCard label="On-site Work" value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length} sub="งานออกกองทั้งหมด" icon={MapPin} gradient="bg-gradient-to-br from-rose-500 to-pink-600" trend="neutral" />
       </div>
@@ -307,8 +326,8 @@ export default function Dashboard() {
                 <h2 className="text-sm font-semibold text-foreground">Task Status</h2>
                 <div className="flex items-center gap-4">
                   {[
-                    { label: "Projects", value: projects.length },
-                    { label: "Customers", value: customers.length },
+                    { label: "Projects", value: filteredProjects.length },
+                    { label: "Customers", value: filteredCustomers.length },
                     { label: "Overdue", value: stats.overdue },
                   ].map(s => (
                     <div key={s.label} className="text-center hidden sm:block">

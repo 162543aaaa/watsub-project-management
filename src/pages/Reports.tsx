@@ -14,8 +14,8 @@ type Task = {
   task_type: string; project_id?: string | null; customer_id?: string | null;
   link?: string | null; comments?: string | null;
 };
-type Project = { id: string; name: string; month: number; created_at?: string };
-type Customer = { id: string; name: string; month: number; start_date?: string | null; created_at?: string };
+type Project = { id: string; name: string; month: number; year: number; created_at?: string };
+type Customer = { id: string; name: string; month: number; year: number; start_date?: string | null; created_at?: string };
 type Employee = { id: string; name: string; avatar?: string | null };
 type LeaveRequest = { id: string; status: string; requested_by: string; leave_type: string; leave_start: string; leave_end: string };
 
@@ -44,8 +44,8 @@ export default function Reports() {
       setLoading(true);
       const [tasksRes, projsRes, custsRes, empsRes, leavesRes] = await Promise.all([
         supabase.from("tasks").select("*"),
-        supabase.from("projects").select("id, name, month, created_at"),
-        supabase.from("customers").select("id, name, month, start_date, created_at"),
+        supabase.from("projects").select("id, name, month, year, created_at"),
+        supabase.from("customers").select("id, name, month, year, start_date, created_at"),
         supabase.from("employees").select("id, name, avatar"),
         supabase.from("leave_requests").select("*"),
       ]);
@@ -80,20 +80,13 @@ export default function Reports() {
   }, [tasks, filterYear, filterMonth]);
 
   const filteredProjects = useMemo(() => {
-    const yearFiltered = projects.filter(p => {
-      const year = p.created_at ? new Date(p.created_at).getFullYear() : 2026;
-      return year === filterYear;
-    });
+    const yearFiltered = projects.filter(p => p.year === filterYear);
     if (filterMonth === "all") return yearFiltered;
     return yearFiltered.filter(p => p.month === filterMonth);
   }, [projects, filterMonth, filterYear]);
 
   const filteredCustomers = useMemo(() => {
-    const yearFiltered = customers.filter(c => {
-      const dateStr = c.start_date || c.created_at;
-      const year = dateStr ? new Date(dateStr).getFullYear() : 2026;
-      return year === filterYear;
-    });
+    const yearFiltered = customers.filter(c => c.year === filterYear);
     if (filterMonth === "all") return yearFiltered;
     return yearFiltered.filter(c => c.month === filterMonth);
   }, [customers, filterMonth, filterYear]);

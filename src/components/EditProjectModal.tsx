@@ -13,9 +13,12 @@ const PILLAR_CONFIG: Record<Pillar, { label: string }> = {
 };
 const PILLARS: Pillar[] = ["VIBES", "SOUL", "JOINT"];
 
+const YEARS = [2025, 2026, 2027];
+
 interface ProjectFormData {
   name: string;
   month: number;
+  year: number;
   pillar: Pillar;
   link: string;
   note: string;
@@ -29,14 +32,13 @@ interface EditProjectModalProps {
 }
 
 export default function EditProjectModal({ isOpen, onClose, project, onSave }: EditProjectModalProps) {
-  const [form, setForm] = useState<ProjectFormData>(
-    project ?? { name: "", month: new Date().getMonth() + 1, pillar: "JOINT", link: "", note: "" }
-  );
+  const defaultForm: ProjectFormData = { name: "", month: new Date().getMonth() + 1, year: new Date().getFullYear(), pillar: "JOINT", link: "", note: "" };
+  const [form, setForm] = useState<ProjectFormData>(project ?? defaultForm);
 
   const [prevProject, setPrevProject] = useState(project);
   if (project !== prevProject) {
     setPrevProject(project);
-    setForm(project ?? { name: "", month: new Date().getMonth() + 1, pillar: "JOINT", link: "", note: "" });
+    setForm(project ?? defaultForm);
   }
 
   if (!isOpen) return null;
@@ -85,18 +87,32 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }: E
               />
             </div>
 
-            {/* Month */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
-              <select
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={form.month}
-                onChange={e => setForm({ ...form, month: Number(e.target.value) })}
-              >
-                {monthNames.slice(1).map((m, i) => (
-                  <option key={i + 1} value={i + 1}>{m}</option>
-                ))}
-              </select>
+            {/* Year & Month */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Year</label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={form.year}
+                  onChange={e => setForm({ ...form, year: Number(e.target.value) })}
+                >
+                  {YEARS.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={form.month}
+                  onChange={e => setForm({ ...form, month: Number(e.target.value) })}
+                >
+                  {monthNames.slice(1).map((m, i) => (
+                    <option key={i + 1} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Pillar */}

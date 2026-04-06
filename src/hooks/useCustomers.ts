@@ -12,6 +12,7 @@ export interface Customer {
   note?: string;
   link?: string;
   month: number;
+  year: number;
   created_at?: string;
   sort_order?: number;
   contact_name?: string;

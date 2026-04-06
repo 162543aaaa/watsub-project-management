@@ -74,12 +74,12 @@ export default function Projects() {
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", month: 1, note: "", link: "", pillar: "SOUL" as Pillar });
+  const [newProject, setNewProject] = useState({ name: "", month: 1, year: new Date().getFullYear(), note: "", link: "", pillar: "SOUL" as Pillar });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
-  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; note: string; link: string; pillar: Pillar } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; year: number; note: string; link: string; pillar: Pillar } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "project" | "task"; id: string; name: string; parentId?: string } | null>(null);
@@ -88,23 +88,20 @@ export default function Projects() {
 
   const months = [...new Set(projects.map(p => p.month))].sort();
   const afterPillar = filterPillar === "all" ? projects : projects.filter(p => p.pillar === filterPillar);
-  const afterYear = afterPillar.filter(p => {
-    const year = p.created_at ? new Date(p.created_at).getFullYear() : 2026;
-    return year === filterYear;
-  });
+  const afterYear = afterPillar.filter(p => p.year === filterYear);
   const filtered = filterMonth === "all" ? afterYear : afterYear.filter(p => p.month === filterMonth);
   const grouped: Record<number, typeof projects> = {};
   filtered.forEach(p => { if (!grouped[p.month]) grouped[p.month] = []; grouped[p.month].push(p); });
 
   const handleAddProject = async () => {
     if (!newProject.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    await addProject({ name: newProject.name, month: newProject.month, note: newProject.note, link: newProject.link, pillar: newProject.pillar });
-    setNewProject({ name: "", month: 1, note: "", link: "", pillar: "SOUL" });
+    await addProject({ name: newProject.name, month: newProject.month, year: newProject.year, note: newProject.note, link: newProject.link, pillar: newProject.pillar });
+    setNewProject({ name: "", month: 1, year: new Date().getFullYear(), note: "", link: "", pillar: "SOUL" });
     setShowAddProject(false);
   };
 
   const openEditProject = (proj: typeof projects[0]) => {
-    setEditModal({ id: proj.id, name: proj.name, month: proj.month, note: proj.note || "", link: proj.link || "", pillar: proj.pillar });
+    setEditModal({ id: proj.id, name: proj.name, month: proj.month, year: proj.year, note: proj.note || "", link: proj.link || "", pillar: proj.pillar });
   };
 
   const handleEditProject = async (formData: { name: string; month: number; pillar: Pillar; link: string; note: string }) => {
@@ -274,12 +271,21 @@ export default function Projects() {
                 <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
                   value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })} placeholder="Project name..." autoFocus />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={newProject.month} onChange={e => setNewProject({ ...newProject, month: Number(e.target.value) })}>
-                  {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Year</label>
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={newProject.year} onChange={e => setNewProject({ ...newProject, year: Number(e.target.value) })}>
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={newProject.month} onChange={e => setNewProject({ ...newProject, month: Number(e.target.value) })}>
+                    {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Pillar <span className="text-destructive">*</span></label>

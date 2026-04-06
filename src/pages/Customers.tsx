@@ -68,11 +68,11 @@ export default function Customers() {
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [] as string[], start_date: "", deadline: "" });
+  const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, year: new Date().getFullYear(), contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [] as string[], start_date: "", deadline: "" });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [taskModal, setTaskModal] = useState<{ customerId: string; task?: Task } | null>(null);
-  const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; link: string; month: number; contact_name: string; contact_info: string; feedback_channel: string; job_description: string; responsible_person: string[]; start_date: string; deadline: string } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: string; name: string; detail: string; payment_fee: string; project_title: string; note: string; link: string; month: number; year: number; contact_name: string; contact_info: string; feedback_channel: string; job_description: string; responsible_person: string[]; start_date: string; deadline: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "customer" | "task"; id: string; name: string; parentId?: string } | null>(null);
@@ -81,11 +81,7 @@ export default function Customers() {
 
   // Filter by year AND month
   const filtered = customers.filter(c => {
-    // Year filter using start_date, fallback to created_at, fallback to 2026
-    const dateStr = c.start_date || c.created_at;
-    const year = dateStr ? new Date(dateStr).getFullYear() : 2026;
-    if (year !== filterYear) return false;
-    // Month filter
+    if (c.year !== filterYear) return false;
     if (filterMonth !== "all" && c.month !== filterMonth) return false;
     return true;
   });
@@ -96,18 +92,18 @@ export default function Customers() {
 
   const handleAddCustomer = async () => {
     if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month, contact_name: form.contact_name, contact_info: form.contact_info, feedback_channel: form.feedback_channel, job_description: form.job_description, responsible_person: form.responsible_person, start_date: form.start_date, deadline: form.deadline });
-    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [], start_date: "", deadline: "" });
+    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month, year: form.year, contact_name: form.contact_name, contact_info: form.contact_info, feedback_channel: form.feedback_channel, job_description: form.job_description, responsible_person: form.responsible_person, start_date: form.start_date, deadline: form.deadline });
+    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, year: new Date().getFullYear(), contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [], start_date: "", deadline: "" });
     setShowAdd(false);
   };
 
   const openEditCustomer = (cust: typeof customers[0]) => {
-    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: cust.link || "", month: cust.month, contact_name: (cust as any).contact_name || "", contact_info: (cust as any).contact_info || "", feedback_channel: (cust as any).feedback_channel || "", job_description: (cust as any).job_description || "", responsible_person: (cust as any).responsible_person || [], start_date: (cust as any).start_date || "", deadline: (cust as any).deadline || "" });
+    setEditModal({ id: cust.id, name: cust.name, detail: cust.detail || "", payment_fee: cust.payment_fee || "", project_title: cust.project_title || "", note: cust.note || "", link: cust.link || "", month: cust.month, year: cust.year, contact_name: cust.contact_name || "", contact_info: cust.contact_info || "", feedback_channel: cust.feedback_channel || "", job_description: cust.job_description || "", responsible_person: cust.responsible_person || [], start_date: cust.start_date || "", deadline: cust.deadline || "" });
   };
 
   const handleEditCustomer = async () => {
     if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, link: editModal.link, month: editModal.month });
+    await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, link: editModal.link, month: editModal.month, year: editModal.year });
     setEditModal(null);
   };
 
@@ -527,20 +523,28 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
               <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
                 value={form.deadline || ""} onChange={e => setForm({ ...form, deadline: e.target.value })} />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Month</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={form.month} onChange={e => setForm({ ...form, month: Number(e.target.value) })}>
-                {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Payment Fee</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                value={form.payment_fee || ""} onChange={e => setForm({ ...form, payment_fee: e.target.value })} placeholder="e.g. 25,000" />
+            <div className="col-span-2 grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Year</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={form.year ?? new Date().getFullYear()} onChange={e => setForm({ ...form, year: Number(e.target.value) })}>
+                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Month</label>
+                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={form.month} onChange={e => setForm({ ...form, month: Number(e.target.value) })}>
+                  {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Payment Fee</label>
+                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                  value={form.payment_fee || ""} onChange={e => setForm({ ...form, payment_fee: e.target.value })} placeholder="e.g. 25,000" />
+              </div>
             </div>
           </div>
-
           {/* === Job Information === */}
           <div className="text-xs font-bold text-primary uppercase tracking-wider pt-2">ข้อมูลงาน</div>
           <div>
