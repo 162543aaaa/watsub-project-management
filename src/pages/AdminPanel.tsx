@@ -197,7 +197,7 @@ export default function AdminPanel() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {ALL_PAGES.map(page => {
-                        const active = pages.length === 0 || pages.includes(page.path);
+                        const active = pages.includes('*') || pages.includes(page.path);
                         return (
                           <button key={page.path}
                             onClick={() => handleTogglePage(u.profile.user_id, pages, page.path)}
