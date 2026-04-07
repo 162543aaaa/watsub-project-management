@@ -403,3 +403,27 @@
   font-size: 14px;
   color: hsl(var(--muted-foreground));
 }
+
+/* Gantt chart theme overrides */
+.gantt-wrapper .ganttTable {
+  display: none;
+}
+.gantt-wrapper svg {
+  font-family: 'Inter', sans-serif;
+}
+.gantt-wrapper ._2dZTy { /* calendar header */
+  fill: hsl(var(--card)) !important;
+  stroke: hsl(var(--border)) !important;
+}
+.gantt-wrapper ._3T42e { /* calendar text */
+  fill: hsl(var(--foreground)) !important;
+}
+.gantt-wrapper ._RuwuK { /* grid row line */
+  stroke: hsl(var(--border)) !important;
+}
+.gantt-wrapper ._9w8d5 { /* grid tick */
+  stroke: hsl(var(--border)) !important;
+}
+.gantt-wrapper ._1nBOt { /* today highlight */
+  fill: hsl(var(--primary) / 0.08) !important;
+}
