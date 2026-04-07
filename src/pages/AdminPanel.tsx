@@ -71,25 +71,52 @@ export default function AdminPanel() {
   };
 
   const handleTogglePage = async (userId: string, currentPages: string[], pagePath: string) => {
-    const newPages = currentPages.includes(pagePath)
-      ? currentPages.filter(p => p !== pagePath)
-      : [...currentPages, pagePath];
+    // If currently full-access ('*'), switching to explicit pages minus the toggled one
+    let newPages: string[];
+    if (currentPages.includes('*')) {
+      // Switching from full-access: select all pages except the toggled one
+      newPages = ALL_PAGES.map(p => p.path).filter(p => p !== pagePath);
+    } else if (currentPages.includes(pagePath)) {
+      newPages = currentPages.filter(p => p !== pagePath);
+    } else {
+      newPages = [...currentPages, pagePath];
+    }
+    const previousPages = currentPages;
     // Optimistic update
     setUsers(prev => prev.map(u => 
       u.profile.user_id === userId 
         ? { ...u, profile: { ...u.profile, allowed_pages: newPages } } 
         : u
     ));
-    await callAdmin("set-pages", { user_id: userId, allowed_pages: newPages });
+    const { error } = await callAdmin("set-pages", { user_id: userId, allowed_pages: newPages });
+    if (error) {
+      // Revert on failure
+      setUsers(prev => prev.map(u => 
+        u.profile.user_id === userId 
+          ? { ...u, profile: { ...u.profile, allowed_pages: previousPages } } 
+          : u
+      ));
+      toast({ title: "เกิดข้อผิดพลาด", description: String(error), variant: "destructive" });
+    }
   };
 
   const handleSetAllPages = async (userId: string) => {
+    const previousPages = users.find(u => u.profile.user_id === userId)?.profile.allowed_pages || [];
     setUsers(prev => prev.map(u => 
       u.profile.user_id === userId 
-        ? { ...u, profile: { ...u.profile, allowed_pages: [] } } 
+        ? { ...u, profile: { ...u.profile, allowed_pages: ['*'] } } 
         : u
     ));
-    await callAdmin("set-pages", { user_id: userId, allowed_pages: [] });
+    const { error } = await callAdmin("set-pages", { user_id: userId, allowed_pages: ['*'] });
+    if (error) {
+      setUsers(prev => prev.map(u => 
+        u.profile.user_id === userId 
+          ? { ...u, profile: { ...u.profile, allowed_pages: previousPages } } 
+          : u
+      ));
+      toast({ title: "เกิดข้อผิดพลาด", description: String(error), variant: "destructive" });
+      return;
+    }
     toast({ title: "เปิดทุกหน้าแล้ว" });
   };
 
