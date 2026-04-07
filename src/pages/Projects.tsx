@@ -13,6 +13,8 @@ import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
 import EditProjectModal from "@/components/EditProjectModal";
 
+const GanttView = lazy(() => import("@/components/GanttView"));
+
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const YEARS = [2025, 2026, 2027];
 
