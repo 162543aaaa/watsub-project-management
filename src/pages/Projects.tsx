@@ -85,7 +85,7 @@ export default function Projects() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "project" | "task"; id: string; name: string; parentId?: string } | null>(null);
-
+  const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const months = [...new Set(projects.map(p => p.month))].sort();
