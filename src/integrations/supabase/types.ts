@@ -537,6 +537,7 @@ export type Database = {
           comments: string | null
           created_at: string
           customer_id: string | null
+          depends_on: string | null
           due_date: string | null
           id: string
           link: string | null
@@ -555,6 +556,7 @@ export type Database = {
           comments?: string | null
           created_at?: string
           customer_id?: string | null
+          depends_on?: string | null
           due_date?: string | null
           id?: string
           link?: string | null
@@ -573,6 +575,7 @@ export type Database = {
           comments?: string | null
           created_at?: string
           customer_id?: string | null
+          depends_on?: string | null
           due_date?: string | null
           id?: string
           link?: string | null
@@ -591,6 +594,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_depends_on_fkey"
+            columns: ["depends_on"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {
