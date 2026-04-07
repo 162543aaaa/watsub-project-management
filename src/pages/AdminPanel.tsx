@@ -177,7 +177,7 @@ export default function AdminPanel() {
                       <p className="font-medium text-sm truncate">{u.profile.display_name}</p>
                       {userIsAdmin && <span className="text-[10px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-md">ADMIN</span>}
                     </div>
-                    <p className="text-xs text-muted-foreground">{u.email} · {pages.length === 0 ? "เข้าถึงทุกหน้า" : `${pages.length} หน้า`}</p>
+                    <p className="text-xs text-muted-foreground">{u.email} · {pages.includes('*') ? "เข้าถึงทุกหน้า" : `${pages.length} หน้า`}</p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <Button size="sm" variant={userIsAdmin ? "destructive" : "secondary"} onClick={() => handleToggleAdmin(u.profile.user_id, userIsAdmin)} className="gap-1 text-xs">
