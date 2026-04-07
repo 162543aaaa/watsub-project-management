@@ -131,6 +131,7 @@ export function useAuth() {
     if (isAdmin) return true;
     if (!isApproved) return false;
     const pages = profile?.allowed_pages ?? [];
+    if (pages.includes('*')) return true;
     if (pages.length === 0) return false;
     return pages.some((p) => {
       if (path === p) return true;

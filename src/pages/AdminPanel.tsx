@@ -17,7 +17,9 @@ const ALL_PAGES = [
   { path: "/team", label: "Team" },
   { path: "/leave", label: "Leave" },
   { path: "/budget", label: "Budget" },
-  { path: "/kpi/overview", label: "KPI" },
+  { path: "/kpi/overview", label: "KPI Overview" },
+  { path: "/kpi/evaluate", label: "KPI Evaluate" },
+  { path: "/kpi/report", label: "KPI Report" },
   { path: "/reports", label: "Reports" },
   { path: "/notifications", label: "Notifications" },
   { path: "/import", label: "Import" },
@@ -69,25 +71,52 @@ export default function AdminPanel() {
   };
 
   const handleTogglePage = async (userId: string, currentPages: string[], pagePath: string) => {
-    const newPages = currentPages.includes(pagePath)
-      ? currentPages.filter(p => p !== pagePath)
-      : [...currentPages, pagePath];
+    // If currently full-access ('*'), switching to explicit pages minus the toggled one
+    let newPages: string[];
+    if (currentPages.includes('*')) {
+      // Switching from full-access: select all pages except the toggled one
+      newPages = ALL_PAGES.map(p => p.path).filter(p => p !== pagePath);
+    } else if (currentPages.includes(pagePath)) {
+      newPages = currentPages.filter(p => p !== pagePath);
+    } else {
+      newPages = [...currentPages, pagePath];
+    }
+    const previousPages = currentPages;
     // Optimistic update
     setUsers(prev => prev.map(u => 
       u.profile.user_id === userId 
         ? { ...u, profile: { ...u.profile, allowed_pages: newPages } } 
         : u
     ));
-    await callAdmin("set-pages", { user_id: userId, allowed_pages: newPages });
+    const { error } = await callAdmin("set-pages", { user_id: userId, allowed_pages: newPages });
+    if (error) {
+      // Revert on failure
+      setUsers(prev => prev.map(u => 
+        u.profile.user_id === userId 
+          ? { ...u, profile: { ...u.profile, allowed_pages: previousPages } } 
+          : u
+      ));
+      toast({ title: "เกิดข้อผิดพลาด", description: String(error), variant: "destructive" });
+    }
   };
 
   const handleSetAllPages = async (userId: string) => {
+    const previousPages = users.find(u => u.profile.user_id === userId)?.profile.allowed_pages || [];
     setUsers(prev => prev.map(u => 
       u.profile.user_id === userId 
-        ? { ...u, profile: { ...u.profile, allowed_pages: [] } } 
+        ? { ...u, profile: { ...u.profile, allowed_pages: ['*'] } } 
         : u
     ));
-    await callAdmin("set-pages", { user_id: userId, allowed_pages: [] });
+    const { error } = await callAdmin("set-pages", { user_id: userId, allowed_pages: ['*'] });
+    if (error) {
+      setUsers(prev => prev.map(u => 
+        u.profile.user_id === userId 
+          ? { ...u, profile: { ...u.profile, allowed_pages: previousPages } } 
+          : u
+      ));
+      toast({ title: "เกิดข้อผิดพลาด", description: String(error), variant: "destructive" });
+      return;
+    }
     toast({ title: "เปิดทุกหน้าแล้ว" });
   };
 
@@ -148,7 +177,7 @@ export default function AdminPanel() {
                       <p className="font-medium text-sm truncate">{u.profile.display_name}</p>
                       {userIsAdmin && <span className="text-[10px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-md">ADMIN</span>}
                     </div>
-                    <p className="text-xs text-muted-foreground">{u.email} · {pages.length === 0 ? "เข้าถึงทุกหน้า" : `${pages.length} หน้า`}</p>
+                    <p className="text-xs text-muted-foreground">{u.email} · {pages.includes('*') ? "เข้าถึงทุกหน้า" : `${pages.length} หน้า`}</p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <Button size="sm" variant={userIsAdmin ? "destructive" : "secondary"} onClick={() => handleToggleAdmin(u.profile.user_id, userIsAdmin)} className="gap-1 text-xs">
@@ -168,7 +197,7 @@ export default function AdminPanel() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {ALL_PAGES.map(page => {
-                        const active = pages.length === 0 || pages.includes(page.path);
+                        const active = pages.includes('*') || pages.includes(page.path);
                         return (
                           <button key={page.path}
                             onClick={() => handleTogglePage(u.profile.user_id, pages, page.path)}
