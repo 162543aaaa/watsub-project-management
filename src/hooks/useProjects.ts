@@ -18,6 +18,7 @@ export interface Task {
   created_at?: string;
   sort_order?: number;
   category?: string;
+  depends_on?: string | null;
 }
 
 export type Pillar = "VIBES" | "SOUL" | "JOINT";
