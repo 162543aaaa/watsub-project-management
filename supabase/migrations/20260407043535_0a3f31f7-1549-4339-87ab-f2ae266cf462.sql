@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN depends_on uuid REFERENCES public.tasks(id) ON DELETE SET NULL;
