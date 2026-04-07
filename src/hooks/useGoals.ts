@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -13,21 +13,30 @@ export interface Goal {
   created_at?: string;
 }
 
-export function useGoals() {
+export function useGoals(filterYear?: number) {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchGoals = async () => {
-    const { data, error } = await supabase
+  const fetchGoals = useCallback(async () => {
+    setLoading(true);
+    let query = supabase
       .from("goals")
       .select("*")
       .order("created_at", { ascending: true });
+
+    if (filterYear) {
+      const startDate = `${filterYear}-01-01`;
+      const endDate = `${filterYear}-12-31`;
+      query = query.gte("deadline", startDate).lte("deadline", endDate);
+    }
+
+    const { data, error } = await query;
     if (error) { console.error(error); setLoading(false); return; }
     setGoals((data || []) as Goal[]);
     setLoading(false);
-  };
+  }, [filterYear]);
 
-  useEffect(() => { fetchGoals(); }, []);
+  useEffect(() => { fetchGoals(); }, [fetchGoals]);
 
   const addGoal = async (goal: Omit<Goal, "id" | "created_at">) => {
     const { data, error } = await supabase.from("goals").insert(goal).select().single();

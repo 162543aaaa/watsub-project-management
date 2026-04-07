@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Target, Users, User, Save, Trash2, Pencil, X, CheckCircle2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Target, Users, User, Save, Trash2, Pencil, X, CheckCircle2, CalendarDays } from "lucide-react";
 import { useGoals, Goal } from "@/hooks/useGoals";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -8,21 +8,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Progress } from "@/components/ui/progress";
 
 type GoalType = "individual" | "team";
+type Quarter = "all" | "Q1" | "Q2" | "Q3" | "Q4";
+
+const currentYear = new Date().getFullYear();
+const yearOptions = [2025, 2026, 2027];
+const quarterOptions: { value: Quarter; label: string }[] = [
+  { value: "all", label: "All Quarters" },
+  { value: "Q1", label: "Q1 (Jan–Mar)" },
+  { value: "Q2", label: "Q2 (Apr–Jun)" },
+  { value: "Q3", label: "Q3 (Jul–Sep)" },
+  { value: "Q4", label: "Q4 (Oct–Dec)" },
+];
+const quarterMonths: Record<Exclude<Quarter, "all">, number[]> = {
+  Q1: [1, 2, 3],
+  Q2: [4, 5, 6],
+  Q3: [7, 8, 9],
+  Q4: [10, 11, 12],
+};
 
 const emptyForm = { title: "", type: "individual" as GoalType, target_value: 100, current_value: 0, deadline: "", assigned_to: "" };
 
 export default function Goals() {
-  const { goals, loading, addGoal, updateGoal, deleteGoal } = useGoals();
+  const [filterYear, setFilterYear] = useState(currentYear);
+  const [filterQuarter, setFilterQuarter] = useState<Quarter>("all");
+  const [filter, setFilter] = useState<"all" | GoalType>("all");
+
+  const { goals, loading, addGoal, updateGoal, deleteGoal } = useGoals(filterYear);
   const { employees } = useEmployees();
   const [showAdd, setShowAdd] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [updateVal, setUpdateVal] = useState("");
   const [form, setForm] = useState(emptyForm);
-  const [filter, setFilter] = useState<"all" | GoalType>("all");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const filtered = filter === "all" ? goals : goals.filter(g => g.type === filter);
+  const filtered = useMemo(() => {
+    return goals.filter(g => {
+      // Type filter
+      if (filter !== "all" && g.type !== filter) return false;
+      // Quarter filter
+      if (filterQuarter !== "all" && g.deadline) {
+        const month = new Date(g.deadline).getMonth() + 1;
+        if (!quarterMonths[filterQuarter].includes(month)) return false;
+      }
+      return true;
+    });
+  }, [goals, filter, filterQuarter]);
 
   const openAdd = () => {
     setEditingGoal(null);
@@ -66,9 +97,7 @@ export default function Goals() {
   const updateProgress = async (id: string) => {
     const val = Number(updateVal);
     if (isNaN(val)) return;
-    const goal = goals.find(g => g.id === id);
-    if (!goal) return;
-    await updateGoal(id, { current_value: Math.min(val, goal.target_value) });
+    await updateGoal(id, { current_value: val });
     setUpdating(null);
     setUpdateVal("");
   };
@@ -87,6 +116,30 @@ export default function Goals() {
         </button>
       </div>
 
+      {/* Year & Quarter Filters */}
+      <div className="flex flex-wrap items-center gap-4 mb-4 animate-stagger-2">
+        <div className="flex items-center gap-1.5">
+          <CalendarDays className="w-4 h-4 text-muted-foreground" />
+          <div className="flex gap-1">
+            {yearOptions.map(y => (
+              <button key={y} onClick={() => setFilterYear(y)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterYear === y ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+                {y}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-1">
+          {quarterOptions.map(q => (
+            <button key={q.value} onClick={() => setFilterQuarter(q.value)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filterQuarter === q.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
+              {q.value === "all" ? "All" : q.value}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Type Filter */}
       <div className="flex gap-2 mb-6 animate-stagger-2">
         {(["all", "individual", "team"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
@@ -184,7 +237,8 @@ export default function Goals() {
         {filtered.map((goal, i) => {
           const pct = goal.target_value ? Math.round((goal.current_value / goal.target_value) * 100) : 0;
           const clampedPct = Math.min(pct, 100);
-          const isComplete = clampedPct >= 100;
+          const isComplete = pct >= 100;
+          const isOver = pct > 100;
           return (
             <div key={goal.id} className={`bg-card rounded-2xl border border-border/60 p-5 card-hover group animate-stagger-${Math.min(i + 1, 5)} relative`}>
               {/* Header row: badge + actions */}
@@ -202,7 +256,7 @@ export default function Goals() {
                   {isComplete && (
                     <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
                       style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
-                      <CheckCircle2 className="w-3 h-3" /> Complete
+                      <CheckCircle2 className="w-3 h-3" /> {isOver ? `${pct}%` : "Complete"}
                     </span>
                   )}
                 </div>
@@ -232,7 +286,7 @@ export default function Goals() {
               <div className="mt-3 mb-2">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-muted-foreground">{goal.current_value} / {goal.target_value}</span>
-                  <span className={`text-xs font-bold ${isComplete ? "text-emerald-600" : "text-primary"}`}>{clampedPct}%</span>
+                  <span className={`text-xs font-bold ${isComplete ? "text-emerald-600" : "text-primary"}`}>{pct}%</span>
                 </div>
                 <Progress value={clampedPct} className="h-2" />
               </div>
