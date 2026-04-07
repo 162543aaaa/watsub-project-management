@@ -209,6 +209,21 @@ export default function Projects() {
               </div>
             )}
           </div>
+          {/* View Toggle */}
+          <div className="flex rounded-xl border border-border overflow-hidden">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition-all ${viewMode === "list" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
+            >
+              <LayoutList className="w-4 h-4" /> List
+            </button>
+            <button
+              onClick={() => setViewMode("gantt")}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition-all ${viewMode === "gantt" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
+            >
+              <GanttChartSquare className="w-4 h-4" /> Timeline
+            </button>
+          </div>
           <button onClick={() => setShowAddProject(true)} className="btn-primary flex items-center gap-2">
             <Plus className="w-4 h-4" /> New Project
           </button>
