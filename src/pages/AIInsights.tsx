@@ -269,23 +269,22 @@ export default function AIInsights() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [analyzed, setAnalyzed] = useState(false);
 
-  // ── Call Supabase Edge Function (Safe & Secure) ─────────────────────────
+  // ── Call admin-users Edge Function (action: run-ai) ───────────────────────
   const runAnalysis = useCallback(async () => {
     if (!teamContext) return;
     setAnalyzing(true);
     setAnalyzed(false);
     
     try {
-      // เรียกใช้งาน Edge Function แทนการยิง API ตรงๆ จากหน้าเว็บ
-      const { data, error } = await supabase.functions.invoke('ai-project-manager', {
-        body: { teamContext }
+      const { data, error } = await supabase.functions.invoke("admin-users", {
+        body: { action: "run-ai", teamContext },
       });
-
+      
       if (error) {
         throw new Error(`Edge Function Error: ${error.message}`);
       }
-
-      const recs: AIRecommendation[] = data.recommendations ?? [];
+      
+      const recs: AIRecommendation[] = data?.recommendations ?? [];
 
       setRecommendations(recs);
       setAnalyzed(true);
