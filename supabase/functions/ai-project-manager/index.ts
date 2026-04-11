@@ -29,7 +29,6 @@ Each recommendation must be a JSON object with these exact fields:
   },
   "status": "pending"
 }`;
-
 // ---------------------------------------------------------------------------
 // Deterministic fallback generator — used when no LLM key is configured
 // ---------------------------------------------------------------------------
