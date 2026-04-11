@@ -16,7 +16,7 @@ const primaryNav = [
 ];
 
 const secondaryNav = [
-  { label: "Goals", icon: Target, path: "/goals" },
+  { label: "OKRs", icon: Target, path: "/okrs" },
   { label: "Team", icon: Users, path: "/team" },
   { label: "Leave", icon: Plane, path: "/leave" },
   { label: "Budget", icon: Wallet, path: "/budget" },
