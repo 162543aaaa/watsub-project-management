@@ -20,23 +20,6 @@ import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import type { AIRecommendation, TeamContext } from "@/types/ai";
 
-const GEMINI_SYSTEM_PROMPT = `You are an expert Scrum Master and Project Manager. Analyze the provided team workload and task deadlines. Your rules: No employee should have more than 5 'In Progress' tasks. Identify bottleneck risks. Suggest task reassignments to balance the workload. Return ONLY a JSON array of recommendations matching the AIRecommendation interface.
-
-Each recommendation must be a JSON object with these exact fields:
-{
-  "id": "unique-string",
-  "type": "risk_alert" | "reassign_task" | "timeline_adjustment",
-  "description": "Short, human-readable summary of the recommendation",
-  "reasoning": "Detailed explanation of why this recommendation is made",
-  "suggested_action": {
-    "taskId": "uuid of the task to act on (optional)",
-    "newAssigneeId": "uuid of the employee to reassign to (optional)",
-    "newDeadline": "YYYY-MM-DD (optional)",
-    "affectedEmployeeId": "uuid of the overloaded employee (optional)"
-  },
-  "status": "pending"
-}`;
-
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function typeIcon(type: AIRecommendation["type"]) {
@@ -286,45 +269,23 @@ export default function AIInsights() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [analyzed, setAnalyzed] = useState(false);
 
-  // ── Call Gemini directly from browser ────────────────────────────────────
+  // ── Call Supabase Edge Function (Safe & Secure) ─────────────────────────
   const runAnalysis = useCallback(async () => {
     if (!teamContext) return;
     setAnalyzing(true);
     setAnalyzed(false);
+    
     try {
-      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-      if (!geminiKey) {
-        throw new Error(
-          "VITE_GEMINI_API_KEY is not set. Add it in Lovable → Project Settings → Environment Variables.",
-        );
+      // เรียกใช้งาน Edge Function แทนการยิง API ตรงๆ จากหน้าเว็บ
+      const { data, error } = await supabase.functions.invoke('ai-project-manager', {
+        body: { teamContext }
+      });
+
+      if (error) {
+        throw new Error(`Edge Function Error: ${error.message}`);
       }
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: GEMINI_SYSTEM_PROMPT }] },
-            contents: [
-              { role: "user", parts: [{ text: JSON.stringify(teamContext, null, 2) }] },
-            ],
-            generationConfig: { response_mime_type: "application/json" },
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        const errBody = await res.text();
-        throw new Error(`Gemini API error ${res.status}: ${errBody}`);
-      }
-
-      const json = await res.json();
-      const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
-      const parsed = JSON.parse(text);
-      const recs: AIRecommendation[] = Array.isArray(parsed)
-        ? parsed
-        : (parsed.recommendations ?? []);
+      const recs: AIRecommendation[] = data.recommendations ?? [];
 
       setRecommendations(recs);
       setAnalyzed(true);
