@@ -14,6 +14,7 @@ const ALL_PAGES = [
   { path: "/customers", label: "Customers" },
   { path: "/calendar", label: "Calendar" },
   { path: "/okrs", label: "OKRs" },
+  { path: "/ai-insights", label: "AI Insights" },
   { path: "/team", label: "Team" },
   { path: "/leave", label: "Leave" },
   { path: "/budget", label: "Budget" },
