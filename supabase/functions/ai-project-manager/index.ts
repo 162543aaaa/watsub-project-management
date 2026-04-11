@@ -6,8 +6,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are an expert Scrum Master and Project Manager. Analyze the provided team workload and task deadlines. Your rules: No employee should have more than 5 'In Progress' tasks. Identify bottleneck risks. Suggest task reassignments to balance the workload. Return ONLY a JSON array of recommendations matching the AIRecommendation interface.
+cconst SYSTEM_PROMPT = `You are an expert Scrum Master and Project Manager. Analyze the provided team workload and task deadlines.
 
+CRITICAL RULES:
+1. When checking workload limits, look ONLY at the 'inProgressCount' field.
+2. IGNORE tasks with status 'To Do' when calculating if an employee is overloaded.
+3. No employee should have more than 5 'In Progress' tasks. 
+4. If an employee has > 5 'In Progress' tasks, suggest reassigning one of their 'In Progress' tasks to someone with a lower 'inProgressCount'.
+
+Return ONLY a JSON array of recommendations matching the AIRecommendation interface.
 Each recommendation must be a JSON object with these exact fields:
 {
   "id": "unique-string",
@@ -22,7 +29,6 @@ Each recommendation must be a JSON object with these exact fields:
   },
   "status": "pending"
 }`;
-
 // ---------------------------------------------------------------------------
 // Deterministic fallback generator — used when no LLM key is configured
 // ---------------------------------------------------------------------------

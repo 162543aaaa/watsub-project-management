@@ -20,23 +20,6 @@ import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import type { AIRecommendation, TeamContext } from "@/types/ai";
 
-const GEMINI_SYSTEM_PROMPT = `You are an expert Scrum Master and Project Manager. Analyze the provided team workload and task deadlines. Your rules: No employee should have more than 5 'In Progress' tasks. Identify bottleneck risks. Suggest task reassignments to balance the workload. Return ONLY a JSON array of recommendations matching the AIRecommendation interface.
-
-Each recommendation must be a JSON object with these exact fields:
-{
-  "id": "unique-string",
-  "type": "risk_alert" | "reassign_task" | "timeline_adjustment",
-  "description": "Short, human-readable summary of the recommendation",
-  "reasoning": "Detailed explanation of why this recommendation is made",
-  "suggested_action": {
-    "taskId": "uuid of the task to act on (optional)",
-    "newAssigneeId": "uuid of the employee to reassign to (optional)",
-    "newDeadline": "YYYY-MM-DD (optional)",
-    "affectedEmployeeId": "uuid of the overloaded employee (optional)"
-  },
-  "status": "pending"
-}`;
-
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function typeIcon(type: AIRecommendation["type"]) {
@@ -291,12 +274,18 @@ export default function AIInsights() {
     if (!teamContext) return;
     setAnalyzing(true);
     setAnalyzed(false);
+    
     try {
       const { data, error } = await supabase.functions.invoke("admin-users", {
         body: { action: "run-ai", teamContext },
       });
-      if (error) throw error;
+      
+      if (error) {
+        throw new Error(`Edge Function Error: ${error.message}`);
+      }
+      
       const recs: AIRecommendation[] = data?.recommendations ?? [];
+
       setRecommendations(recs);
       setAnalyzed(true);
       toast({ title: `AI analysis complete — ${recs.length} recommendation(s) generated.` });
