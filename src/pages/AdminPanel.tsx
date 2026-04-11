@@ -13,7 +13,7 @@ const ALL_PAGES = [
   { path: "/projects", label: "Projects" },
   { path: "/customers", label: "Customers" },
   { path: "/calendar", label: "Calendar" },
-  { path: "/goals", label: "Goals" },
+  { path: "/okrs", label: "OKRs" },
   { path: "/team", label: "Team" },
   { path: "/leave", label: "Leave" },
   { path: "/budget", label: "Budget" },

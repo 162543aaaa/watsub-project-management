@@ -261,7 +261,6 @@ export default function OKRs() {
       <div className="space-y-4">
         {filtered.map((obj, i) => {
           const pct = getProgress(obj);
-          const clampedPct = Math.min(pct, 100);
           const isExpanded = expanded.has(obj.id);
           const owner = getOwner(obj.owner_id);
           const krs = obj.key_results ?? [];
@@ -294,7 +293,7 @@ export default function OKRs() {
                       <span>{krs.length} Key Result{krs.length !== 1 ? "s" : ""}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Progress value={clampedPct} className="h-2 flex-1" />
+                      <Progress value={pct} className="h-2 flex-1" />
                       <span className={`text-xs font-bold w-12 text-right ${pct >= 100 ? "text-emerald-600" : "text-primary"}`}>{pct}%</span>
                     </div>
                   </div>
@@ -318,7 +317,6 @@ export default function OKRs() {
                   {krs.map(kr => {
                     const range = kr.target_value - kr.initial_value;
                     const krPct = range > 0 ? Math.round(((kr.current_value - kr.initial_value) / range) * 100) : 0;
-                    const krClamped = Math.min(krPct, 100);
                     return (
                       <div key={kr.id} className="px-12 py-3 border-b border-border/20 last:border-b-0 group/kr flex items-center gap-3">
                         <TrendingUp className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
@@ -330,7 +328,7 @@ export default function OKRs() {
                               <span className={`text-[11px] font-bold ${krPct >= 100 ? "text-emerald-600" : "text-primary"}`}>{krPct}%</span>
                             </div>
                           </div>
-                          <Progress value={krClamped} className="h-1.5" />
+                          <Progress value={krPct} className="h-1.5" />
                         </div>
                         {/* Quick edit */}
                         <div className="flex items-center gap-1 flex-shrink-0">
