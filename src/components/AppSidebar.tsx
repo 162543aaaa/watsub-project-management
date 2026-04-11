@@ -12,7 +12,7 @@ const navItems = [
   { label: "Projects", icon: FolderOpen, path: "/projects" },
   { label: "Customers", icon: Users2, path: "/customers" },
   { label: "Calendar", icon: Calendar, path: "/calendar" },
-  { label: "Goals", icon: Target, path: "/goals" },
+  { label: "OKRs", icon: Target, path: "/okrs" },
   { label: "Team", icon: Users, path: "/team" },
   { label: "Meetings", icon: Video, path: "/meetings" },
   { label: "On-site Work", icon: MapPin, path: "/onsite-work" },
