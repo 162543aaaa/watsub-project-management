@@ -142,12 +142,53 @@ serve(async (req) => {
     }
 
     // -------------------------------------------------------------------------
-    // LLM API CALL — PLACEHOLDER
-    // Set ANTHROPIC_API_KEY or OPENAI_API_KEY in your Supabase project secrets
-    // to enable live AI recommendations. Uncomment the block you need.
+    // === Google Gemini (ACTIVE) ===
+    // Set GEMINI_API_KEY in Supabase Dashboard → Edge Functions → Manage secrets
     // -------------------------------------------------------------------------
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    if (geminiKey) {
+      const geminiUrl =
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
 
-    // === Anthropic (Claude) ===
+      const res = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: SYSTEM_PROMPT }],
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: JSON.stringify(teamContext, null, 2) }],
+            },
+          ],
+          generationConfig: {
+            response_mime_type: "application/json",
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`Gemini API error ${res.status}: ${errBody}`);
+      }
+
+      const json = await res.json();
+      const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+      const parsed = JSON.parse(text);
+      const recommendations = Array.isArray(parsed)
+        ? parsed
+        : (parsed.recommendations ?? []);
+
+      return new Response(JSON.stringify({ recommendations }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Optional: Anthropic (Claude) — uncomment + set ANTHROPIC_API_KEY secret
+    // -------------------------------------------------------------------------
     // const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     // if (anthropicKey) {
     //   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -173,15 +214,14 @@ serve(async (req) => {
     //   });
     // }
 
-    // === OpenAI (GPT-4o) ===
+    // -------------------------------------------------------------------------
+    // Optional: OpenAI (GPT-4o) — uncomment + set OPENAI_API_KEY secret
+    // -------------------------------------------------------------------------
     // const openaiKey = Deno.env.get("OPENAI_API_KEY");
     // if (openaiKey) {
     //   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     //     method: "POST",
-    //     headers: {
-    //       Authorization: `Bearer ${openaiKey}`,
-    //       "Content-Type": "application/json",
-    //     },
+    //     headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
     //     body: JSON.stringify({
     //       model: "gpt-4o",
     //       response_format: { type: "json_object" },
@@ -202,7 +242,7 @@ serve(async (req) => {
     // }
 
     // -------------------------------------------------------------------------
-    // Fallback: deterministic rule-based recommendations
+    // Fallback: deterministic rule-based recommendations (no API key configured)
     // -------------------------------------------------------------------------
     const recommendations = generateFallbackRecommendations(teamContext);
 
