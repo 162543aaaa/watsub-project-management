@@ -197,6 +197,50 @@ export type Database = {
         }
         Relationships: []
       }
+      key_results: {
+        Row: {
+          created_at: string
+          current_value: number
+          id: string
+          initial_value: number
+          objective_id: string
+          target_value: number
+          title: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number
+          id?: string
+          initial_value?: number
+          objective_id: string
+          target_value?: number
+          title: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number
+          id?: string
+          initial_value?: number
+          objective_id?: string
+          target_value?: number
+          title?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "key_results_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_evaluations: {
         Row: {
           created_at: string
@@ -427,6 +471,47 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      objectives: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string | null
+          period: string
+          status: string
+          title: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          period?: string
+          status?: string
+          title: string
+          updated_at?: string
+          year?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          period?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objectives_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       onsite_work: {
         Row: {
