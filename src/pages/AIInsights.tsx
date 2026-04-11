@@ -286,17 +286,38 @@ export default function AIInsights() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [analyzed, setAnalyzed] = useState(false);
 
-  // ── Call admin-users Edge Function (action: run-ai) ─────────────────────
+  // ── Call Gemini REST API directly from the browser ────────────────────────
   const runAnalysis = useCallback(async () => {
     if (!teamContext) return;
     setAnalyzing(true);
     setAnalyzed(false);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-users", {
-        body: { action: "run-ai", teamContext },
-      });
-      if (error) throw new Error(error.message);
-      const recs: AIRecommendation[] = data?.recommendations ?? [];
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+      if (!geminiKey) {
+        throw new Error(
+          "VITE_GEMINI_API_KEY not set. Go to Lovable → Project Settings → Environment Variables and add it."
+        );
+      }
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: GEMINI_SYSTEM_PROMPT }] },
+            contents: [{ role: "user", parts: [{ text: JSON.stringify(teamContext, null, 2) }] }],
+            generationConfig: { response_mime_type: "application/json" },
+          }),
+        }
+      );
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`Gemini API error ${res.status}: ${errBody}`);
+      }
+      const json = await res.json();
+      const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+      const parsed = JSON.parse(text);
+      const recs: AIRecommendation[] = Array.isArray(parsed) ? parsed : (parsed.recommendations ?? []);
       setRecommendations(recs);
       setAnalyzed(true);
       toast({ title: `AI analysis complete — ${recs.length} recommendation(s) generated.` });
