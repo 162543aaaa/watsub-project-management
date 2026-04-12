@@ -221,98 +221,87 @@ serve(async (req) => {
     }
 
     // ========================================================================
-    // 3. GLOBAL AI CHATBOT — real context injection + vault key resolution
+    // 3. GLOBAL AI CHATBOT (Make AI Smart with Real Database Data)
     // ========================================================================
     if (action === 'chat-with-data') {
-      const callerId = claimsData.user.id;
-      // deno-lint-ignore no-explicit-any
       const messages: Array<{ role: string; content: string }> = body.messages ?? [];
+      const callerId = claimsData.user.id;
 
-      // ── 3a. Inject real user context from DB ─────────────────────────────
-      const [tasksResult, projectsResult] = await Promise.all([
-        supabase
-          .from('tasks')
-          .select('id, name, status, due_date, priority')
-          .contains('assigned_to', [callerId])
-          .limit(20),
-        supabase
-          .from('projects')
-          .select('id, name, status')
-          .limit(10),
-      ]);
+      // 🧠 [ส่วนที่ 1] เติม "ความรู้" (ดึงข้อมูลจาก Database สดๆ)
+      const { data: myTasks } = await supabase
+        .from('tasks')
+        .select('id, name, status, priority, due_date')
+        .neq('status', 'Completed')
+        .limit(20);
+
+      const { data: myProjects } = await supabase
+        .from('projects')
+        .select('id, name, status, health')
+        .neq('status', 'Completed')
+        .limit(10);
 
       const userContext = {
-        myTasks: tasksResult.data ?? [],
-        projects: projectsResult.data ?? [],
+        current_time: new Date().toISOString(),
+        user_id: callerId,
+        active_tasks: myTasks || [],
+        active_projects: myProjects || [],
       };
 
-      // ── 3b. Resolve API keys: body → Vault → env var ─────────────────────
-      let geminiKey: string | undefined = body.geminiApiKey || undefined;
-      let claudeKey: string | undefined = body.claudeApiKey || undefined;
+      // 🎯 [ส่วนที่ 2] เติม "สกิลและนิสัย" (System Prompt)
+      const systemPrompt = `คุณคือ "Watsub AI" ผู้ช่วย Project Manager อัจฉริยะประจำแอปพลิเคชัน WatSUB
 
-      if (!geminiKey) {
-        try {
-          const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_gemini' });
-          if (data) geminiKey = data;
-        } catch { /* Vault not set up */ }
-      }
-      if (!geminiKey) geminiKey = Deno.env.get('GEMINI_API_KEY') || undefined;
+กฎเหล็กในการทำงาน (Skills & Rules):
+1. คุณต้องวิเคราะห์ข้อมูลจาก "Database Context" ที่ให้ไปด้านล่างนี้ เพื่อตอบคำถามผู้ใช้
+2. หากผู้ใช้ถามว่า "ฉันมีงานอะไรบ้าง" หรือ "มีงานไหนด่วนไหม" ให้ดูจากข้อมูล \`active_tasks\` และแจ้งเตือนงานที่ใกล้ถึงกำหนด (due_date)
+3. หากผู้ใช้ถามถึงภาพรวม ให้สรุปข้อมูลจาก \`active_projects\`
+4. ตอบด้วยความสุภาพ เป็นมืออาชีพ กระชับ และใช้ภาษาไทยเป็นหลัก
+5. หากผู้ใช้ถามเรื่องอื่นที่ไม่เกี่ยวกับการทำงาน หรือไม่มีข้อมูลใน Context ให้ตอบสุภาพว่า "ผมมีข้อมูลเฉพาะเรื่องงานในโปรเจกต์เท่านั้นครับ"
 
-      if (!claudeKey) {
-        try {
-          const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_claude' });
-          if (data) claudeKey = data;
-        } catch { /* Vault not set up */ }
-      }
+=== DATABASE CONTEXT (ข้อมูล ณ ปัจจุบัน) ===
+${JSON.stringify(userContext, null, 2)}
+==========================================`;
 
-      // ── 3c. Resolve preferred model: body → ai_settings table → default ──
-      let geminiModel: string = body.geminiModel || '';
-      let claudeModel: string = body.claudeModel || '';
+      // Prefer BYOK Gemini key from client, fall back to server env var
+      const geminiKey: string | undefined = body.geminiApiKey || Deno.env.get('GEMINI_API_KEY');
+      const geminiModel: string = body.geminiModel || 'gemini-2.0-flash';
 
-      if (!geminiModel || !claudeModel) {
-        try {
-          const { data: settings } = await supabase
-            .from('ai_settings')
-            .select('provider, model')
-            .eq('id', 1)
-            .single();
-          if (settings) {
-            if (!geminiModel && settings.provider === 'gemini') geminiModel = settings.model;
-            if (!claudeModel && settings.provider === 'claude') claudeModel = settings.model;
-          }
-        } catch { /* table not ready */ }
-      }
-      geminiModel = geminiModel || 'gemini-2.0-flash';
-      claudeModel = claudeModel || 'claude-sonnet-4-6';
-
-      const systemPrompt = `You are Watsub AI, a helpful project management assistant embedded in the WatSUB Project Management application.
-You help team members understand their tasks, projects, deadlines, and workload.
-Be concise, friendly, and professional. Respond in the same language the user writes in (Thai or English).
-
-Current user's workspace data:
-${JSON.stringify(userContext, null, 2)}`;
-
-      // ── 3d. Try Gemini ────────────────────────────────────────────────────
       if (geminiKey && messages.length > 0) {
         try {
           const contents = messages
             .filter((m) => m.role === 'user' || m.role === 'assistant')
-            .map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] }));
+            .map((m) => ({
+              role: m.role === 'user' ? 'user' : 'model',
+              parts: [{ text: m.content }],
+            }));
 
           const res = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system_instruction: { parts: [{ text: systemPrompt }] }, contents }) },
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: systemPrompt }] },
+                contents,
+              }),
+            },
           );
 
           if (res.ok) {
             const json = await res.json();
             const reply: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
-            return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ reply }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
           }
-        } catch { /* fall through to Claude */ }
+        } catch {
+          // fall through to Claude
+        }
       }
 
-      // ── 3e. Try Claude ────────────────────────────────────────────────────
+      // Try BYOK Claude key if Gemini unavailable
+      const claudeKey: string | undefined = body.claudeApiKey;
+      const claudeModel: string = body.claudeModel || 'claude-sonnet-4-6';
+
       if (claudeKey && messages.length > 0) {
         try {
           const claudeMessages = messages
@@ -321,22 +310,37 @@ ${JSON.stringify(userContext, null, 2)}`;
 
           const res = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
-            body: JSON.stringify({ model: claudeModel, max_tokens: 1024, system: systemPrompt, messages: claudeMessages }),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': claudeKey,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: claudeModel,
+              max_tokens: 1024,
+              system: systemPrompt,
+              messages: claudeMessages,
+            }),
           });
 
           if (res.ok) {
             const json = await res.json();
             const reply: string = json.content?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
-            return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ reply }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
           }
-        } catch { /* fall through */ }
+        } catch {
+          // fall through to no-key response
+        }
       }
 
       // No key available
       return new Response(JSON.stringify({
-        reply: 'กรุณาตั้งค่า API Key ก่อนครับ\n\nไปที่ไอคอน 🤖 (AI Settings) ที่มุมขวาบน → กรอก Gemini หรือ Claude API Key → กด "Save Key" แล้วลองใหม่อีกครั้งครับ',
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        reply: 'กรุณาตั้งค่า API Key ก่อนครับ\n\nไปที่ไอคอน 🤖 (AI Settings) ที่มุมขวาบน → กรอก Gemini API Key → กด "Save Key" แล้วลองใหม่อีกครั้งครับ',
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // ========================================================================
