@@ -18,11 +18,24 @@ const WELCOME: Message = {
 
 export default function AIChatbot() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([WELCOME]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const stored = sessionStorage.getItem("chat_history");
+      if (stored) return JSON.parse(stored) as Message[];
+    } catch {
+      // ignore parse errors — fall back to welcome message
+    }
+    return [WELCOME];
+  });
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Persist chat history to sessionStorage on every change
+  useEffect(() => {
+    sessionStorage.setItem("chat_history", JSON.stringify(messages));
+  }, [messages]);
 
   // Scroll to bottom whenever messages change
   useEffect(() => {

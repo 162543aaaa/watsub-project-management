@@ -228,16 +228,20 @@ serve(async (req) => {
       const callerId = claimsData.user.id;
 
       // 🧠 [ส่วนที่ 1] เติม "ความรู้" (ดึงข้อมูลจาก Database สดๆ)
+      // Task 1 fix: filter by caller's own assignments to prevent cross-user data leak
       const { data: myTasks } = await supabase
         .from('tasks')
         .select('id, name, status, priority, due_date')
         .neq('status', 'Completed')
+        .contains('assigned_to', [callerId])
+        .order('due_date', { ascending: true, nullsFirst: false })
         .limit(20);
 
       const { data: myProjects } = await supabase
         .from('projects')
         .select('id, name, status, health')
         .neq('status', 'Completed')
+        .contains('team_members', [callerId])
         .limit(10);
 
       const userContext = {
@@ -293,8 +297,15 @@ ${JSON.stringify(userContext, null, 2)}
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
-        } catch {
-          // fall through to Claude
+          // Task 2 fix: surface Gemini API errors instead of silently falling through
+          const geminiErrText = await res.text();
+          console.error(`Gemini API error (${res.status}):`, geminiErrText);
+          return new Response(JSON.stringify({
+            reply: `เกิดข้อผิดพลาดจาก AI API (Key อาจไม่ถูกต้องหรือโควต้าเต็ม): ${res.status} – ${geminiErrText.slice(0, 200)}`,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (geminiErr) {
+          console.error('Gemini network/parse error:', geminiErr);
+          // fall through to Claude on network-level failure
         }
       }
 
@@ -330,7 +341,14 @@ ${JSON.stringify(userContext, null, 2)}
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
-        } catch {
+          // Task 2 fix: surface Claude API errors instead of silently falling through
+          const claudeErrText = await res.text();
+          console.error(`Claude API error (${res.status}):`, claudeErrText);
+          return new Response(JSON.stringify({
+            reply: `เกิดข้อผิดพลาดจาก AI API (Key อาจไม่ถูกต้องหรือโควต้าเต็ม): ${res.status} – ${claudeErrText.slice(0, 200)}`,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (claudeErr) {
+          console.error('Claude network/parse error:', claudeErr);
           // fall through to no-key response
         }
       }
