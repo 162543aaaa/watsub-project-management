@@ -1,12 +1,219 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, Users, CheckCircle2, AlertCircle, FolderOpen, Clock,
   Trophy, TrendingUp, Download, FileText, Sheet, ChevronDown, ChevronUp,
-  ExternalLink
+  ExternalLink, MessageSquare, Send, Loader2, Sparkles, RefreshCw, Info
 } from "lucide-react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { exportCSV, escapeHtml } from "@/lib/exportUtils";
+import {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, ResponsiveContainer,
+} from "recharts";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Strictly typed recharts chart specification
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface BarLineDef {
+  dataKey: string;
+  color: string;
+  name: string;
+}
+
+interface BaseSpec {
+  title: string;
+  data: Record<string, string | number>[];
+}
+
+interface BarChartSpec extends BaseSpec {
+  type: "BarChart";
+  xKey: string;
+  bars: BarLineDef[];
+}
+
+interface LineChartSpec extends BaseSpec {
+  type: "LineChart";
+  xKey: string;
+  lines: BarLineDef[];
+}
+
+interface AreaChartSpec extends BaseSpec {
+  type: "AreaChart";
+  xKey: string;
+  bars?: BarLineDef[];
+  lines?: BarLineDef[];
+}
+
+interface PieChartSpec extends BaseSpec {
+  type: "PieChart";
+  nameKey: string;
+  valueKey: string;
+  colors: string[];
+}
+
+type ChartSpec = BarChartSpec | LineChartSpec | AreaChartSpec | PieChartSpec;
+
+interface ChartResponse {
+  chartSpec: ChartSpec;
+  insight: string;
+}
+
+// ── Strict runtime validation ────────────────────────────────────────────────
+
+const VALID_CHART_TYPES = new Set(["BarChart", "LineChart", "AreaChart", "PieChart"]);
+
+function isValidChartSpec(obj: unknown): obj is ChartSpec {
+  if (!obj || typeof obj !== "object") return false;
+  const s = obj as Record<string, unknown>;
+  if (!VALID_CHART_TYPES.has(s.type as string)) return false;
+  if (!Array.isArray(s.data) || s.data.length === 0) return false;
+  if (typeof s.title !== "string" || !s.title) return false;
+  // Type-specific checks
+  if (s.type === "BarChart") return Array.isArray(s.bars) && s.bars.length > 0 && typeof s.xKey === "string";
+  if (s.type === "LineChart") return Array.isArray(s.lines) && s.lines.length > 0 && typeof s.xKey === "string";
+  if (s.type === "AreaChart") return typeof s.xKey === "string";
+  if (s.type === "PieChart") return typeof s.nameKey === "string" && typeof s.valueKey === "string";
+  return false;
+}
+
+function parseChartResponse(raw: unknown): ChartResponse {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("Response is not a JSON object");
+  }
+  const obj = raw as Record<string, unknown>;
+  if (!isValidChartSpec(obj.chartSpec)) {
+    throw new Error(
+      `Invalid chartSpec — got type "${(obj.chartSpec as Record<string, unknown>)?.type ?? "unknown"}". ` +
+      "Expected: BarChart, LineChart, AreaChart, or PieChart with non-empty data array.",
+    );
+  }
+  return {
+    chartSpec: obj.chartSpec as ChartSpec,
+    insight: typeof obj.insight === "string" ? obj.insight : "",
+  };
+}
+
+// ── Dynamic recharts renderer ────────────────────────────────────────────────
+
+function DynamicChart({ spec }: { spec: ChartSpec }) {
+  const commonProps = {
+    data: spec.data,
+    margin: { top: 8, right: 16, left: 0, bottom: 4 },
+  };
+
+  if (spec.type === "BarChart") {
+    return (
+      <ResponsiveContainer width="100%" height={260}>
+        <BarChart {...commonProps}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis dataKey={spec.xKey} tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 11 }} />
+          <Tooltip
+            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {spec.bars.map((b) => (
+            <Bar key={b.dataKey} dataKey={b.dataKey} fill={b.color} name={b.name} radius={[4, 4, 0, 0]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (spec.type === "LineChart") {
+    return (
+      <ResponsiveContainer width="100%" height={260}>
+        <LineChart {...commonProps}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis dataKey={spec.xKey} tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 11 }} />
+          <Tooltip
+            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {spec.lines.map((l) => (
+            <Line key={l.dataKey} type="monotone" dataKey={l.dataKey} stroke={l.color} name={l.name} strokeWidth={2} dot={{ r: 4 }} />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (spec.type === "AreaChart") {
+    const series = spec.lines ?? spec.bars ?? [];
+    return (
+      <ResponsiveContainer width="100%" height={260}>
+        <AreaChart {...commonProps}>
+          <defs>
+            {series.map((s) => (
+              <linearGradient key={s.dataKey} id={`grad-${s.dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={s.color} stopOpacity={0.25} />
+                <stop offset="95%" stopColor={s.color} stopOpacity={0} />
+              </linearGradient>
+            ))}
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis dataKey={spec.xKey} tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 11 }} />
+          <Tooltip
+            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {series.map((s) => (
+            <Area
+              key={s.dataKey}
+              type="monotone"
+              dataKey={s.dataKey}
+              stroke={s.color}
+              fill={`url(#grad-${s.dataKey})`}
+              name={s.name}
+              strokeWidth={2}
+            />
+          ))}
+        </AreaChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  // PieChart
+  const FALLBACK_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#06b6d4", "#ec4899", "#8b5cf6"];
+  const colors = spec.colors?.length ? spec.colors : FALLBACK_COLORS;
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <PieChart>
+        <Pie
+          data={spec.data}
+          cx="50%"
+          cy="50%"
+          outerRadius={100}
+          dataKey={spec.valueKey}
+          nameKey={spec.nameKey}
+          label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
+          labelLine={false}
+          paddingAngle={3}
+        >
+          {spec.data.map((_, idx) => (
+            <Cell key={idx} fill={colors[idx % colors.length]} />
+          ))}
+        </Pie>
+        <Tooltip
+          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+        />
+        <Legend wrapperStyle={{ fontSize: 12 }} />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Example prompt suggestions ───────────────────────────────────────────────
+const PROMPT_SUGGESTIONS = [
+  "Show completed tasks by employee this month",
+  "Which tasks are overdue grouped by priority?",
+  "Task status distribution as a pie chart",
+  "Compare projects by number of tasks",
+];
 
 type Task = {
   id: string; name: string; status: string; priority: string;
@@ -38,6 +245,13 @@ export default function Reports() {
   const [showAllOverdue, setShowAllOverdue] = useState(false);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+
+  // ── Chat with Data state ───────────────────────────────────────────────
+  const [chatQuery, setChatQuery] = useState("");
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [chartResult, setChartResult] = useState<ChartResponse | null>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -133,6 +347,60 @@ export default function Reports() {
   }, [tasks, projects, customers, filterYear]);
 
   const periodLabel = filterMonth === "all" ? `${filterYear}` : `${monthNames[filterMonth as number]} ${filterYear}`;
+
+  // ── Build data context for the AI chart analyst ─────────────────────────
+  const chartDataContext = useMemo(() => {
+    const employeeTaskMap = employees.map((emp) => {
+      const myTasks = tasks.filter((t) => t.assigned_to.includes(emp.name));
+      const done = myTasks.filter((t) => t.status === "Done").length;
+      const inProgress = myTasks.filter((t) => t.status === "In Progress").length;
+      const todo = myTasks.filter((t) => t.status === "To Do").length;
+      return { name: emp.name, done, inProgress, todo, total: myTasks.length };
+    }).filter((e) => e.total > 0);
+
+    const projectSummary = filteredProjects.map((p) => ({
+      name: p.name,
+      taskCount: 0, // projects from this component don't carry tasks
+    }));
+
+    return {
+      period: periodLabel,
+      taskStatusCounts: {
+        Done: allTasks.filter((t) => t.status === "Done").length,
+        "In Progress": allTasks.filter((t) => t.status === "In Progress").length,
+        "To Do": allTasks.filter((t) => t.status === "To Do").length,
+      },
+      employees: employeeTaskMap,
+      projects: projectSummary,
+      overdueCount: overdueTasks.length,
+      totalTasks: allTasks.length,
+    };
+  }, [employees, tasks, allTasks, filteredProjects, overdueTasks, periodLabel]);
+
+  const handleChartQuery = useCallback(async () => {
+    const q = chatQuery.trim();
+    if (!q || chartLoading) return;
+    setChartLoading(true);
+    setChartError(null);
+    setChartResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-phase3-advanced", {
+        body: { action: "text-to-chart", query: q, dataContext: chartDataContext },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      // Strict typed parse — throws on malformed response
+      const result = parseChartResponse(data);
+      setChartResult(result);
+    } catch (err) {
+      setChartError(err instanceof Error ? err.message : "Unknown error occurred");
+    } finally {
+      setChartLoading(false);
+    }
+  }, [chatQuery, chartLoading, chartDataContext]);
 
   const getTaskContext = (task: Task) => {
     if (task.project_id) {
@@ -414,6 +682,131 @@ export default function Reports() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── Chat with Data ─────────────────────────────────────────────────── */}
+      <div className="bg-card rounded-2xl border border-border/60 p-5 animate-stagger-5 mt-6" style={{ boxShadow: "var(--shadow-sm)" }}>
+        {/* Section header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <MessageSquare className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h2 className="font-bold text-foreground flex items-center gap-1.5">
+              Chat with Data
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                AI
+              </span>
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Ask a question in plain English — get an instant chart
+            </p>
+          </div>
+        </div>
+
+        {/* Input row */}
+        <div className="flex gap-2 mb-4">
+          <input
+            ref={chatInputRef}
+            type="text"
+            value={chatQuery}
+            onChange={(e) => setChatQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleChartQuery(); }}
+            placeholder="e.g. Show completed tasks by employee this month…"
+            disabled={chartLoading}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 outline-none transition-all disabled:opacity-50"
+          />
+          <button
+            onClick={handleChartQuery}
+            disabled={!chatQuery.trim() || chartLoading}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-semibold hover:opacity-90 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+          >
+            {chartLoading
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Send className="w-4 h-4" />}
+            {chartLoading ? "Thinking…" : "Analyze"}
+          </button>
+        </div>
+
+        {/* Prompt suggestions */}
+        {!chartResult && !chartLoading && !chartError && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {PROMPT_SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => { setChatQuery(s); chatInputRef.current?.focus(); }}
+                className="text-xs px-3 py-1.5 rounded-full border border-border bg-muted hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-300 dark:hover:border-violet-700 text-muted-foreground hover:text-violet-600 dark:hover:text-violet-400 transition-all"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Loading skeleton */}
+        {chartLoading && (
+          <div className="mt-4 space-y-3 animate-pulse">
+            <div className="h-4 bg-muted rounded-full w-1/3" />
+            <div className="h-64 bg-muted rounded-xl" />
+            <div className="h-3 bg-muted rounded-full w-2/3" />
+          </div>
+        )}
+
+        {/* Error state */}
+        {chartError && !chartLoading && (
+          <div className="mt-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-4 flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-0.5">
+                Chart generation failed
+              </p>
+              <p className="text-xs text-red-500/80 dark:text-red-400/70 font-mono break-all">
+                {chartError}
+              </p>
+            </div>
+            <button
+              onClick={handleChartQuery}
+              className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-semibold flex-shrink-0"
+            >
+              <RefreshCw className="w-3 h-3" /> Retry
+            </button>
+          </div>
+        )}
+
+        {/* Chart result */}
+        {chartResult && !chartLoading && (
+          <div className="mt-2 animate-scale-in">
+            {/* Chart title + reset */}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-foreground">{chartResult.chartSpec.title}</h3>
+              <button
+                onClick={() => { setChartResult(null); setChartError(null); setChatQuery(""); chatInputRef.current?.focus(); }}
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" /> New query
+              </button>
+            </div>
+
+            {/* The chart */}
+            <DynamicChart spec={chartResult.chartSpec} />
+
+            {/* AI insight */}
+            {chartResult.insight && (
+              <div className="mt-4 flex items-start gap-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-900/30">
+                <Sparkles className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-violet-700 dark:text-violet-300 leading-relaxed">
+                  {chartResult.insight}
+                </p>
+              </div>
+            )}
+
+            {/* Data context note */}
+            <p className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              Based on {chartDataContext.totalTasks} tasks · {periodLabel}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
