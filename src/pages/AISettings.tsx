@@ -107,20 +107,41 @@ export default function AISettings() {
     return `${prefix}${"•".repeat(10)}${suffix}`;
   };
 
+  // Direct fetch helper — bypasses supabase-js error swallowing on non-2xx
+  const invokeEdgeFunction = async (payload: Record<string, unknown>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+    const res = await fetch(`${supabaseUrl}/functions/v1/admin-users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session?.access_token ?? ""}`,
+        "apikey": anonKey,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`HTTP ${res.status}: ${body}`);
+    }
+
+    return res.json();
+  };
+
   const handleSaveKey = async () => {
     if (!currentKey.trim()) return;
     setSaving(true);
     try {
-      const { error } = await supabase.functions.invoke("admin-users", {
-        body: {
-          action: "save-ai-settings",
-          provider,
-          apiKey: currentKey,
-          selectedModel: currentModel,
-          features,
-        },
+      await invokeEdgeFunction({
+        action: "save-ai-settings",
+        provider,
+        apiKey: currentKey,
+        selectedModel: currentModel,
+        features,
       });
-      if (error) throw new Error(error.message);
 
       setSavedMasks((prev) => ({ ...prev, [provider]: maskKey(currentKey, providerCfg.prefixLen) }));
       setKeys((prev) => ({ ...prev, [provider]: "" }));
@@ -135,16 +156,13 @@ export default function AISettings() {
   const handleSaveAll = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase.functions.invoke("admin-users", {
-        body: {
-          action: "save-ai-settings",
-          provider,
-          apiKey: currentKey,
-          selectedModel: currentModel,
-          features,
-        },
+      await invokeEdgeFunction({
+        action: "save-ai-settings",
+        provider,
+        apiKey: currentKey,
+        selectedModel: currentModel,
+        features,
       });
-      if (error) throw new Error(error.message);
 
       if (currentKey.trim()) {
         setSavedMasks((prev) => ({ ...prev, [provider]: maskKey(currentKey, providerCfg.prefixLen) }));
