@@ -392,6 +392,70 @@ serve(async (req) => {
     }
 
     // ========================================================================
+    // PHASE-2 AI SMART LOGIC — customer-sentiment / okr-suggestions
+    // ========================================================================
+
+    if (action === 'customer-sentiment') {
+      const { customerData } = body;
+      if (!customerData) {
+        return new Response(JSON.stringify({ error: 'Missing customerData' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const geminiKey = await resolveGeminiKey(body, supabase);
+      if (!geminiKey) {
+        return new Response(JSON.stringify({ error: 'No Gemini API Key' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const info = [
+        customerData.note && `Notes: ${customerData.note}`,
+        customerData.detail && `Detail: ${customerData.detail}`,
+        customerData.job_description && `Job Description: ${customerData.job_description}`,
+        customerData.feedback_channel && `Feedback Channel: ${customerData.feedback_channel}`,
+      ].filter(Boolean).join('\n');
+      const prompt = `You are a Customer Success Manager. Analyze this customer profile for "${customerData.name}" and determine their sentiment based on the available information.\n\n${info || '(No notes available)'}\n\nReturn ONLY valid JSON with no markdown: {"sentiment": "Happy", "reason": "one sentence"}\nsentiment must be exactly one of: "Happy", "Neutral", "At Risk"`;
+      const raw = await callGemini(geminiKey, prompt, true);
+      let result: { sentiment: string; reason: string } = { sentiment: 'Neutral', reason: 'Insufficient data to determine sentiment.' };
+      try {
+        const parsed = JSON.parse(raw ?? '{}');
+        if (parsed.sentiment && parsed.reason) result = parsed;
+      } catch { /* use default */ }
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'okr-suggestions') {
+      const { okrData } = body;
+      if (!okrData) {
+        return new Response(JSON.stringify({ error: 'Missing okrData' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const geminiKey = await resolveGeminiKey(body, supabase);
+      if (!geminiKey) {
+        return new Response(JSON.stringify({ error: 'No Gemini API Key' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const prompt = `You are an OKR Coach. This objective is at risk of not being completed on time.\n\n` +
+        `Objective: "${okrData.title}"\nPeriod: ${okrData.period}\n` +
+        `Current Progress: ${okrData.progressPct}%\nDays Elapsed: ${okrData.daysElapsed} of ${okrData.totalDays}\n\n` +
+        `Suggest exactly 2 specific, actionable steps to accelerate progress and hit 100% by the deadline. ` +
+        `Return ONLY valid JSON with no markdown: {"suggestions": ["step 1", "step 2"]}`;
+      const raw = await callGemini(geminiKey, prompt, true);
+      let suggestions: string[] = [];
+      try {
+        const parsed = JSON.parse(raw ?? '{}');
+        suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.map(String) : [];
+      } catch { suggestions = []; }
+      return new Response(JSON.stringify({ suggestions }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ========================================================================
     // 4. GET AI SETTINGS — return saved model/features + vault key flags
     // ========================================================================
     if (action === 'get-ai-settings') {

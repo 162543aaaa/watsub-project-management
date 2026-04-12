@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Target, Save, Trash2, Pencil, X, ChevronDown, ChevronRight, CalendarDays, TrendingUp, User } from "lucide-react";
+import { Plus, Target, Save, Trash2, Pencil, X, ChevronDown, ChevronRight, CalendarDays, TrendingUp, User, Sparkles, Loader2 } from "lucide-react";
 import { useOKRs } from "@/hooks/useOKRs";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -7,6 +7,36 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import type { Objective, KeyResult } from "@/types";
+import { getOkrSuggestions } from "@/lib/aiActions";
+
+// ── OKR Confidence Helpers ────────────────────────────────────────────────────
+
+function getQuarterDates(period: string): { start: Date; end: Date; totalDays: number } | null {
+  const match = period.match(/Q([1-4])\s+(\d{4})/);
+  if (!match) return null;
+  const q = Number(match[1]);
+  const year = Number(match[2]);
+  const starts = [new Date(year, 0, 1), new Date(year, 3, 1), new Date(year, 6, 1), new Date(year, 9, 1)];
+  const ends   = [new Date(year, 2, 31), new Date(year, 5, 30), new Date(year, 8, 30), new Date(year, 11, 31)];
+  const start = starts[q - 1];
+  const end   = ends[q - 1];
+  const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return { start, end, totalDays };
+}
+
+interface ConfidenceInfo { projectedFinal: number; daysElapsed: number; totalDays: number; isAtRisk: boolean }
+
+function getConfidence(pct: number, period: string): ConfidenceInfo | null {
+  const dates = getQuarterDates(period);
+  if (!dates) return null;
+  const { start, end, totalDays } = dates;
+  const now = new Date();
+  if (now < start) return { projectedFinal: 100, daysElapsed: 0, totalDays, isAtRisk: false };
+  const daysElapsed = Math.min(Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)), totalDays);
+  const projectedFinal = daysElapsed > 0 ? Math.min(Math.round((pct / daysElapsed) * totalDays), 100) : (pct > 0 ? 100 : 0);
+  const isAtRisk = now <= end && projectedFinal < 100 && pct < 100;
+  return { projectedFinal, daysElapsed, totalDays, isAtRisk };
+}
 
 const currentYear = new Date().getFullYear();
 const yearOptions = [2025, 2026, 2027];
@@ -35,6 +65,26 @@ export default function OKRs() {
 
   const [confirmDeleteObj, setConfirmDeleteObj] = useState<string | null>(null);
   const [confirmDeleteKR, setConfirmDeleteKR] = useState<string | null>(null);
+  const [okrSuggestions, setOkrSuggestions] = useState<Record<string, { loading: boolean; steps: string[] }>>({});
+
+  const handleGetSuggestions = async (obj: Objective, pct: number) => {
+    const conf = getConfidence(pct, obj.period ?? "");
+    if (!conf) return;
+    setOkrSuggestions(prev => ({ ...prev, [obj.id]: { loading: true, steps: [] } }));
+    try {
+      const steps = await getOkrSuggestions({
+        title: obj.title,
+        period: obj.period ?? "",
+        progressPct: pct,
+        daysElapsed: conf.daysElapsed,
+        totalDays: conf.totalDays,
+      });
+      setOkrSuggestions(prev => ({ ...prev, [obj.id]: { loading: false, steps } }));
+    } catch (e) {
+      toast({ title: "ไม่สามารถโหลด Suggestions ได้", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      setOkrSuggestions(prev => { const next = { ...prev }; delete next[obj.id]; return next; });
+    }
+  };
 
   const filtered = useMemo(() => {
     if (filterQuarter === "All") return objectives;
@@ -292,10 +342,53 @@ export default function OKRs() {
                       )}
                       <span>{krs.length} Key Result{krs.length !== 1 ? "s" : ""}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Progress value={pct} className="h-2 flex-1" />
-                      <span className={`text-xs font-bold w-12 text-right ${pct >= 100 ? "text-emerald-600" : "text-primary"}`}>{pct}%</span>
-                    </div>
+                    {(() => {
+                      const conf = getConfidence(pct, obj.period ?? "");
+                      const sugg = okrSuggestions[obj.id];
+                      return (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <Progress value={pct} className="h-2 flex-1" />
+                            <span className={`text-xs font-bold w-12 text-right ${pct >= 100 ? "text-emerald-600" : "text-primary"}`}>{pct}%</span>
+                            {conf && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${
+                                conf.isAtRisk
+                                  ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                              }`}>
+                                {conf.isAtRisk ? `⚠ At Risk · proj ${conf.projectedFinal}%` : `On Track · proj ${conf.projectedFinal}%`}
+                              </span>
+                            )}
+                          </div>
+                          {conf?.isAtRisk && (
+                            <div className="mt-2">
+                              {!sugg ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleGetSuggestions(obj, pct); }}
+                                  className="flex items-center gap-1 text-[11px] text-violet-500 hover:text-violet-600 font-medium transition-colors"
+                                >
+                                  <Sparkles className="w-3 h-3" /> Get AI suggestions to speed up
+                                </button>
+                              ) : sugg.loading ? (
+                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Generating…
+                                </div>
+                              ) : sugg.steps.length > 0 ? (
+                                <div className="mt-1 space-y-1">
+                                  {sugg.steps.map((step, i) => (
+                                    <div key={i} className="flex items-start gap-1.5 text-[11px] text-foreground">
+                                      <span className="text-violet-500 font-bold flex-shrink-0">{i + 1}.</span>
+                                      <span>{step}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={e => e.stopPropagation()}>
                     <button onClick={() => openEditObj(obj)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Brain,
   AlertTriangle,
@@ -13,8 +13,11 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  Flame,
 } from "lucide-react";
 import { useTeamContext } from "@/hooks/useTeamContext";
+import { useLeave } from "@/hooks/useLeave";
+import { useEmployees } from "@/hooks/useEmployees";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -276,6 +279,126 @@ function RecCard({ rec, onApprove, onReject, approving }: RecCardProps) {
   );
 }
 
+// ─── Burnout & Capacity Panel ────────────────────────────────────────────────
+
+function BurnoutCapacityPanel() {
+  const { leaves } = useLeave();
+  const { employees } = useEmployees();
+  const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
+  const [highPrioTasks, setHighPrioTasks] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    supabase
+      .from("tasks")
+      .select("assigned_to, name, priority, status")
+      .gte("created_at", since.toISOString())
+      .then(({ data }) => {
+        const done: Record<string, number> = {};
+        const high: Record<string, string[]> = {};
+        (data || []).forEach((t: { assigned_to?: string[]; name: string; priority: string; status: string }) => {
+          if (t.status === "Done") {
+            (t.assigned_to || []).forEach(n => { done[n] = (done[n] || 0) + 1; });
+          }
+          if (t.priority === "High" && t.status !== "Done") {
+            (t.assigned_to || []).forEach(n => {
+              if (!high[n]) high[n] = [];
+              high[n].push(t.name);
+            });
+          }
+        });
+        setDoneCounts(done);
+        setHighPrioTasks(high);
+      });
+  }, []);
+
+  const approvedLeaveNames = useMemo(
+    () => new Set(leaves.filter(l => l.status === "Approved").map(l => l.requested_by)),
+    [leaves],
+  );
+
+  const upcomingLeaveMap = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() + 7);
+    const now = new Date();
+    const map: Record<string, { start: string; end: string }> = {};
+    leaves.forEach(l => {
+      if (l.status !== "Approved") return;
+      const s = new Date(l.leave_start);
+      if (s >= now && s <= cutoff) map[l.requested_by] = { start: l.leave_start, end: l.leave_end };
+    });
+    return map;
+  }, [leaves]);
+
+  const burnoutRisks = useMemo(
+    () => employees.filter(e => (doneCounts[e.name] || 0) > 15 && !approvedLeaveNames.has(e.name)),
+    [employees, doneCounts, approvedLeaveNames],
+  );
+
+  const capacityAlerts = useMemo(
+    () => employees
+      .filter(e => upcomingLeaveMap[e.name] && (highPrioTasks[e.name]?.length || 0) > 0)
+      .map(e => ({ emp: e, leave: upcomingLeaveMap[e.name], highCount: highPrioTasks[e.name].length })),
+    [employees, upcomingLeaveMap, highPrioTasks],
+  );
+
+  if (burnoutRisks.length === 0 && capacityAlerts.length === 0) return null;
+
+  return (
+    <div className="bg-card rounded-2xl border border-border/60 p-5 mb-6 animate-stagger-2">
+      <div className="flex items-center gap-2 mb-4">
+        <Flame className="w-5 h-5 text-orange-500" />
+        <h2 className="text-sm font-semibold">Capacity & Burnout Risk</h2>
+      </div>
+
+      {burnoutRisks.length > 0 && (
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Burnout Risk</p>
+          <div className="space-y-2">
+            {burnoutRisks.map(e => (
+              <div key={e.id} className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40">
+                <Flame className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-300">{e.name}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    {doneCounts[e.name]} tasks completed in last 30 days — no approved leave recorded
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 whitespace-nowrap flex-shrink-0">
+                  High Burnout Risk
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {capacityAlerts.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Capacity Risk — Upcoming Leave</p>
+          <div className="space-y-2">
+            {capacityAlerts.map(({ emp: e, leave, highCount }) => (
+              <div key={e.id} className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+                <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">{e.name}</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Leave {leave.start} → {leave.end} · {highCount} High-priority task{highCount !== 1 ? "s" : ""} pending — consider reassigning
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 whitespace-nowrap flex-shrink-0">
+                  Capacity Risk
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AIInsights() {
@@ -435,6 +558,9 @@ export default function AIInsights() {
 
       {/* Team Health Panel */}
       {teamContext && <TeamHealthPanel ctx={teamContext} />}
+
+      {/* Burnout & Capacity Panel */}
+      <BurnoutCapacityPanel />
 
       {/* Pre-analysis prompt */}
       {!analyzed && !analyzing && (
