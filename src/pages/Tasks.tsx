@@ -269,6 +269,14 @@ export default function Tasks() {
 
     // Cross-column move: update status
     if (activeTask.status !== targetCol) {
+      if (targetCol === "Done" && !activeTask.link && (!activeTask.comments || activeTask.comments.trim().length < 20)) {
+        toast({
+          title: "กรุณาเพิ่มรายละเอียดหรือ Link ก่อนปิดงาน",
+          description: "Please add a note (≥20 chars) or a link before completing this task.",
+          variant: "destructive",
+        });
+        return;
+      }
       const updates = { status: targetCol };
       if (activeTask._source === "project") {
         await updateProjectTask(activeTask.id, updates);
@@ -322,9 +330,24 @@ export default function Tasks() {
   const handleStatusToggle = async (task: AllTask) => {
     const nextStatus: Record<TaskStatus, TaskStatus> = { "To Do": "In Progress", "In Progress": "Done", "Done": "To Do" };
     const newStatus = nextStatus[task.status as TaskStatus] || "To Do";
+    if (newStatus === "Done" && !task.link && (!task.comments || task.comments.trim().length < 20)) {
+      toast({
+        title: "กรุณาเพิ่มรายละเอียดหรือ Link ก่อนปิดงาน",
+        description: "Please add a note (≥20 chars) or a link before completing this task.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (task._source === "project") await updateProjectTask(task.id, { status: newStatus });
     else if (task._source === "customer") await updateCustomerTask(task.id, { status: newStatus });
     else await updateTask(task.id, { status: newStatus });
+  };
+
+  const handleBreakdown = async (subTasks: string[]) => {
+    for (const name of subTasks) {
+      await addTask({ name, status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", comments: "", link: "", task_type: "standalone", category: "none" });
+    }
+    toast({ title: `เพิ่ม ${subTasks.length} Sub-tasks สำเร็จ!` });
   };
 
   const navigateToSource = (task: AllTask) => {
@@ -540,6 +563,7 @@ export default function Tasks() {
         employees={employees}
         onSave={handleSave}
         onClose={() => setModal({ open: false, task: null })}
+        onBreakdown={handleBreakdown}
       />
 
       <ConfirmDeleteDialog
