@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bot, Key, Shield, Zap, Eye, EyeOff, Save, Loader2, Cpu, CheckCircle2,
 } from "lucide-react";
@@ -86,6 +86,50 @@ export default function AISettings() {
   const [selectedModel, setSelectedModel] = useState<Record<Provider, string>>(DEFAULT_MODEL);
   const [features, setFeatures]   = useState<AIFeatures>({ aiProjectManager: true, smartTaskReassignment: true });
   const [saving, setSaving]       = useState(false);
+
+  // Load persisted settings from DB + Vault flags on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+        const res = await fetch(`${supabaseUrl}/functions/v1/admin-users`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token ?? ""}`,
+            "apikey": anonKey,
+          },
+          body: JSON.stringify({ action: "get-ai-settings" }),
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        // Restore saved model selection
+        if (data.provider && data.model) {
+          setSelectedModel((prev) => ({ ...prev, [data.provider as Provider]: data.model }));
+          setProvider(data.provider as Provider);
+        }
+
+        // Restore feature toggles
+        if (data.features && typeof data.features === "object") {
+          setFeatures((prev) => ({ ...prev, ...data.features }));
+        }
+
+        // Show vault key indicators (only when no session key is cached)
+        if (data.geminiKeySet && !sessionStorage.getItem("ai_key_gemini")) {
+          setSavedMasks((prev) => ({ ...prev, gemini: "AIzaSy••••••••••(vault)" }));
+        }
+        if (data.claudeKeySet && !sessionStorage.getItem("ai_key_claude")) {
+          setSavedMasks((prev) => ({ ...prev, claude: "sk-ant-••••••••••(vault)" }));
+        }
+      } catch { /* silently ignore — DB may not be set up yet */ }
+    };
+    loadSettings();
+  }, []);
 
   const currentKey   = keys[provider];
   const currentMask  = savedMasks[provider];
