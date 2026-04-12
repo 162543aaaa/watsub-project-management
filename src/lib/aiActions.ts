@@ -1,31 +1,38 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-
+// ============================================================================
+// AI ACTION ORCHESTRATOR (อัปเกรดใช้ Supabase Invoke แก้ปัญหา Invalid JWT)
+// ============================================================================
 async function callAiAction(
   action: string,
   payload: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const { data: { session } } = await supabase.auth.getSession();
+  // 1. ดึง Key ของ Gemini ที่ซ่อนไว้ (ถ้ามี)
   const geminiApiKey = sessionStorage.getItem("ai_key_gemini") ?? undefined;
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session?.access_token ?? ""}`,
-      apikey: ANON_KEY,
-    },
-    body: JSON.stringify({ action, geminiApiKey, ...payload }),
+  // 2. ใช้ .invoke() แทน fetch() เพื่อให้ระบบจัดการ JWT Token และ Header อัตโนมัติ!
+  const { data, error } = await supabase.functions.invoke("admin-users", {
+    body: { action, geminiApiKey, ...payload },
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`AI '${action}' failed ${res.status}: ${text.slice(0, 200)}`);
+  // 3. จัดการ Error แบบละเอียด
+  if (error) {
+    // ถ้าเป็น Error จาก JWT/Auth หรือเครือข่าย
+    console.error(`Invoke Error for ${action}:`, error);
+    throw new Error(`การเชื่อมต่อ AI ล้มเหลว (${action}): ${error.message}`);
   }
-  return res.json();
+
+  if (data?.error) {
+    // ถ้าเป็น Error ที่ฟ้องมาจาก Edge Function ของเราเอง
+    throw new Error(`ข้อผิดพลาดจาก AI: ${data.error}`);
+  }
+
+  return data || {};
 }
+
+// ============================================================================
+// AI FUNCTIONS
+// ============================================================================
 
 /** Rewrite raw text in a professional business tone. Returns polished string. */
 export async function polishText(rawText: string): Promise<string> {
