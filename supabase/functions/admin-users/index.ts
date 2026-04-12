@@ -221,63 +221,98 @@ serve(async (req) => {
     }
 
     // ========================================================================
-    // 3. GLOBAL AI CHATBOT (any authenticated user)
-    // ========================================================================
-    // messages: Array<{ role: 'user' | 'assistant', content: string }>
-    // geminiApiKey / claudeApiKey: BYOK keys forwarded from sessionStorage
-    // userContext: placeholder — replace with real DB queries later
+    // 3. GLOBAL AI CHATBOT — real context injection + vault key resolution
     // ========================================================================
     if (action === 'chat-with-data') {
+      const callerId = claimsData.user.id;
       // deno-lint-ignore no-explicit-any
       const messages: Array<{ role: string; content: string }> = body.messages ?? [];
-      const userContext = {};
+
+      // ── 3a. Inject real user context from DB ─────────────────────────────
+      const [tasksResult, projectsResult] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select('id, name, status, due_date, priority')
+          .contains('assigned_to', [callerId])
+          .limit(20),
+        supabase
+          .from('projects')
+          .select('id, name, status')
+          .limit(10),
+      ]);
+
+      const userContext = {
+        myTasks: tasksResult.data ?? [],
+        projects: projectsResult.data ?? [],
+      };
+
+      // ── 3b. Resolve API keys: body → Vault → env var ─────────────────────
+      let geminiKey: string | undefined = body.geminiApiKey || undefined;
+      let claudeKey: string | undefined = body.claudeApiKey || undefined;
+
+      if (!geminiKey) {
+        try {
+          const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_gemini' });
+          if (data) geminiKey = data;
+        } catch { /* Vault not set up */ }
+      }
+      if (!geminiKey) geminiKey = Deno.env.get('GEMINI_API_KEY') || undefined;
+
+      if (!claudeKey) {
+        try {
+          const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_claude' });
+          if (data) claudeKey = data;
+        } catch { /* Vault not set up */ }
+      }
+
+      // ── 3c. Resolve preferred model: body → ai_settings table → default ──
+      let geminiModel: string = body.geminiModel || '';
+      let claudeModel: string = body.claudeModel || '';
+
+      if (!geminiModel || !claudeModel) {
+        try {
+          const { data: settings } = await supabase
+            .from('ai_settings')
+            .select('provider, model')
+            .eq('id', 1)
+            .single();
+          if (settings) {
+            if (!geminiModel && settings.provider === 'gemini') geminiModel = settings.model;
+            if (!claudeModel && settings.provider === 'claude') claudeModel = settings.model;
+          }
+        } catch { /* table not ready */ }
+      }
+      geminiModel = geminiModel || 'gemini-2.0-flash';
+      claudeModel = claudeModel || 'claude-sonnet-4-6';
 
       const systemPrompt = `You are Watsub AI, a helpful project management assistant embedded in the WatSUB Project Management application.
 You help team members understand their tasks, projects, deadlines, and workload.
 Be concise, friendly, and professional. Respond in the same language the user writes in (Thai or English).
-Workspace context: ${JSON.stringify(userContext)}`;
 
-      // Prefer BYOK Gemini key from client, fall back to server env var
-      const geminiKey: string | undefined = body.geminiApiKey || Deno.env.get('GEMINI_API_KEY');
-      const geminiModel: string = body.geminiModel || 'gemini-2.0-flash';
+Current user's workspace data:
+${JSON.stringify(userContext, null, 2)}`;
 
+      // ── 3d. Try Gemini ────────────────────────────────────────────────────
       if (geminiKey && messages.length > 0) {
         try {
           const contents = messages
             .filter((m) => m.role === 'user' || m.role === 'assistant')
-            .map((m) => ({
-              role: m.role === 'user' ? 'user' : 'model',
-              parts: [{ text: m.content }],
-            }));
+            .map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] }));
 
           const res = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                system_instruction: { parts: [{ text: systemPrompt }] },
-                contents,
-              }),
-            },
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system_instruction: { parts: [{ text: systemPrompt }] }, contents }) },
           );
 
           if (res.ok) {
             const json = await res.json();
             const reply: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
-            return new Response(JSON.stringify({ reply }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+            return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
           }
-        } catch {
-          // fall through to Claude or no-key response
-        }
+        } catch { /* fall through to Claude */ }
       }
 
-      // Try BYOK Claude key if Gemini unavailable
-      const claudeKey: string | undefined = body.claudeApiKey;
-      const claudeModel: string = body.claudeModel || 'claude-sonnet-4-6';
-
+      // ── 3e. Try Claude ────────────────────────────────────────────────────
       if (claudeKey && messages.length > 0) {
         try {
           const claudeMessages = messages
@@ -286,70 +321,85 @@ Workspace context: ${JSON.stringify(userContext)}`;
 
           const res = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': claudeKey,
-              'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-              model: claudeModel,
-              max_tokens: 1024,
-              system: systemPrompt,
-              messages: claudeMessages,
-            }),
+            headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({ model: claudeModel, max_tokens: 1024, system: systemPrompt, messages: claudeMessages }),
           });
 
           if (res.ok) {
             const json = await res.json();
             const reply: string = json.content?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
-            return new Response(JSON.stringify({ reply }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+            return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
           }
-        } catch {
-          // fall through to no-key response
-        }
+        } catch { /* fall through */ }
       }
 
-      // No key available — guide user to AI Settings
+      // No key available
       return new Response(JSON.stringify({
         reply: 'กรุณาตั้งค่า API Key ก่อนครับ\n\nไปที่ไอคอน 🤖 (AI Settings) ที่มุมขวาบน → กรอก Gemini หรือ Claude API Key → กด "Save Key" แล้วลองใหม่อีกครั้งครับ',
-      }), {
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ========================================================================
+    // 4. GET AI SETTINGS — return saved model/features + vault key flags
+    // ========================================================================
+    if (action === 'get-ai-settings') {
+      // deno-lint-ignore no-explicit-any
+      let settingsData: Record<string, any> = { provider: 'gemini', model: 'gemini-2.0-flash', features: {} };
+      try {
+        const { data } = await supabase
+          .from('ai_settings')
+          .select('provider, model, features')
+          .eq('id', 1)
+          .single();
+        if (data) settingsData = data;
+      } catch { /* table not ready */ }
+
+      let geminiKeySet = false;
+      let claudeKeySet = false;
+      try {
+        const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_gemini' });
+        geminiKeySet = !!data;
+      } catch { /* vault not set up */ }
+      try {
+        const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_claude' });
+        claudeKeySet = !!data;
+      } catch { /* vault not set up */ }
+
+      return new Response(JSON.stringify({ ...settingsData, geminiKeySet, claudeKeySet }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // ========================================================================
-    // 4. SAVE AI SETTINGS (BYOK) — any authenticated user
-    // ========================================================================
-    // Accepts: provider ('gemini' | 'claude'), apiKey, selectedModel, features
-    // Placed BEFORE the admin-only gate so any authenticated user can persist
-    // their AI preferences. The UI already restricts the /ai-settings route
-    // to admin users via AppSidebar + TopNav.
-    //
-    // To persist keys in Supabase Vault, run in the SQL editor once per provider:
-    //   SELECT vault.create_secret('<KEY>', 'gemini_api_key', 'Gemini BYOK');
-    //   SELECT vault.create_secret('<KEY>', 'claude_api_key', 'Claude BYOK');
-    //
-    // Read them back inside an edge function with:
-    //   SELECT decrypted_secret FROM vault.decrypted_secrets
-    //   WHERE name = 'gemini_api_key';
-    //   SELECT decrypted_secret FROM vault.decrypted_secrets
-    //   WHERE name = 'claude_api_key';
-    //
-    // Optional: persist model/feature prefs in an ai_settings table:
-    //   CREATE TABLE ai_settings (
-    //     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    //     provider   text NOT NULL DEFAULT 'gemini',
-    //     model      text NOT NULL DEFAULT 'gemini-2.0-flash',
-    //     features   jsonb NOT NULL DEFAULT '{}',
-    //     updated_at timestamptz DEFAULT now()
-    //   );
+    // 5. SAVE AI SETTINGS (BYOK) — Vault encryption + ai_settings table
     // ========================================================================
     if (action === 'save-ai-settings') {
+      const { provider, apiKey, selectedModel, features } = body;
+
+      // Save API key to Vault (encrypted)
+      if (provider && apiKey) {
+        try {
+          await supabase.rpc('put_decrypted_secret', {
+            secret_name: `ai_key_${provider}`,
+            secret_value: apiKey,
+          });
+        } catch { /* Vault not available — key only in sessionStorage */ }
+      }
+
+      // Upsert model/feature preferences into ai_settings table
+      try {
+        await supabase.from('ai_settings').upsert({
+          id: 1,
+          provider: provider ?? 'gemini',
+          model: selectedModel ?? 'gemini-2.0-flash',
+          features: features ?? {},
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+      } catch { /* table not ready */ }
+
       return new Response(JSON.stringify({
         success: true,
-        message: 'AI settings saved successfully.',
+        message: 'AI settings saved.',
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
