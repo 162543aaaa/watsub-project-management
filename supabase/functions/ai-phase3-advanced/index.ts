@@ -54,7 +54,10 @@ async function callGemini(
   const json = await res.json();
   const raw: string =
     json.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
-  return JSON.parse(raw);
+  // Defensive: Gemini occasionally wraps JSON in ```json … ``` fences even
+  // when response_mime_type is set to application/json.
+  const cleanRaw = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+  return JSON.parse(cleanRaw || "{}");
 }
 
 /** Generate a 768-dim text embedding via Gemini text-embedding-004. */

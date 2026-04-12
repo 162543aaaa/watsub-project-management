@@ -337,8 +337,12 @@ serve(async (req) => {
       }
       const prompt = `Rewrite the following text in a professional, clear, and structured business tone. ` +
         `Return ONLY the rewritten text — no explanations, no markdown, no extra commentary.\n\nOriginal:\n${rawText}`;
-      const polished = await callGemini(geminiKey, prompt);
-      return new Response(JSON.stringify({ polished: polished ?? rawText }), {
+      const polishedRaw = await callGemini(geminiKey, prompt);
+      const polished = polishedRaw
+        ?.replace(/```(?:markdown|text)?/gi, '')
+        .replace(/```/g, '')
+        .trim();
+      return new Response(JSON.stringify({ polished: polished || rawText }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -387,8 +391,12 @@ serve(async (req) => {
         `โดยอิงจากข้อมูลสถิติต่อไปนี้:\n\n${JSON.stringify(stats, null, 2)}\n\n` +
         `เขียนเป็นภาษาไทย กระชับ เป็นมืออาชีพ ไม่ต้องขึ้นหัวข้อ ความยาวประมาณ 3-4 ประโยค ` +
         `ระบุจุดแข็งและข้อแนะนำในการพัฒนา`;
-      const draft = await callGemini(geminiKey, prompt);
-      return new Response(JSON.stringify({ draft: draft ?? '' }), {
+      const draftRaw = await callGemini(geminiKey, prompt);
+      const draft = draftRaw
+        ?.replace(/```(?:markdown|text)?/gi, '')
+        .replace(/```/g, '')
+        .trim();
+      return new Response(JSON.stringify({ draft: draft || '' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
