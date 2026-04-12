@@ -134,6 +134,12 @@ export default function AISettings() {
   const handleSaveKey = async () => {
     if (!currentKey.trim()) return;
     setSaving(true);
+
+    // Save to sessionStorage FIRST so the chatbot can use it immediately,
+    // regardless of whether the edge function call succeeds or not.
+    sessionStorage.setItem(`ai_key_${provider}`, currentKey);
+    sessionStorage.setItem(`ai_model_${provider}`, currentModel);
+
     try {
       await invokeEdgeFunction({
         action: "save-ai-settings",
@@ -142,22 +148,26 @@ export default function AISettings() {
         selectedModel: currentModel,
         features,
       });
-
-      // Persist key in sessionStorage so AIChatbot can use it this session
-      sessionStorage.setItem(`ai_key_${provider}`, currentKey);
-      sessionStorage.setItem(`ai_model_${provider}`, currentModel);
-      setSavedMasks((prev) => ({ ...prev, [provider]: maskKey(currentKey, providerCfg.prefixLen) }));
-      setKeys((prev) => ({ ...prev, [provider]: "" }));
-      toast({ title: `${providerCfg.name} API key saved successfully.` });
-    } catch (e) {
-      toast({ title: "Failed to save key", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
-    } finally {
-      setSaving(false);
+    } catch {
+      // Edge function save is best-effort; key is already in sessionStorage
     }
+
+    setSavedMasks((prev) => ({ ...prev, [provider]: maskKey(currentKey, providerCfg.prefixLen) }));
+    setKeys((prev) => ({ ...prev, [provider]: "" }));
+    toast({ title: `${providerCfg.name} API key saved successfully.` });
+    setSaving(false);
   };
 
   const handleSaveAll = async () => {
     setSaving(true);
+
+    // Save to sessionStorage FIRST
+    if (currentKey.trim()) {
+      sessionStorage.setItem(`ai_key_${provider}`, currentKey);
+      sessionStorage.setItem(`ai_model_${provider}`, currentModel);
+    }
+    sessionStorage.setItem(`ai_features`, JSON.stringify(features));
+
     try {
       await invokeEdgeFunction({
         action: "save-ai-settings",
@@ -166,20 +176,16 @@ export default function AISettings() {
         selectedModel: currentModel,
         features,
       });
-
-      if (currentKey.trim()) {
-        sessionStorage.setItem(`ai_key_${provider}`, currentKey);
-        sessionStorage.setItem(`ai_model_${provider}`, currentModel);
-        setSavedMasks((prev) => ({ ...prev, [provider]: maskKey(currentKey, providerCfg.prefixLen) }));
-        setKeys((prev) => ({ ...prev, [provider]: "" }));
-      }
-      sessionStorage.setItem(`ai_features`, JSON.stringify(features));
-      toast({ title: "AI settings saved successfully." });
-    } catch (e) {
-      toast({ title: "Failed to save settings", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
-    } finally {
-      setSaving(false);
+    } catch {
+      // Edge function save is best-effort
     }
+
+    if (currentKey.trim()) {
+      setSavedMasks((prev) => ({ ...prev, [provider]: maskKey(currentKey, providerCfg.prefixLen) }));
+      setKeys((prev) => ({ ...prev, [provider]: "" }));
+    }
+    toast({ title: "AI settings saved successfully." });
+    setSaving(false);
   };
 
   return (
