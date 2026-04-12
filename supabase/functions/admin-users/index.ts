@@ -223,27 +223,26 @@ serve(async (req) => {
     // ========================================================================
     // 3. GLOBAL AI CHATBOT (any authenticated user)
     // ========================================================================
-    // Receives: messages — Array<{ role: 'user' | 'assistant', content: string }>
-    // The userContext object is a placeholder: wire it up later by querying
-    // the Supabase DB for the caller's active tasks, projects, KPIs, etc.
-    // and injecting that data as a system prompt so the AI can answer
-    // questions grounded in real workspace data.
+    // messages: Array<{ role: 'user' | 'assistant', content: string }>
+    // geminiApiKey / claudeApiKey: BYOK keys forwarded from sessionStorage
+    // userContext: placeholder — replace with real DB queries later
     // ========================================================================
     if (action === 'chat-with-data') {
       // deno-lint-ignore no-explicit-any
       const messages: Array<{ role: string; content: string }> = body.messages ?? [];
-
-      // Placeholder: will be replaced with real DB data per caller
       const userContext = {};
 
-      const geminiKey = Deno.env.get('GEMINI_API_KEY');
-      if (geminiKey && messages.length > 0) {
-        try {
-          const systemPrompt = `You are Watsub AI, a helpful project management assistant embedded in the WatSUB Project Management application.
+      const systemPrompt = `You are Watsub AI, a helpful project management assistant embedded in the WatSUB Project Management application.
 You help team members understand their tasks, projects, deadlines, and workload.
 Be concise, friendly, and professional. Respond in the same language the user writes in (Thai or English).
 Workspace context: ${JSON.stringify(userContext)}`;
 
+      // Prefer BYOK Gemini key from client, fall back to server env var
+      const geminiKey: string | undefined = body.geminiApiKey || Deno.env.get('GEMINI_API_KEY');
+      const geminiModel: string = body.geminiModel || 'gemini-2.0-flash';
+
+      if (geminiKey && messages.length > 0) {
+        try {
           const contents = messages
             .filter((m) => m.role === 'user' || m.role === 'assistant')
             .map((m) => ({
@@ -252,7 +251,7 @@ Workspace context: ${JSON.stringify(userContext)}`;
             }));
 
           const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -270,15 +269,51 @@ Workspace context: ${JSON.stringify(userContext)}`;
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
-          // Gemini failed — fall through to mock response
         } catch {
-          // Network/parse error — fall through to mock response
+          // fall through to Claude or no-key response
         }
       }
 
-      // Mock / fallback response
+      // Try BYOK Claude key if Gemini unavailable
+      const claudeKey: string | undefined = body.claudeApiKey;
+      const claudeModel: string = body.claudeModel || 'claude-sonnet-4-6';
+
+      if (claudeKey && messages.length > 0) {
+        try {
+          const claudeMessages = messages
+            .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .map((m) => ({ role: m.role, content: m.content }));
+
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': claudeKey,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: claudeModel,
+              max_tokens: 1024,
+              system: systemPrompt,
+              messages: claudeMessages,
+            }),
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            const reply: string = json.content?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
+            return new Response(JSON.stringify({ reply }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+        } catch {
+          // fall through to no-key response
+        }
+      }
+
+      // No key available — guide user to AI Settings
       return new Response(JSON.stringify({
-        reply: 'สวัสดีครับ! ผม Watsub AI พร้อมช่วยเหลือคุณแล้ว ขณะนี้กำลังอยู่ระหว่างการเชื่อมต่อกับฐานข้อมูลครับ',
+        reply: 'กรุณาตั้งค่า API Key ก่อนครับ\n\nไปที่ไอคอน 🤖 (AI Settings) ที่มุมขวาบน → กรอก Gemini หรือ Claude API Key → กด "Save Key" แล้วลองใหม่อีกครั้งครับ',
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
