@@ -265,10 +265,24 @@ serve(async (req) => {
 ${JSON.stringify(userContext, null, 2)}
 ==========================================`;
 
-      // Prefer BYOK Gemini key from client, fall back to server env var
-      const geminiKey: string | undefined = body.geminiApiKey || Deno.env.get('GEMINI_API_KEY');
+      // ==========================================
+      // 🔐 การดึง API KEY แบบสมบูรณ์ (Client -> Vault -> Env)
+      // ==========================================
+
+      // 1. ลองดึง Gemini Key
+      let geminiKey: string | undefined = body.geminiApiKey;
+      if (!geminiKey) {
+        try {
+          // ถ้าไม่มีส่งมาจากหน้าเว็บ (เช่น ล็อกอินเครื่องใหม่) ให้ไปงัดจากตู้เซฟ (Vault)
+          const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_gemini' });
+          if (data) geminiKey = data;
+        } catch { /* ignored */ }
+      }
+      if (!geminiKey) geminiKey = Deno.env.get('GEMINI_API_KEY'); // ท่าไม้ตายสุดท้าย
+
       const geminiModel: string = body.geminiModel || 'gemini-2.0-flash';
 
+      // --- กระบวนการคุยกับ Gemini ---
       if (geminiKey && messages.length > 0) {
         try {
           const contents = messages
@@ -293,26 +307,30 @@ ${JSON.stringify(userContext, null, 2)}
           if (res.ok) {
             const json = await res.json();
             const reply: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
-            return new Response(JSON.stringify({ reply }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+            return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
           }
-          // Task 2 fix: surface Gemini API errors instead of silently falling through
           const geminiErrText = await res.text();
           console.error(`Gemini API error (${res.status}):`, geminiErrText);
           return new Response(JSON.stringify({
-            reply: `เกิดข้อผิดพลาดจาก AI API (Key อาจไม่ถูกต้องหรือโควต้าเต็ม): ${res.status} – ${geminiErrText.slice(0, 200)}`,
+            reply: `เกิดข้อผิดพลาดจาก Google Gemini: ${res.status} – ${geminiErrText.slice(0, 200)}`,
           }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         } catch (geminiErr) {
           console.error('Gemini network/parse error:', geminiErr);
-          // fall through to Claude on network-level failure
         }
       }
 
-      // Try BYOK Claude key if Gemini unavailable
-      const claudeKey: string | undefined = body.claudeApiKey;
+      // 2. ลองดึง Claude Key
+      let claudeKey: string | undefined = body.claudeApiKey;
+      if (!claudeKey) {
+        try {
+          const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_claude' });
+          if (data) claudeKey = data;
+        } catch { /* ignored */ }
+      }
+
       const claudeModel: string = body.claudeModel || 'claude-sonnet-4-6';
 
+      // --- กระบวนการคุยกับ Claude ---
       if (claudeKey && messages.length > 0) {
         try {
           const claudeMessages = messages
@@ -337,25 +355,21 @@ ${JSON.stringify(userContext, null, 2)}
           if (res.ok) {
             const json = await res.json();
             const reply: string = json.content?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
-            return new Response(JSON.stringify({ reply }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+            return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
           }
-          // Task 2 fix: surface Claude API errors instead of silently falling through
           const claudeErrText = await res.text();
           console.error(`Claude API error (${res.status}):`, claudeErrText);
           return new Response(JSON.stringify({
-            reply: `เกิดข้อผิดพลาดจาก AI API (Key อาจไม่ถูกต้องหรือโควต้าเต็ม): ${res.status} – ${claudeErrText.slice(0, 200)}`,
+            reply: `เกิดข้อผิดพลาดจาก Anthropic Claude: ${res.status} – ${claudeErrText.slice(0, 200)}`,
           }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         } catch (claudeErr) {
           console.error('Claude network/parse error:', claudeErr);
-          // fall through to no-key response
         }
       }
 
       // No key available
       return new Response(JSON.stringify({
-        reply: 'กรุณาตั้งค่า API Key ก่อนครับ\n\nไปที่ไอคอน 🤖 (AI Settings) ที่มุมขวาบน → กรอก Gemini API Key → กด "Save Key" แล้วลองใหม่อีกครั้งครับ',
+        reply: 'กรุณาตั้งค่า API Key ก่อนครับ\n\nไปที่ไอคอน 🤖 (AI Settings) ที่มุมขวาบน → กรอก API Key → กด "Save Key" แล้วลองใหม่อีกครั้งครับ',
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
