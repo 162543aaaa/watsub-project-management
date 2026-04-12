@@ -579,6 +579,7 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
+          embedding: string | null
           id: string
           link: string | null
           month: number
@@ -591,6 +592,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          embedding?: string | null
           id?: string
           link?: string | null
           month?: number
@@ -603,6 +605,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          embedding?: string | null
           id?: string
           link?: string | null
           month?: number

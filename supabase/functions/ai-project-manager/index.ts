@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-cconst SYSTEM_PROMPT = `You are an expert Scrum Master and Project Manager. Analyze the provided team workload and task deadlines.
+const SYSTEM_PROMPT = `You are an expert Scrum Master and Project Manager. Analyze the provided team workload and task deadlines.
 
 CRITICAL RULES:
 1. When checking workload limits, look ONLY at the 'inProgressCount' field.
