@@ -184,32 +184,33 @@ serve(async (req) => {
 
       const geminiKey = Deno.env.get('GEMINI_API_KEY');
       if (geminiKey) {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-              contents: [{ role: 'user', parts: [{ text: JSON.stringify(teamContext, null, 2) }] }],
-              generationConfig: { response_mime_type: 'application/json' },
-            }),
-          },
-        );
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                contents: [{ role: 'user', parts: [{ text: JSON.stringify(teamContext, null, 2) }] }],
+                generationConfig: { response_mime_type: 'application/json' },
+              }),
+            },
+          );
 
-        if (!res.ok) {
-          const errBody = await res.text();
-          throw new Error(`Gemini API error ${res.status}: ${errBody}`);
+          if (res.ok) {
+            const json = await res.json();
+            const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
+            const parsed = JSON.parse(text);
+            const recommendations = Array.isArray(parsed) ? parsed : (parsed.recommendations ?? []);
+            return new Response(JSON.stringify({ recommendations }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          // Gemini API returned non-2xx — fall through to rule-based fallback
+        } catch {
+          // Network or parse error — fall through to rule-based fallback
         }
-
-        const json = await res.json();
-        const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
-        const parsed = JSON.parse(text);
-        const recommendations = Array.isArray(parsed) ? parsed : (parsed.recommendations ?? []);
-
-        return new Response(JSON.stringify({ recommendations }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
       }
 
       // Fallback: rule-based recommendations
