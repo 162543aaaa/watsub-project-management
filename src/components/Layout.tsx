@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import TopNav from "./TopNav";
-import AIChatbot from "./AIChatbot";
 
 export default function Layout() {
   return (
@@ -9,7 +8,6 @@ export default function Layout() {
       <main className="pt-14 min-h-screen overflow-y-auto">
         <Outlet />
       </main>
-      <AIChatbot />
     </div>
   );
 }
