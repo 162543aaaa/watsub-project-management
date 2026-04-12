@@ -47,3 +47,30 @@ export async function draftKpiText(
   const data = await callAiAction("draft-kpi", { stats, employeeName });
   return (data.draft as string) ?? "";
 }
+
+/** Analyze customer sentiment from notes/feedback. Returns sentiment + 1-sentence reason. */
+export async function analyzeCustomerSentiment(customerData: {
+  name: string;
+  note?: string;
+  detail?: string;
+  job_description?: string;
+  feedback_channel?: string;
+}): Promise<{ sentiment: "Happy" | "Neutral" | "At Risk"; reason: string }> {
+  const data = await callAiAction("customer-sentiment", { customerData });
+  return {
+    sentiment: (data.sentiment as "Happy" | "Neutral" | "At Risk") ?? "Neutral",
+    reason: (data.reason as string) ?? "",
+  };
+}
+
+/** Get 2 actionable suggestions to accelerate an at-risk OKR. */
+export async function getOkrSuggestions(okrData: {
+  title: string;
+  period: string;
+  progressPct: number;
+  daysElapsed: number;
+  totalDays: number;
+}): Promise<string[]> {
+  const data = await callAiAction("okr-suggestions", { okrData });
+  return (data.suggestions as string[]) ?? [];
+}

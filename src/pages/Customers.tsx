@@ -1,13 +1,14 @@
 import { useState, useRef } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2, Sparkles, Loader2, SmilePlus, Meh, ShieldAlert } from "lucide-react";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useCustomers } from "@/hooks/useCustomers";
+import { useCustomers, Customer } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
+import { analyzeCustomerSentiment } from "@/lib/aiActions";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
@@ -76,8 +77,26 @@ export default function Customers() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "customer" | "task"; id: string; name: string; parentId?: string } | null>(null);
+  const [sentiments, setSentiments] = useState<Record<string, { status: "Happy" | "Neutral" | "At Risk"; reason: string } | "loading">>({});
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  const handleSentiment = async (cust: Customer) => {
+    setSentiments(prev => ({ ...prev, [cust.id]: "loading" }));
+    try {
+      const result = await analyzeCustomerSentiment({
+        name: cust.name,
+        note: cust.note,
+        detail: cust.detail,
+        job_description: cust.job_description,
+        feedback_channel: cust.feedback_channel,
+      });
+      setSentiments(prev => ({ ...prev, [cust.id]: result }));
+    } catch (e) {
+      toast({ title: "วิเคราะห์ไม่สำเร็จ", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      setSentiments(prev => { const next = { ...prev }; delete next[cust.id]; return next; });
+    }
+  };
 
   // Filter by year AND month
   const filtered = customers.filter(c => {
@@ -355,10 +374,24 @@ export default function Customers() {
                                   <CheckCircle2 className="w-3 h-3" /> Complete
                                 </span>
                               )}
+                          {(() => {
+                                const s = sentiments[cust.id];
+                                if (!s || s === "loading") return null;
+                                const cfg = {
+                                  Happy: { icon: <SmilePlus className="w-3 h-3" />, cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" },
+                                  Neutral: { icon: <Meh className="w-3 h-3" />, cls: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" },
+                                  "At Risk": { icon: <ShieldAlert className="w-3 h-3" />, cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
+                                }[s.status];
+                                return (
+                                  <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.cls}`} title={s.reason}>
+                                    {cfg.icon} {s.status}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </div>
                           {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
-                          <div className="flex items-center gap-3 mt-3">
+                          <div className="flex items-center gap-3 mt-3 flex-wrap">
                             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               {expanded[cust.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                               {expanded[cust.id] ? "Hide" : "Show"} tasks
@@ -367,7 +400,26 @@ export default function Customers() {
                               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-all hover:scale-105">
                               <Plus className="w-3.5 h-3.5" /> Add task
                             </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleSentiment(cust); }}
+                              disabled={sentiments[cust.id] === "loading"}
+                              className="flex items-center gap-1 text-xs text-violet-500 hover:text-violet-600 font-medium transition-all hover:scale-105 disabled:opacity-50"
+                            >
+                              {sentiments[cust.id] === "loading"
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Sparkles className="w-3.5 h-3.5" />}
+                              Analyze Sentiment
+                            </button>
                           </div>
+                          {(() => {
+                            const s = sentiments[cust.id];
+                            if (!s || s === "loading") return null;
+                            return (
+                              <p className="mt-2 text-[11px] text-muted-foreground italic border-t border-border/40 pt-2">
+                                {s.reason}
+                              </p>
+                            );
+                          })()}
                           {expanded[cust.id] && (
                             <div className="mt-3 space-y-2" onClick={e => e.stopPropagation()}>
                               {cust.tasks.length === 0 ? (
