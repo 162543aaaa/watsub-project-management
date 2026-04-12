@@ -219,6 +219,42 @@ serve(async (req) => {
       });
     }
 
+    // ========================================================================
+    // 3. SAVE AI SETTINGS (BYOK) — any authenticated user
+    // ========================================================================
+    // Accepts: provider ('gemini' | 'claude'), apiKey, selectedModel, features
+    // Placed BEFORE the admin-only gate so any authenticated user can persist
+    // their AI preferences. The UI already restricts the /ai-settings route
+    // to admin users via AppSidebar + TopNav.
+    //
+    // To persist keys in Supabase Vault, run in the SQL editor once per provider:
+    //   SELECT vault.create_secret('<KEY>', 'gemini_api_key', 'Gemini BYOK');
+    //   SELECT vault.create_secret('<KEY>', 'claude_api_key', 'Claude BYOK');
+    //
+    // Read them back inside an edge function with:
+    //   SELECT decrypted_secret FROM vault.decrypted_secrets
+    //   WHERE name = 'gemini_api_key';
+    //   SELECT decrypted_secret FROM vault.decrypted_secrets
+    //   WHERE name = 'claude_api_key';
+    //
+    // Optional: persist model/feature prefs in an ai_settings table:
+    //   CREATE TABLE ai_settings (
+    //     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    //     provider   text NOT NULL DEFAULT 'gemini',
+    //     model      text NOT NULL DEFAULT 'gemini-2.0-flash',
+    //     features   jsonb NOT NULL DEFAULT '{}',
+    //     updated_at timestamptz DEFAULT now()
+    //   );
+    // ========================================================================
+    if (action === 'save-ai-settings') {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'AI settings saved successfully.',
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // --- MUST BE ADMIN BEYOND THIS POINT ---
     const callerId = claimsData.user.id;
     const { data: callerRole } = await supabase
@@ -230,40 +266,6 @@ serve(async (req) => {
     if (!callerRole) {
       return new Response(JSON.stringify({ error: 'Admin only' }), {
         status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // ========================================================================
-    // 3. SAVE AI SETTINGS (BYOK)
-    // ========================================================================
-    // NOTE: To wire up real Supabase Vault persistence, run the following SQL
-    // in your project's SQL editor once:
-    //
-    //   -- 1. Store the key:
-    //   SELECT vault.create_secret('<YOUR_KEY>', 'gemini_api_key', 'Gemini BYOK key');
-    //
-    //   -- 2. Update it later:
-    //   SELECT vault.update_secret(id, '<NEW_KEY>')
-    //   FROM vault.secrets WHERE name = 'gemini_api_key';
-    //
-    //   -- 3. Read it back in an edge function:
-    //   SELECT decrypted_secret FROM vault.decrypted_secrets
-    //   WHERE name = 'gemini_api_key';
-    //
-    //   -- 4. Create ai_settings table for model/feature prefs:
-    //   CREATE TABLE ai_settings (
-    //     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    //     model      text NOT NULL DEFAULT 'gemini-2.0-flash',
-    //     features   jsonb NOT NULL DEFAULT '{}',
-    //     updated_at timestamptz DEFAULT now()
-    //   );
-    // ========================================================================
-    if (action === 'save-ai-settings') {
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'AI settings saved successfully.',
-      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
