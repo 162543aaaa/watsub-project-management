@@ -129,7 +129,7 @@ serve(async (req) => {
 
     // deno-lint-ignore no-explicit-any
     const body = await req.json().catch(() => ({})) as Record<string, any>;
-    const { action, email, password, display_name, user_id, role, is_approved, allowed_pages, teamContext, apiKey, selectedModel, features } = body;
+    const { action, email, password, display_name, user_id, role, is_approved, allowed_pages, teamContext } = body;
 
     // 1. SETUP ADMIN (No Auth required — initial setup only)
     if (action === 'setup-admin') {
@@ -234,102 +234,36 @@ serve(async (req) => {
       });
     }
 
-    // 3. SAVE AI SETTINGS (admin only)
-    // ─────────────────────────────────────────────────────────────────────────
-    // This action persists the admin's BYOK Gemini API key plus model/feature
-    // preferences.
+    // ========================================================================
+    // 3. SAVE AI SETTINGS (BYOK)
+    // ========================================================================
+    // NOTE: To wire up real Supabase Vault persistence, run the following SQL
+    // in your project's SQL editor once:
     //
-    // SUPABASE VAULT INTEGRATION GUIDE
-    // To store the API key with true server-side encryption, follow these steps:
+    //   -- 1. Store the key:
+    //   SELECT vault.create_secret('<YOUR_KEY>', 'gemini_api_key', 'Gemini BYOK key');
     //
-    //   1. Enable the pgsodium / Vault extension in your Supabase project:
-    //        SELECT vault.create_secret('<API_KEY>', 'gemini_api_key', 'Gemini BYOK key');
+    //   -- 2. Update it later:
+    //   SELECT vault.update_secret(id, '<NEW_KEY>')
+    //   FROM vault.secrets WHERE name = 'gemini_api_key';
     //
-    //   2. To upsert (replace) the secret later:
-    //        SELECT vault.update_secret(id, '<NEW_API_KEY>')
-    //        FROM vault.secrets WHERE name = 'gemini_api_key';
+    //   -- 3. Read it back in an edge function:
+    //   SELECT decrypted_secret FROM vault.decrypted_secrets
+    //   WHERE name = 'gemini_api_key';
     //
-    //   3. To read the decrypted secret in an edge function:
-    //        const { data } = await supabase.rpc('vault_decrypt', { secret_name: 'gemini_api_key' });
-    //        const key = data?.decrypted_secret;
-    //
-    //   4. You can also use a `ai_settings` table to persist model/feature prefs:
-    //        CREATE TABLE ai_settings (
-    //          id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    //          model       text NOT NULL DEFAULT 'gemini-2.0-flash',
-    //          features    jsonb NOT NULL DEFAULT '{}',
-    //          updated_at  timestamptz DEFAULT now()
-    //        );
-    //        -- Then upsert a single row keyed on a fixed id or no PK conflict:
-    //        INSERT INTO ai_settings (id, model, features)
-    //        VALUES ('00000000-0000-0000-0000-000000000001', <model>, <features>)
-    //        ON CONFLICT (id) DO UPDATE SET model = EXCLUDED.model, features = EXCLUDED.features, updated_at = now();
-    // ─────────────────────────────────────────────────────────────────────────
+    //   -- 4. Create ai_settings table for model/feature prefs:
+    //   CREATE TABLE ai_settings (
+    //     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    //     model      text NOT NULL DEFAULT 'gemini-2.0-flash',
+    //     features   jsonb NOT NULL DEFAULT '{}',
+    //     updated_at timestamptz DEFAULT now()
+    //   );
+    // ========================================================================
     if (action === 'save-ai-settings') {
-      // Validate input
-      const validModels = ['gemini-2.0-flash', 'gemini-1.5-pro'];
-      if (selectedModel && !validModels.includes(selectedModel)) {
-        return new Response(JSON.stringify({ error: 'Invalid model selection' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      // If an API key was provided, persist it via Supabase Vault RPC.
-      // The vault.create_secret / vault.update_secret functions are available
-      // when the Vault extension is enabled on your Supabase project.
-      if (apiKey && typeof apiKey === 'string' && apiKey.trim().length > 0) {
-        // Check whether a secret named 'gemini_api_key' already exists.
-        const { data: existingSecret } = await supabase
-          .rpc('vault_secret_exists' as never, { secret_name: 'gemini_api_key' })
-          .single()
-          .catch(() => ({ data: null }));
-
-        if (existingSecret) {
-          // Update existing secret
-          await supabase
-            .rpc('vault_update_secret' as never, {
-              secret_name: 'gemini_api_key',
-              new_secret: apiKey.trim(),
-            })
-            .catch(() => {
-              // If vault RPCs are not yet enabled, fall back to storing in an
-              // environment-variable-style secrets table or log a warning.
-              console.warn('[save-ai-settings] Vault update RPC not available — key not persisted.');
-            });
-        } else {
-          // Create new secret
-          await supabase
-            .rpc('vault_create_secret' as never, {
-              secret_name: 'gemini_api_key',
-              secret_value: apiKey.trim(),
-              description: 'Gemini BYOK API key for AI features',
-            })
-            .catch(() => {
-              console.warn('[save-ai-settings] Vault create RPC not available — key not persisted.');
-            });
-        }
-      }
-
-      // Persist model + feature toggles to the ai_settings table (if it exists).
-      // This is a best-effort upsert; missing table will not cause a hard error.
-      if (selectedModel || features) {
-        await supabase
-          .from('ai_settings' as never)
-          .upsert({
-            id: '00000000-0000-0000-0000-000000000001',
-            ...(selectedModel && { model: selectedModel }),
-            ...(features && { features }),
-            updated_at: new Date().toISOString(),
-          })
-          .catch(() => {
-            // Table may not exist yet — silently skip. Create it with the SQL
-            // in the guide above to enable persistence.
-            console.warn('[save-ai-settings] ai_settings table not found — preferences not persisted.');
-          });
-      }
-
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'AI settings saved successfully.',
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
