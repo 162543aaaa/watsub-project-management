@@ -221,7 +221,71 @@ serve(async (req) => {
     }
 
     // ========================================================================
-    // 3. SAVE AI SETTINGS (BYOK) — any authenticated user
+    // 3. GLOBAL AI CHATBOT (any authenticated user)
+    // ========================================================================
+    // Receives: messages — Array<{ role: 'user' | 'assistant', content: string }>
+    // The userContext object is a placeholder: wire it up later by querying
+    // the Supabase DB for the caller's active tasks, projects, KPIs, etc.
+    // and injecting that data as a system prompt so the AI can answer
+    // questions grounded in real workspace data.
+    // ========================================================================
+    if (action === 'chat-with-data') {
+      // deno-lint-ignore no-explicit-any
+      const messages: Array<{ role: string; content: string }> = body.messages ?? [];
+
+      // Placeholder: will be replaced with real DB data per caller
+      const userContext = {};
+
+      const geminiKey = Deno.env.get('GEMINI_API_KEY');
+      if (geminiKey && messages.length > 0) {
+        try {
+          const systemPrompt = `You are Watsub AI, a helpful project management assistant embedded in the WatSUB Project Management application.
+You help team members understand their tasks, projects, deadlines, and workload.
+Be concise, friendly, and professional. Respond in the same language the user writes in (Thai or English).
+Workspace context: ${JSON.stringify(userContext)}`;
+
+          const contents = messages
+            .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .map((m) => ({
+              role: m.role === 'user' ? 'user' : 'model',
+              parts: [{ text: m.content }],
+            }));
+
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: systemPrompt }] },
+                contents,
+              }),
+            },
+          );
+
+          if (res.ok) {
+            const json = await res.json();
+            const reply: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
+            return new Response(JSON.stringify({ reply }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          // Gemini failed — fall through to mock response
+        } catch {
+          // Network/parse error — fall through to mock response
+        }
+      }
+
+      // Mock / fallback response
+      return new Response(JSON.stringify({
+        reply: 'สวัสดีครับ! ผม Watsub AI พร้อมช่วยเหลือคุณแล้ว ขณะนี้กำลังอยู่ระหว่างการเชื่อมต่อกับฐานข้อมูลครับ',
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ========================================================================
+    // 4. SAVE AI SETTINGS (BYOK) — any authenticated user
     // ========================================================================
     // Accepts: provider ('gemini' | 'claude'), apiKey, selectedModel, features
     // Placed BEFORE the admin-only gate so any authenticated user can persist
