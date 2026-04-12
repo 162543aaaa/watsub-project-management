@@ -49,6 +49,12 @@ export default function AIChatbot() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+      // Pick up BYOK key saved from AI Settings page (preferred: gemini, then claude)
+      const geminiKey = sessionStorage.getItem("ai_key_gemini") ?? undefined;
+      const claudeKey = sessionStorage.getItem("ai_key_claude") ?? undefined;
+      const geminiModel = sessionStorage.getItem("ai_model_gemini") ?? "gemini-2.0-flash";
+      const claudeModel = sessionStorage.getItem("ai_model_claude") ?? "claude-sonnet-4-6";
+
       const res = await fetch(`${supabaseUrl}/functions/v1/admin-users`, {
         method: "POST",
         headers: {
@@ -59,6 +65,10 @@ export default function AIChatbot() {
         body: JSON.stringify({
           action: "chat-with-data",
           messages: next,
+          geminiApiKey: geminiKey,
+          claudeApiKey: claudeKey,
+          geminiModel,
+          claudeModel,
         }),
       });
 

@@ -143,6 +143,9 @@ export default function AISettings() {
         features,
       });
 
+      // Persist key in sessionStorage so AIChatbot can use it this session
+      sessionStorage.setItem(`ai_key_${provider}`, currentKey);
+      sessionStorage.setItem(`ai_model_${provider}`, currentModel);
       setSavedMasks((prev) => ({ ...prev, [provider]: maskKey(currentKey, providerCfg.prefixLen) }));
       setKeys((prev) => ({ ...prev, [provider]: "" }));
       toast({ title: `${providerCfg.name} API key saved successfully.` });
@@ -165,9 +168,12 @@ export default function AISettings() {
       });
 
       if (currentKey.trim()) {
+        sessionStorage.setItem(`ai_key_${provider}`, currentKey);
+        sessionStorage.setItem(`ai_model_${provider}`, currentModel);
         setSavedMasks((prev) => ({ ...prev, [provider]: maskKey(currentKey, providerCfg.prefixLen) }));
         setKeys((prev) => ({ ...prev, [provider]: "" }));
       }
+      sessionStorage.setItem(`ai_features`, JSON.stringify(features));
       toast({ title: "AI settings saved successfully." });
     } catch (e) {
       toast({ title: "Failed to save settings", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
