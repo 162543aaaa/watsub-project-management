@@ -344,9 +344,11 @@ export default function Tasks() {
   };
 
   const handleBreakdown = async (subTasks: string[]) => {
-    for (const name of subTasks) {
-      await addTask({ name, status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", comments: "", link: "", task_type: "standalone", category: "none" });
-    }
+    await Promise.all(
+      subTasks.map((name) =>
+        addTask({ name, status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", comments: "", link: "", task_type: "standalone", category: "none" }),
+      ),
+    );
     toast({ title: `เพิ่ม ${subTasks.length} Sub-tasks สำเร็จ!` });
   };
 

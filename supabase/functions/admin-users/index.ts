@@ -263,7 +263,8 @@ serve(async (req) => {
           if (res.ok) {
             const json = await res.json();
             const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
-            const parsed = JSON.parse(text);
+            const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanText || '[]');
             const recommendations = Array.isArray(parsed) ? parsed : (parsed.recommendations ?? []);
             return new Response(JSON.stringify({ recommendations }), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -360,7 +361,8 @@ serve(async (req) => {
       const raw = await callGemini(geminiKey, prompt, true);
       let subTasks: string[] = [];
       try {
-        const parsed = JSON.parse(raw ?? '[]');
+        const cleanRaw = (raw ?? '').replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanRaw || '[]');
         subTasks = Array.isArray(parsed) ? parsed.map(String) : [];
       } catch { subTasks = []; }
       return new Response(JSON.stringify({ subTasks }), {
@@ -418,7 +420,8 @@ serve(async (req) => {
       const raw = await callGemini(geminiKey, prompt, true);
       let result: { sentiment: string; reason: string } = { sentiment: 'Neutral', reason: 'Insufficient data to determine sentiment.' };
       try {
-        const parsed = JSON.parse(raw ?? '{}');
+        const cleanRaw = (raw ?? '').replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanRaw || '{}');
         if (parsed.sentiment && parsed.reason) result = parsed;
       } catch { /* use default */ }
       return new Response(JSON.stringify(result), {
@@ -447,7 +450,8 @@ serve(async (req) => {
       const raw = await callGemini(geminiKey, prompt, true);
       let suggestions: string[] = [];
       try {
-        const parsed = JSON.parse(raw ?? '{}');
+        const cleanRaw = (raw ?? '').replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanRaw || '{}');
         suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.map(String) : [];
       } catch { suggestions = []; }
       return new Response(JSON.stringify({ suggestions }), {

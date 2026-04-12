@@ -390,20 +390,23 @@ export default function KpiEvaluate() {
         revenue_vs_target: autoValues.revenue_vs_target_q,
       };
       const draft = await draftKpiText(stats, evaluatee.name);
+      let filled = 0;
       for (const section of formConfig.sections) {
         for (const q of section.questions) {
           if (q.type === "text") {
             setText(q.id, draft);
-            toast({ title: "✨ Auto-Draft สำเร็จ! กรุณาตรวจสอบและแก้ไขก่อนส่ง" });
-            setDraftingKpi(false);
-            return;
+            filled++;
           }
         }
       }
+      if (filled > 0) {
+        toast({ title: "✨ Auto-Draft สำเร็จ! กรุณาตรวจสอบและแก้ไขก่อนส่ง" });
+      }
+      setDraftingKpi(false);
     } catch (e) {
       toast({ title: "ไม่สามารถสร้าง Draft ได้", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      setDraftingKpi(false);
     }
-    setDraftingKpi(false);
   };
 
   // Calculate progress %
