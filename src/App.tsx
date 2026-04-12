@@ -32,6 +32,7 @@ import KpiAdmin from "./pages/kpi/KpiAdmin";
 import KpiDashboard from "./pages/kpi/KpiDashboard";
 import KpiPeriodSummary from "./pages/kpi/KpiPeriodSummary";
 import AIInsights from "./pages/AIInsights";
+import AISettings from "./pages/AISettings";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -78,6 +79,7 @@ const App = () => (
                 <Route path="/kpi/admin/summary/:periodId" element={<KpiPeriodSummary />} />
                 <Route path="/kpi/dashboard" element={<KpiDashboard />} />
                 <Route path="/ai-insights" element={<AIInsights />} />
+                <Route path="/ai-settings" element={<AISettings />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

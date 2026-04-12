@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Menu, X, ChevronDown, Shield, LogOut, TrendingUp, Brain
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Menu, X, ChevronDown, Shield, LogOut, TrendingUp, Brain, Bot
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -182,14 +182,24 @@ export default function TopNav() {
         {/* Right side: Admin + Logout */}
         <div className="hidden md:flex items-center gap-1 ml-auto">
           {isAdmin && (
-            <Link to="/admin">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
-                style={location.pathname === "/admin" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}
-                title="Admin Panel"
-                aria-label="Admin Panel">
-                <Shield className="w-4 h-4" />
-              </div>
-            </Link>
+            <>
+              <Link to="/ai-settings">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                  style={location.pathname === "/ai-settings" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}
+                  title="AI Settings"
+                  aria-label="AI Settings">
+                  <Bot className="w-4 h-4" />
+                </div>
+              </Link>
+              <Link to="/admin">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                  style={location.pathname === "/admin" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}
+                  title="Admin Panel"
+                  aria-label="Admin Panel">
+                  <Shield className="w-4 h-4" />
+                </div>
+              </Link>
+            </>
           )}
           <button onClick={signOut}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
@@ -247,13 +257,22 @@ export default function TopNav() {
               );
             })}
             {isAdmin && (
-              <Link to="/admin">
-                <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all"
-                  style={location.pathname === "/admin" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}>
-                  <Shield className="w-4 h-4" />
-                  <span className="text-[9px] font-medium">Admin</span>
-                </div>
-              </Link>
+              <>
+                <Link to="/ai-settings">
+                  <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all"
+                    style={location.pathname === "/ai-settings" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}>
+                    <Bot className="w-4 h-4" />
+                    <span className="text-[9px] font-medium">AI Config</span>
+                  </div>
+                </Link>
+                <Link to="/admin">
+                  <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all"
+                    style={location.pathname === "/admin" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}>
+                    <Shield className="w-4 h-4" />
+                    <span className="text-[9px] font-medium">Admin</span>
+                  </div>
+                </Link>
+              </>
             )}
             <button onClick={signOut}>
               <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" style={{ color: "hsl(215 20% 60%)" }}>
