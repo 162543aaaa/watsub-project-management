@@ -1,9 +1,10 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin, TrendingUp, Brain
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin, TrendingUp, Brain, Bot
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useState } from "react";
 
 const navItems = [
@@ -26,10 +27,15 @@ const navItems = [
   { label: "Export", icon: Download, path: "/export" },
 ];
 
+const adminNavItems = [
+  { label: "AI Settings", icon: Bot, path: "/ai-settings" },
+];
+
 export default function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const { unreadCount } = useNotifications();
+  const { isAdmin } = useAuthContext();
 
   return (
     <aside
@@ -91,6 +97,48 @@ export default function AppSidebar() {
             </Link>
           );
         })}
+
+        {/* Admin-only section */}
+        {isAdmin && (
+          <>
+            <div className="mx-2 my-2" style={{ height: "1px", background: "hsl(222 47% 18%)" }} />
+            {!collapsed && (
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: "hsl(215 20% 40%)" }}>
+                Admin
+              </p>
+            )}
+            {adminNavItems.map((item) => {
+              const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+              return (
+                <Link key={item.path} to={item.path}>
+                  <div
+                    className="nav-item group relative"
+                    style={active ? {
+                      background: "hsl(191 91% 37% / 0.15)",
+                      color: "hsl(191 91% 55%)",
+                      borderLeft: "3px solid hsl(191 91% 45%)",
+                      paddingLeft: collapsed ? "10px" : "10px"
+                    } : {}}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <item.icon className="w-[18px] h-[18px]" style={{ flexShrink: 0 }} />
+                    </div>
+                    {!collapsed && (
+                      <span className="text-[13px] font-medium truncate">{item.label}</span>
+                    )}
+                    {collapsed && (
+                      <div className="absolute left-full ml-3 px-2 py-1 rounded-lg text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50"
+                        style={{ background: "hsl(222 47% 15%)", color: "hsl(215 20% 90%)", boxShadow: "0 4px 12px hsl(0 0% 0% / 0.3)" }}>
+                        {item.label}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
 
       {/* Collapse toggle */}
