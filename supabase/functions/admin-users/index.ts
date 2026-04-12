@@ -7,6 +7,34 @@ const corsHeaders = {
 };
 
 // ============================================================================
+// AI EMBEDDING HELPER (แปลงข้อความเป็น Vector 768 มิติ)
+// ============================================================================
+async function generateEmbedding(text: string, apiKey: string): Promise<number[] | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/text-embedding-004',
+          content: { parts: [{ text }] },
+        }),
+      },
+    );
+    if (!res.ok) {
+      console.error('Embedding API Error:', await res.text());
+      return null;
+    }
+    const json = await res.json();
+    return json.embedding?.values || null;
+  } catch (err) {
+    console.error('Embedding Exception:', err);
+    return null;
+  }
+}
+
+// ============================================================================
 // AI SYSTEM CONFIGURATION & HELPERS
 // ============================================================================
 const SYSTEM_PROMPT = `You are an expert Scrum Master and Project Manager. Analyze the provided team workload and task deadlines.
@@ -221,76 +249,102 @@ serve(async (req) => {
     }
 
     // ========================================================================
-    // 3. GLOBAL AI CHATBOT (Make AI Smart with Real Database Data)
+    // NEW: ACTION สำหรับสร้าง Vector เมื่อมีการบันทึก Task/Project ใหม่
+    // ========================================================================
+    if (action === 'generate-embedding') {
+      const { id, text, table } = body; // table = 'tasks' หรือ 'projects'
+
+      // ดึง Key ออกมาจาก Vault ก่อน ถ้าไม่มีค่อยใช้ env var
+      let geminiKey = Deno.env.get('GEMINI_API_KEY');
+      try {
+        const { data: vaultKey } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_gemini' });
+        if (vaultKey) geminiKey = vaultKey;
+      } catch { /* ignored */ }
+
+      if (!geminiKey) {
+        return new Response(JSON.stringify({ error: 'No API Key' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const vector = await generateEmbedding(text, geminiKey);
+      if (vector) {
+        // อัปเดตข้อมูลตัวเลขลงในฐานข้อมูล
+        await supabase.from(table).update({ embedding: vector }).eq('id', id);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ error: 'Failed to generate embedding' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ========================================================================
+    // 3. GLOBAL AI CHATBOT (อัปเกรดเป็นระบบ RAG + Vector Search)
     // ========================================================================
     if (action === 'chat-with-data') {
       const messages: Array<{ role: string; content: string }> = body.messages ?? [];
       const callerId = claimsData.user.id;
 
-      // 🧠 [ส่วนที่ 1] เติม "ความรู้" (ดึงข้อมูลจาก Database สดๆ)
-      // Task 1 fix: filter by caller's own assignments to prevent cross-user data leak
-      const { data: myTasks } = await supabase
-        .from('tasks')
-        .select('id, name, status, priority, due_date')
-        .neq('status', 'Completed')
-        .contains('assigned_to', [callerId])
-        .order('due_date', { ascending: true, nullsFirst: false })
-        .limit(20);
-
-      const { data: myProjects } = await supabase
-        .from('projects')
-        .select('id, name, status, health')
-        .neq('status', 'Completed')
-        .contains('team_members', [callerId])
-        .limit(10);
-
-      const userContext = {
-        current_time: new Date().toISOString(),
-        user_id: callerId,
-        active_tasks: myTasks || [],
-        active_projects: myProjects || [],
-      };
-
-      // 🎯 [ส่วนที่ 2] เติม "สกิลและนิสัย" (System Prompt)
-      const systemPrompt = `คุณคือ "Watsub AI" ผู้ช่วย Project Manager อัจฉริยะประจำแอปพลิเคชัน WatSUB
-
-กฎเหล็กในการทำงาน (Skills & Rules):
-1. คุณต้องวิเคราะห์ข้อมูลจาก "Database Context" ที่ให้ไปด้านล่างนี้ เพื่อตอบคำถามผู้ใช้
-2. หากผู้ใช้ถามว่า "ฉันมีงานอะไรบ้าง" หรือ "มีงานไหนด่วนไหม" ให้ดูจากข้อมูล \`active_tasks\` และแจ้งเตือนงานที่ใกล้ถึงกำหนด (due_date)
-3. หากผู้ใช้ถามถึงภาพรวม ให้สรุปข้อมูลจาก \`active_projects\`
-4. ตอบด้วยความสุภาพ เป็นมืออาชีพ กระชับ และใช้ภาษาไทยเป็นหลัก
-5. หากผู้ใช้ถามเรื่องอื่นที่ไม่เกี่ยวกับการทำงาน หรือไม่มีข้อมูลใน Context ให้ตอบสุภาพว่า "ผมมีข้อมูลเฉพาะเรื่องงานในโปรเจกต์เท่านั้นครับ"
-
-=== DATABASE CONTEXT (ข้อมูล ณ ปัจจุบัน) ===
-${JSON.stringify(userContext, null, 2)}
-==========================================`;
-
-      // ==========================================
       // 🔐 การดึง API KEY แบบสมบูรณ์ (Client -> Vault -> Env)
-      // ==========================================
-
-      // 1. ลองดึง Gemini Key
       let geminiKey: string | undefined = body.geminiApiKey;
       if (!geminiKey) {
         try {
-          // ถ้าไม่มีส่งมาจากหน้าเว็บ (เช่น ล็อกอินเครื่องใหม่) ให้ไปงัดจากตู้เซฟ (Vault)
           const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_gemini' });
           if (data) geminiKey = data;
         } catch { /* ignored */ }
       }
-      if (!geminiKey) geminiKey = Deno.env.get('GEMINI_API_KEY'); // ท่าไม้ตายสุดท้าย
+      if (!geminiKey) geminiKey = Deno.env.get('GEMINI_API_KEY');
 
       const geminiModel: string = body.geminiModel || 'gemini-2.0-flash';
+
+      // deno-lint-ignore no-explicit-any
+      let matchedTasks: any[] = [];
+      if (geminiKey && messages.length > 0) {
+        // 🧠 RAG STEP 1: เอาคำถามล่าสุดของผู้ใช้ไปแปลงเป็น Vector
+        const lastUserMessage = messages.filter((m) => m.role === 'user').pop()?.content || '';
+        const queryEmbedding = await generateEmbedding(lastUserMessage, geminiKey);
+
+        // 🔍 RAG STEP 2: ค้นหา Database ด้วย Vector Similarity (เฉพาะงานของคนถาม)
+        if (queryEmbedding) {
+          const { data } = await supabase.rpc('match_tasks', {
+            query_embedding: queryEmbedding,
+            match_threshold: 0.3, // ค้นหาความเหมือนระดับ 30% ขึ้นไป
+            match_count: 5,       // ดึงมาแค่ 5 งานที่ตรงกับคำถามที่สุด
+            caller_id: callerId,
+          });
+          matchedTasks = data || [];
+        }
+      }
+
+      // 📦 RAG STEP 3: แพ็คข้อมูลที่ค้นเจอส่งให้ AI อ่าน
+      const userContext = {
+        current_time: new Date().toISOString(),
+        user_id: callerId,
+        relevant_tasks: matchedTasks,
+      };
+
+      const systemPrompt = `คุณคือ "Watsub AI" ผู้ช่วย Project Manager อัจฉริยะประจำแอปพลิเคชัน WatSUB
+
+กฎเหล็กในการทำงาน:
+1. คุณต้องตอบคำถามโดยอ้างอิงจากข้อมูล "DATABASE CONTEXT" (ซึ่งเป็นผลลัพธ์จากการสืบค้นด้วย AI แบบ Semantic Search)
+2. ถ้าข้อมูลใน Context ไม่เพียงพอต่อการตอบ ให้ตอบสุภาพว่า "ผมไม่พบข้อมูลที่เกี่ยวข้องในระบบครับ"
+3. ตอบด้วยความสุภาพ เป็นมืออาชีพ กระชับ และใช้ภาษาไทยเป็นหลัก
+
+=== DATABASE CONTEXT (ข้อมูลที่เกี่ยวข้องกับคำถามที่สุด) ===
+${JSON.stringify(userContext, null, 2)}
+==========================================`;
 
       // --- กระบวนการคุยกับ Gemini ---
       if (geminiKey && messages.length > 0) {
         try {
-          const contents = messages
-            .filter((m) => m.role === 'user' || m.role === 'assistant')
-            .map((m) => ({
-              role: m.role === 'user' ? 'user' : 'model',
-              parts: [{ text: m.content }],
-            }));
+          const contents = messages.map((m) => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.content }],
+          }));
 
           const res = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
@@ -319,60 +373,10 @@ ${JSON.stringify(userContext, null, 2)}
         }
       }
 
-      // 2. ลองดึง Claude Key
-      let claudeKey: string | undefined = body.claudeApiKey;
-      if (!claudeKey) {
-        try {
-          const { data } = await supabase.rpc('get_decrypted_secret', { secret_name: 'ai_key_claude' });
-          if (data) claudeKey = data;
-        } catch { /* ignored */ }
-      }
-
-      const claudeModel: string = body.claudeModel || 'claude-sonnet-4-6';
-
-      // --- กระบวนการคุยกับ Claude ---
-      if (claudeKey && messages.length > 0) {
-        try {
-          const claudeMessages = messages
-            .filter((m) => m.role === 'user' || m.role === 'assistant')
-            .map((m) => ({ role: m.role, content: m.content }));
-
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': claudeKey,
-              'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-              model: claudeModel,
-              max_tokens: 1024,
-              system: systemPrompt,
-              messages: claudeMessages,
-            }),
-          });
-
-          if (res.ok) {
-            const json = await res.json();
-            const reply: string = json.content?.[0]?.text ?? 'ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ';
-            return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-          }
-          const claudeErrText = await res.text();
-          console.error(`Claude API error (${res.status}):`, claudeErrText);
-          return new Response(JSON.stringify({
-            reply: `เกิดข้อผิดพลาดจาก Anthropic Claude: ${res.status} – ${claudeErrText.slice(0, 200)}`,
-          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        } catch (claudeErr) {
-          console.error('Claude network/parse error:', claudeErr);
-        }
-      }
-
       // No key available
       return new Response(JSON.stringify({
-        reply: 'กรุณาตั้งค่า API Key ก่อนครับ\n\nไปที่ไอคอน 🤖 (AI Settings) ที่มุมขวาบน → กรอก API Key → กด "Save Key" แล้วลองใหม่อีกครั้งครับ',
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+        reply: 'กรุณาตั้งค่า API Key ก่อนครับ (ไอคอน 🤖 มุมขวาล่าง)',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ========================================================================
