@@ -35,6 +35,40 @@ async function generateEmbedding(text: string, apiKey: string): Promise<number[]
 }
 
 // ============================================================================
+// SHARED AI HELPERS (Gemini key resolution + single-turn chat)
+// ============================================================================
+
+// deno-lint-ignore no-explicit-any
+async function resolveGeminiKey(body: Record<string, any>, supabaseClient: any): Promise<string | undefined> {
+  let key: string | undefined = body.geminiApiKey;
+  if (!key) {
+    try {
+      const { data } = await supabaseClient.rpc('get_decrypted_secret', { secret_name: 'ai_key_gemini' });
+      if (data) key = data;
+    } catch { /* ignored */ }
+  }
+  return key || Deno.env.get('GEMINI_API_KEY');
+}
+
+async function callGemini(apiKey: string, prompt: string, jsonMode = false): Promise<string | null> {
+  const body: Record<string, unknown> = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+  };
+  if (jsonMode) body.generationConfig = { response_mime_type: 'application/json' };
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+  );
+  if (!res.ok) {
+    console.error(`Gemini error ${res.status}:`, await res.text());
+    return null;
+  }
+  const json = await res.json();
+  return json.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+}
+
+// ============================================================================
 // AI SYSTEM CONFIGURATION & HELPERS
 // ============================================================================
 const SYSTEM_PROMPT = `You are an expert Scrum Master and Project Manager. Analyze the provided team workload and task deadlines.
@@ -278,6 +312,81 @@ serve(async (req) => {
       }
       return new Response(JSON.stringify({ error: 'Failed to generate embedding' }), {
         status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ========================================================================
+    // PHASE-1 AI QUICK WINS — polish-text / breakdown-task / draft-kpi
+    // All require auth; no admin privilege needed.
+    // ========================================================================
+
+    if (action === 'polish-text') {
+      const { rawText } = body;
+      if (!rawText?.trim()) {
+        return new Response(JSON.stringify({ error: 'Missing rawText' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const geminiKey = await resolveGeminiKey(body, supabase);
+      if (!geminiKey) {
+        return new Response(JSON.stringify({ error: 'No Gemini API Key' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const prompt = `Rewrite the following text in a professional, clear, and structured business tone. ` +
+        `Return ONLY the rewritten text — no explanations, no markdown, no extra commentary.\n\nOriginal:\n${rawText}`;
+      const polished = await callGemini(geminiKey, prompt);
+      return new Response(JSON.stringify({ polished: polished ?? rawText }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'breakdown-task') {
+      const { taskTitle } = body;
+      if (!taskTitle?.trim()) {
+        return new Response(JSON.stringify({ error: 'Missing taskTitle' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const geminiKey = await resolveGeminiKey(body, supabase);
+      if (!geminiKey) {
+        return new Response(JSON.stringify({ error: 'No Gemini API Key' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const prompt = `Break the following task into exactly 5 to 7 clear, actionable sub-task names. ` +
+        `Return ONLY a JSON array of strings. No explanation, no markdown, just the raw JSON array.\n\nTask: "${taskTitle}"`;
+      const raw = await callGemini(geminiKey, prompt, true);
+      let subTasks: string[] = [];
+      try {
+        const parsed = JSON.parse(raw ?? '[]');
+        subTasks = Array.isArray(parsed) ? parsed.map(String) : [];
+      } catch { subTasks = []; }
+      return new Response(JSON.stringify({ subTasks }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'draft-kpi') {
+      const { stats, employeeName } = body;
+      if (!stats || !employeeName) {
+        return new Response(JSON.stringify({ error: 'Missing stats or employeeName' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const geminiKey = await resolveGeminiKey(body, supabase);
+      if (!geminiKey) {
+        return new Response(JSON.stringify({ error: 'No Gemini API Key' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const prompt = `คุณคือ HR Manager มืออาชีพ กรุณาเขียนบทสรุปผลการปฏิบัติงานสำหรับพนักงานชื่อ "${employeeName}" ` +
+        `โดยอิงจากข้อมูลสถิติต่อไปนี้:\n\n${JSON.stringify(stats, null, 2)}\n\n` +
+        `เขียนเป็นภาษาไทย กระชับ เป็นมืออาชีพ ไม่ต้องขึ้นหัวข้อ ความยาวประมาณ 3-4 ประโยค ` +
+        `ระบุจุดแข็งและข้อแนะนำในการพัฒนา`;
+      const draft = await callGemini(geminiKey, prompt);
+      return new Response(JSON.stringify({ draft: draft ?? '' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

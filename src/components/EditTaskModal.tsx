@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Save } from "lucide-react";
+import { X, Save, Sparkles, Loader2 } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { toast } from "@/hooks/use-toast";
 import { Task } from "@/hooks/useProjects";
+import { polishText, breakdownTask } from "@/lib/aiActions";
 
 interface Employee {
   name: string;
@@ -16,25 +17,82 @@ interface EditTaskModalProps {
   task: Partial<Task> | null;
   employees: Employee[];
   onSave: (data: Partial<Task>) => void;
+  onBreakdown?: (subTasks: string[]) => void;
 }
 
-export default function EditTaskModal({ isOpen, onClose, task, employees, onSave }: EditTaskModalProps) {
+export default function EditTaskModal({ isOpen, onClose, task, employees, onSave, onBreakdown }: EditTaskModalProps) {
   const [form, setForm] = useState<Partial<Task>>(
     task ?? { name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", link: "", comments: "", category: "none" }
   );
+  const [polishing, setPolishing] = useState(false);
+  const [breakingDown, setBreakingDown] = useState(false);
+  const [subTaskPreview, setSubTaskPreview] = useState<string[] | null>(null);
 
   // Reset form when task prop changes (modal re-opened with different task)
   const [prevTask, setPrevTask] = useState(task);
   if (task !== prevTask) {
     setPrevTask(task);
     setForm(task ?? { name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", link: "", comments: "", category: "none" });
+    setSubTaskPreview(null);
   }
 
   if (!isOpen) return null;
 
+  const handlePolishNote = async () => {
+    const text = form.comments?.trim();
+    if (!text) {
+      toast({ title: "กรุณากรอก Note ก่อน", variant: "destructive" });
+      return;
+    }
+    setPolishing(true);
+    try {
+      const polished = await polishText(text);
+      setForm(f => ({ ...f, comments: polished }));
+      toast({ title: "✨ ปรับโทนเสร็จแล้ว!" });
+    } catch (e) {
+      toast({ title: "ไม่สามารถปรับโทนได้", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setPolishing(false);
+    }
+  };
+
+  const handleBreakdown = async () => {
+    const title = form.name?.trim();
+    if (!title || title.length < 3) {
+      toast({ title: "กรุณากรอกชื่องานก่อน", variant: "destructive" });
+      return;
+    }
+    setBreakingDown(true);
+    setSubTaskPreview(null);
+    try {
+      const subTasks = await breakdownTask(title);
+      if (!subTasks.length) throw new Error("No sub-tasks returned");
+      setSubTaskPreview(subTasks);
+    } catch (e) {
+      toast({ title: "ไม่สามารถ Breakdown ได้", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setBreakingDown(false);
+    }
+  };
+
+  const handleAddAllSubTasks = () => {
+    if (!subTaskPreview || !onBreakdown) return;
+    onBreakdown(subTaskPreview);
+    setSubTaskPreview(null);
+  };
+
   const save = () => {
     if (!form.name?.trim()) {
       toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" });
+      return;
+    }
+    // Feature 4: Quality gatekeeper — block marking Done without description OR link
+    if (form.status === "Done" && !form.link && (!form.comments || form.comments.trim().length < 20)) {
+      toast({
+        title: "กรุณาเพิ่มรายละเอียดหรือ Link ก่อนปิดงาน",
+        description: "Please add a note (≥20 chars) or a link before completing this task.",
+        variant: "destructive",
+      });
       return;
     }
     onSave(form);
@@ -64,9 +122,25 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 px-6 pb-2">
           <div className="space-y-4">
-            {/* Task Name */}
+            {/* Task Name + AI Breakdown button */}
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Task Name</label>
+                {onBreakdown && (
+                  <button
+                    type="button"
+                    onClick={handleBreakdown}
+                    disabled={breakingDown || !form.name?.trim()}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all disabled:opacity-40 hover:bg-violet-500/10 text-violet-500"
+                    title="AI Breakdown — แตกงานออกเป็น Sub-tasks"
+                  >
+                    {breakingDown
+                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                      : <Sparkles className="w-3 h-3" />}
+                    AI Breakdown
+                  </button>
+                )}
+              </div>
               <input
                 className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
                 value={form.name || ""}
@@ -75,6 +149,35 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
                 autoFocus
               />
             </div>
+
+            {/* Sub-task preview panel */}
+            {subTaskPreview && (
+              <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 space-y-2">
+                <p className="text-xs font-semibold text-violet-500">✨ Sub-tasks ที่แนะนำ ({subTaskPreview.length})</p>
+                <ul className="space-y-1">
+                  {subTaskPreview.map((t, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-foreground">
+                      <span className="text-violet-400 font-bold mt-0.5">{i + 1}.</span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={handleAddAllSubTasks}
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-violet-500 text-white text-xs font-semibold hover:bg-violet-600 transition-colors"
+                  >
+                    Add All as Sub-tasks
+                  </button>
+                  <button
+                    onClick={() => setSubTaskPreview(null)}
+                    className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Status & Priority */}
             <div className="grid grid-cols-2 gap-3">
@@ -161,9 +264,23 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
               />
             </div>
 
-            {/* Note */}
+            {/* Note + Polish button */}
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Note</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Note</label>
+                <button
+                  type="button"
+                  onClick={handlePolishNote}
+                  disabled={polishing || !form.comments?.trim()}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all disabled:opacity-40 hover:bg-amber-500/10 text-amber-500"
+                  title="✨ Polish — ปรับให้เป็น Professional Tone"
+                >
+                  {polishing
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : <Sparkles className="w-3 h-3" />}
+                  Polish
+                </button>
+              </div>
               <textarea
                 rows={3}
                 className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
