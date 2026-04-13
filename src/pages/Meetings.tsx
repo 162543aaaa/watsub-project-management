@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, X, Save, Calendar, Clock, MapPin, FileText, Users, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, Calendar, Clock, MapPin, FileText, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useMeetings, Meeting } from "@/hooks/useMeetings";
 import { useEmployees } from "@/hooks/useEmployees";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { toast } from "@/hooks/use-toast";
-import { polishText } from "@/lib/aiActions";
 
 const emptyForm = { title: "", meeting_date: "", start_time: "", end_time: "", location: "", note: "", participants: [] as string[] };
 
@@ -17,25 +16,6 @@ export default function Meetings() {
   const [editing, setEditing] = useState<Meeting | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [polishing, setPolishing] = useState(false);
-
-  const handlePolishNote = async () => {
-    const text = form.note?.trim();
-    if (!text) {
-      toast({ title: "กรุณากรอก หมายเหตุ ก่อน", variant: "destructive" });
-      return;
-    }
-    setPolishing(true);
-    try {
-      const polished = await polishText(text);
-      setForm(f => ({ ...f, note: polished }));
-      toast({ title: "✨ ปรับโทนเสร็จแล้ว!" });
-    } catch (e) {
-      toast({ title: "ไม่สามารถปรับโทนได้", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
-    } finally {
-      setPolishing(false);
-    }
-  };
 
   const openAdd = () => {
     setEditing(null);
@@ -198,16 +178,6 @@ export default function Meetings() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold text-foreground">หมายเหตุ</label>
-                <button
-                  type="button"
-                  onClick={handlePolishNote}
-                  disabled={polishing || !form.note?.trim()}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all disabled:opacity-40 hover:bg-amber-500/10 text-amber-500"
-                  title="✨ Polish — ปรับให้เป็น Professional Tone"
-                >
-                  {polishing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                  Polish
-                </button>
               </div>
               <textarea className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 rows={3} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="หมายเหตุ..." />
