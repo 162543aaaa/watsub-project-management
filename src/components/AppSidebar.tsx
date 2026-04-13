@@ -1,7 +1,8 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin, TrendingUp
+  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin, TrendingUp,
+  BookOpen, LayoutGrid
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -15,6 +16,8 @@ const navItems = [
   { label: "Calendar", icon: Calendar, path: "/calendar" },
   { label: "OKRs", icon: Target, path: "/okrs" },
   { label: "Team", icon: Users, path: "/team" },
+  { label: "Team Workload", icon: LayoutGrid, path: "/workload" },
+  { label: "Wiki", icon: BookOpen, path: "/wiki" },
   { label: "Meetings", icon: Video, path: "/meetings" },
   { label: "On-site Work", icon: MapPin, path: "/onsite-work" },
   { label: "Leave", icon: Plane, path: "/leave" },

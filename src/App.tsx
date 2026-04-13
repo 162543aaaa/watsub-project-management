@@ -31,6 +31,9 @@ import KpiReport from "./pages/kpi/KpiReport";
 import KpiAdmin from "./pages/kpi/KpiAdmin";
 import KpiDashboard from "./pages/kpi/KpiDashboard";
 import KpiPeriodSummary from "./pages/kpi/KpiPeriodSummary";
+import Wiki from "./pages/Wiki";
+import WikiArticle from "./pages/WikiArticle";
+import Workload from "./pages/Workload";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -76,6 +79,9 @@ const App = () => (
                 <Route path="/kpi/admin/new-period" element={<KpiAdmin />} />
                 <Route path="/kpi/admin/summary/:periodId" element={<KpiPeriodSummary />} />
                 <Route path="/kpi/dashboard" element={<KpiDashboard />} />
+                <Route path="/wiki" element={<Wiki />} />
+                <Route path="/wiki/:slug" element={<WikiArticle />} />
+                <Route path="/workload" element={<Workload />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
