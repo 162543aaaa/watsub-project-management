@@ -795,13 +795,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_resource_workload: {
-        Args: {
-          start_date: string
-          end_date: string
-        }
-        Returns: Json
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
