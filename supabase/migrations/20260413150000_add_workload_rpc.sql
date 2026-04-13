@@ -37,6 +37,9 @@ AS $$
             t.due_date IS NULL
             OR (t.due_date >= start_date::text AND t.due_date <= end_date::text)
           )
+    -- Only internal, active team members; excludes outsource / external workers
+    WHERE e.active = true
+      AND COALESCE(e.type, 'fulltime') = 'fulltime'
     GROUP BY e.id, e.name, e.avatar
     ORDER BY total_estimated_hours DESC, active_tasks_count DESC
   ) w

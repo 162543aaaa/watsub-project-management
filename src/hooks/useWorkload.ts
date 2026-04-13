@@ -40,10 +40,15 @@ export function useWorkload(startDate?: string, endDate?: string) {
     setIsLoading(true);
     setError(null);
     try {
-      // ── 1. Fetch all employees ──────────────────────────────────────────
+      // ── 1. Fetch TEAM MEMBERS only ─────────────────────────────────────
+      //    • active = true  → not deactivated / no longer with the company
+      //    • type  = 'fulltime' → internal staff only; excludes outsource /
+      //      freelance workers (type = 'outsource') such as external contractors
       const { data: employees, error: empError } = await supabase
         .from("employees")
         .select("id, name, avatar, position")
+        .eq("active", true)
+        .eq("type", "fulltime")
         .order("name", { ascending: true });
 
       if (empError) throw empError;
