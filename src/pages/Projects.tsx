@@ -1,6 +1,5 @@
 import { useState, useRef, lazy, Suspense } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle, LayoutList, GanttChartSquare, Sparkles, BookOpen, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle, LayoutList, GanttChartSquare } from "lucide-react";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
@@ -88,32 +87,6 @@ export default function Projects() {
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "project" | "task"; id: string; name: string; parentId?: string } | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-
-  // ── AI Onboarding state ────────────────────────────────────────────────
-  const [onboardTarget, setOnboardTarget] = useState<{ id: string; name: string } | null>(null);
-  const [onboardLoading, setOnboardLoading] = useState(false);
-  const [onboardBriefing, setOnboardBriefing] = useState<string | null>(null);
-  const [onboardError, setOnboardError] = useState<string | null>(null);
-
-  const handleOnboardMe = async (e: React.MouseEvent, proj: { id: string; name: string }) => {
-    e.stopPropagation();
-    setOnboardTarget(proj);
-    setOnboardBriefing(null);
-    setOnboardError(null);
-    setOnboardLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("ai-phase3-advanced", {
-        body: { action: "onboard-project", projectName: proj.name, projectId: proj.id },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      setOnboardBriefing(data?.briefing ?? "No briefing returned.");
-    } catch (err) {
-      setOnboardError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setOnboardLoading(false);
-    }
-  };
 
   const months = [...new Set(projects.map(p => p.month))].sort();
   const afterPillar = filterPillar === "all" ? projects : projects.filter(p => p.pillar === filterPillar);
@@ -434,13 +407,6 @@ export default function Projects() {
                                 </span>
                               </div>
                               <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                                <button
-                                  onClick={(e) => handleOnboardMe(e, proj)}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-all hover:scale-110 active:scale-95"
-                                  title="✨ Onboard Me — AI Welcome Briefing"
-                                >
-                                  <Sparkles className="w-3.5 h-3.5 text-violet-500" />
-                                </button>
                                 <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
                                   className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                   <Pencil className="w-3.5 h-3.5" />
@@ -563,165 +529,10 @@ export default function Projects() {
         description={`ต้องการลบ${confirmDeleteItem?.type === "project" ? "โปรเจกต์" : "งาน"} "${confirmDeleteItem?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
       />
 
-      {/* ── AI Welcome Briefing Modal ─────────────────────────────────────── */}
-      {onboardTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "hsl(222 47% 9% / 0.7)", backdropFilter: "blur(6px)" }}
-          onClick={() => { if (!onboardLoading) { setOnboardTarget(null); setOnboardBriefing(null); setOnboardError(null); } }}
-        >
-          <div
-            className="bg-card rounded-2xl border border-border w-full max-w-2xl max-h-[85vh] flex flex-col animate-scale-in"
-            style={{ boxShadow: "var(--shadow-lg)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center gap-3 p-5 border-b border-border/60 flex-shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <BookOpen className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-foreground text-base leading-tight truncate">
-                  Welcome Briefing
-                </h3>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {onboardTarget.name}
-                </p>
-              </div>
-              {!onboardLoading && (
-                <button
-                  onClick={() => { setOnboardTarget(null); setOnboardBriefing(null); setOnboardError(null); }}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110 flex-shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-5">
-              {onboardLoading && (
-                <div className="flex flex-col items-center justify-center py-12 gap-4">
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center animate-pulse">
-                      <Sparkles className="w-6 h-6 text-white" />
-                    </div>
-                    <Loader2 className="w-5 h-5 text-violet-500 animate-spin absolute -bottom-1 -right-1" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-foreground">Generating your briefing…</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Analysing project history, tasks, and meeting notes
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {onboardError && !onboardLoading && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-4">
-                  <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">
-                    Failed to generate briefing
-                  </p>
-                  <p className="text-xs text-red-500 dark:text-red-400/80 font-mono break-all">
-                    {onboardError}
-                  </p>
-                  <button
-                    onClick={(e) => handleOnboardMe(e as unknown as React.MouseEvent, onboardTarget)}
-                    className="mt-3 text-xs text-violet-600 font-semibold hover:underline"
-                  >
-                    Try again →
-                  </button>
-                </div>
-              )}
-
-              {onboardBriefing && !onboardLoading && (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <BriefingContent markdown={onboardBriefing} />
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            {onboardBriefing && !onboardLoading && (
-              <div className="border-t border-border/60 p-4 flex-shrink-0 flex items-center justify-between">
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-violet-500" />
-                  Generated by AI · Based on {onboardTarget.name} tasks &amp; history
-                </p>
-                <button
-                  onClick={() => { setOnboardTarget(null); setOnboardBriefing(null); setOnboardError(null); }}
-                  className="px-4 py-2 rounded-xl bg-muted text-sm font-medium hover:bg-muted/80 transition-all hover:scale-105 active:scale-95"
-                >
-                  Close
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── Lightweight markdown renderer (no external dep) ──────────────────────────
-// Renders the AI briefing: headings, bold, italics, bullet lists, line breaks.
-function BriefingContent({ markdown }: { markdown: string }) {
-  const lines = markdown.split("\n");
-  const elements: React.ReactNode[] = [];
-
-  const renderInline = (text: string, key: number): React.ReactNode => {
-    // Bold **...**
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return (
-      <span key={key}>
-        {parts.map((part, i) =>
-          part.startsWith("**") && part.endsWith("**") ? (
-            <strong key={i}>{part.slice(2, -2)}</strong>
-          ) : (
-            part
-          ),
-        )}
-      </span>
-    );
-  };
-
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    if (line.startsWith("## ")) {
-      elements.push(
-        <h2 key={i} className="text-lg font-bold text-foreground mt-5 mb-2 first:mt-0">
-          {line.slice(3)}
-        </h2>,
-      );
-    } else if (line.startsWith("### ")) {
-      elements.push(
-        <h3 key={i} className="text-sm font-bold text-foreground mt-4 mb-1.5 flex items-center gap-1.5">
-          {line.slice(4)}
-        </h3>,
-      );
-    } else if (line.startsWith("- ") || line.startsWith("• ") || line.match(/^\s{2}[•\-]/)) {
-      const text = line.replace(/^\s*[-•]\s*/, "");
-      elements.push(
-        <div key={i} className="flex items-start gap-2 py-0.5 pl-2">
-          <span className="text-violet-500 mt-0.5 flex-shrink-0 text-xs">▸</span>
-          <span className="text-sm text-foreground/90 leading-relaxed">{renderInline(text, i)}</span>
-        </div>,
-      );
-    } else if (line.trim() === "") {
-      elements.push(<div key={i} className="h-1" />);
-    } else {
-      elements.push(
-        <p key={i} className="text-sm text-foreground/90 leading-relaxed">
-          {renderInline(line, i)}
-        </p>,
-      );
-    }
-    i++;
-  }
-
-  return <div className="space-y-0.5">{elements}</div>;
-}
 
 function SortableProjCard({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });

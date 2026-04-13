@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { Plus, TrendingUp, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin, ChevronDown, Loader2, X, CalendarDays } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, TrendingUp, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects, Task } from "@/hooks/useProjects";
@@ -11,7 +11,6 @@ import { useOnsiteWork } from "@/hooks/useOnsiteWork";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import TaskDetailModal from "@/components/TaskDetailModal";
-import { generateDailyStandup, type StandupResult } from "@/lib/standupUtils";
 
 const today = new Date();
 const YEARS = [2025, 2026, 2027];
@@ -83,13 +82,6 @@ export default function Dashboard() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
 
-  // ── Daily Digest state ──────────────────────────────────────────────────
-  const [digestEmployee, setDigestEmployee] = useState<string>("");
-  const [digestResult, setDigestResult] = useState<StandupResult | null>(null);
-  const [digestLoading, setDigestLoading] = useState(false);
-  const [digestError, setDigestError] = useState<string | null>(null);
-  const [digestDismissed, setDigestDismissed] = useState(false);
-
   const allTasks = useMemo(() => {
     const projectTasks = projects.filter(p => p.year === filterYear).flatMap(p => p.tasks);
     const customerTasks = customers.filter(c => c.year === filterYear).flatMap(c => c.tasks);
@@ -130,35 +122,6 @@ export default function Dashboard() {
     { name: "In Progress", value: stats.inProgress, color: "hsl(191 91% 37%)" },
     { name: "To Do", value: stats.todo, color: "hsl(215 14% 65%)" },
   ].filter(d => d.value > 0);
-
-  // ── Set default digest employee once employees load ─────────────────────
-  useEffect(() => {
-    if (employees.length > 0 && !digestEmployee) {
-      setDigestEmployee(employees[0].name);
-    }
-  }, [employees, digestEmployee]);
-
-  const fetchDigest = useCallback(async (name: string) => {
-    if (!name) return;
-    setDigestLoading(true);
-    setDigestError(null);
-    setDigestResult(null);
-    try {
-      const result = await generateDailyStandup(name);
-      setDigestResult(result);
-    } catch (err) {
-      setDigestError(err instanceof Error ? err.message : "Failed to load standup");
-    } finally {
-      setDigestLoading(false);
-    }
-  }, []);
-
-  // Auto-fetch when the selected employee changes
-  useEffect(() => {
-    if (digestEmployee && !digestDismissed) {
-      fetchDigest(digestEmployee);
-    }
-  }, [digestEmployee, digestDismissed, fetchDigest]);
 
   const handleSaveTask = async (task: Task, updates: Partial<Task>) => {
     if (task.task_type === "standalone") {
@@ -219,135 +182,6 @@ export default function Dashboard() {
         <StatCard label="Meetings" value={meetings.length + allTasks.filter(t => t.category === "meeting").length} sub="การประชุมทั้งหมด" icon={Video} gradient="bg-gradient-to-br from-violet-500 to-purple-600" trend="neutral" />
         <StatCard label="On-site Work" value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length} sub="งานออกกองทั้งหมด" icon={MapPin} gradient="bg-gradient-to-br from-rose-500 to-pink-600" trend="neutral" />
       </div>
-
-      {/* ── Daily Digest ────────────────────────────────────────────────────── */}
-      {!digestDismissed && employees.length > 0 && (
-        <div className="mb-5 sm:mb-7 animate-stagger-3">
-          <div
-            className="rounded-2xl border overflow-hidden"
-            style={{
-              background: "hsl(var(--card))",
-              borderColor: "hsl(var(--border))",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            {/* Digest header */}
-            <div
-              className="flex items-center justify-between px-4 py-3 border-b"
-              style={{ borderColor: "hsl(var(--border))", background: "hsl(271 81% 56% / 0.07)" }}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                  <CalendarDays className="w-3.5 h-3.5 text-white" />
-                </div>
-                <span className="text-sm font-bold text-foreground">Daily Digest</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 flex-shrink-0">
-                  TODAY
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {/* Employee picker */}
-                <div className="relative">
-                  <select
-                    value={digestEmployee}
-                    onChange={(e) => setDigestEmployee(e.target.value)}
-                    className="appearance-none pl-3 pr-7 py-1.5 rounded-lg border text-xs font-medium bg-background outline-none cursor-pointer"
-                    style={{ borderColor: "hsl(var(--border))" }}
-                  >
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name}>{emp.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
-                </div>
-                <button
-                  onClick={() => fetchDigest(digestEmployee)}
-                  disabled={digestLoading}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-all"
-                  title="Refresh"
-                >
-                  {digestLoading
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-                    : <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
-                </button>
-                <button
-                  onClick={() => setDigestDismissed(true)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-all"
-                  title="Dismiss"
-                >
-                  <X className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
-              </div>
-            </div>
-
-            {/* Digest body */}
-            <div className="px-4 py-3">
-              {digestLoading && (
-                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading your daily digest…
-                </div>
-              )}
-
-              {digestError && !digestLoading && (
-                <div className="flex items-center gap-2 text-sm text-red-500 py-1">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {digestError}
-                </div>
-              )}
-
-              {digestResult && !digestLoading && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Completed yesterday */}
-                  <div className="rounded-xl p-3" style={{ background: "hsl(142 71% 45% / 0.07)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                    <p className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: "hsl(142 71% 40%)" }}>
-                      ✅ Completed (24h)
-                    </p>
-                    {digestResult.data.completedYesterday.length === 0
-                      ? <p className="text-xs text-muted-foreground">None</p>
-                      : digestResult.data.completedYesterday.map((t) => (
-                          <p key={t.id} className="text-xs text-foreground/90 py-0.5 truncate">• {t.name}</p>
-                        ))}
-                  </div>
-
-                  {/* Due today */}
-                  <div className="rounded-xl p-3" style={{ background: "hsl(var(--primary) / 0.07)", border: "1px solid hsl(var(--primary) / 0.2)" }}>
-                    <p className="text-[11px] font-bold uppercase tracking-wide mb-2 text-primary">
-                      📋 Due Today
-                    </p>
-                    {digestResult.data.dueToday.length === 0
-                      ? <p className="text-xs text-muted-foreground">Nothing scheduled</p>
-                      : digestResult.data.dueToday.map((t) => (
-                          <p key={t.id} className="text-xs text-foreground/90 py-0.5 truncate">
-                            {t.priority === "High" ? "🔴" : t.priority === "Medium" ? "🟡" : "🟢"} {t.name}
-                          </p>
-                        ))}
-                  </div>
-
-                  {/* Overdue */}
-                  <div className="rounded-xl p-3" style={{ background: digestResult.data.overdue.length > 0 ? "hsl(0 84% 60% / 0.07)" : "hsl(var(--muted))", border: digestResult.data.overdue.length > 0 ? "1px solid hsl(0 84% 60% / 0.2)" : "1px solid hsl(var(--border))" }}>
-                    <p className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: digestResult.data.overdue.length > 0 ? "hsl(0 84% 50%)" : "hsl(var(--muted-foreground))" }}>
-                      {digestResult.data.overdue.length > 0 ? "⚠️" : "✓"} Overdue
-                    </p>
-                    {digestResult.data.overdue.length === 0
-                      ? <p className="text-xs text-muted-foreground">All clear! 🎉</p>
-                      : digestResult.data.overdue.slice(0, 4).map((t) => (
-                          <p key={t.id} className="text-xs text-foreground/90 py-0.5 truncate">
-                            • {t.name} <span className="text-red-400">({t.daysOverdue}d)</span>
-                          </p>
-                        ))}
-                    {digestResult.data.overdue.length > 4 && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        +{digestResult.data.overdue.length - 4} more
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Team Progress — Full Width */}
       <div className="animate-stagger-3">

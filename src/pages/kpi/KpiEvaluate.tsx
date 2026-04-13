@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronDown, ChevronRight, ClipboardCheck, Info, Star, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, ClipboardCheck, Info, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   useKpiPeriods, useKpiEvaluations,
@@ -9,7 +9,6 @@ import {
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { draftKpiText } from "@/lib/aiActions";
 import {
   KPI_QUESTIONS,
   loadKpiFormConfig,
@@ -274,7 +273,6 @@ export default function KpiEvaluate() {
   const [scores, setScores] = useState<KpiSubScores>({});
   const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [draftingKpi, setDraftingKpi] = useState(false);
   const [evaluator, setEvaluator] = useState<Employee | null>(null);
   const [needPicker, setNeedPicker] = useState(false);
   const [autoValues, setAutoValues] = useState<AutoValues | null>(null);
@@ -376,37 +374,6 @@ export default function KpiEvaluate() {
   const setText = (id: string, v: string) => {
     if (isReadOnly) return;
     setTextAnswers((p) => ({ ...p, [id]: v }));
-  };
-
-  const handleDraftKpi = async () => {
-    if (!autoValues || !evaluatee) return;
-    setDraftingKpi(true);
-    try {
-      const stats: Record<string, string> = {
-        on_time_rate: autoValues.on_time_rate,
-        total_tasks: autoValues.total_tasks,
-        avg_revision: autoValues.avg_revision,
-        closed_projects: autoValues.closed_projects,
-        revenue_vs_target: autoValues.revenue_vs_target_q,
-      };
-      const draft = await draftKpiText(stats, evaluatee.name);
-      let filled = 0;
-      for (const section of formConfig.sections) {
-        for (const q of section.questions) {
-          if (q.type === "text") {
-            setText(q.id, draft);
-            filled++;
-          }
-        }
-      }
-      if (filled > 0) {
-        toast({ title: "✨ Auto-Draft สำเร็จ! กรุณาตรวจสอบและแก้ไขก่อนส่ง" });
-      }
-      setDraftingKpi(false);
-    } catch (e) {
-      toast({ title: "ไม่สามารถสร้าง Draft ได้", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
-      setDraftingKpi(false);
-    }
   };
 
   // Calculate progress %
@@ -523,20 +490,6 @@ export default function KpiEvaluate() {
           </div>
         </div>
         <div className="mt-3 text-xs text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">{formConfig.note}</div>
-
-        {!isReadOnly && autoValues && (
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={handleDraftKpi}
-              disabled={draftingKpi}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 hover:bg-violet-500/10 text-violet-500 border border-violet-500/30"
-            >
-              {draftingKpi ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-              Auto-Draft KPI Review
-            </button>
-          </div>
-        )}
 
         <div className="mt-4 pt-4 border-t border-border/40">
           <p className="text-xs font-medium text-muted-foreground mb-2">น้ำหนักการประเมิน ({roleKey})</p>

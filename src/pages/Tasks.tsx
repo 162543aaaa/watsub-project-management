@@ -343,15 +343,6 @@ export default function Tasks() {
     else await updateTask(task.id, { status: newStatus });
   };
 
-  const handleBreakdown = async (subTasks: string[]) => {
-    await Promise.all(
-      subTasks.map((name) =>
-        addTask({ name, status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", comments: "", link: "", task_type: "standalone", category: "none" }),
-      ),
-    );
-    toast({ title: `เพิ่ม ${subTasks.length} Sub-tasks สำเร็จ!` });
-  };
-
   const navigateToSource = (task: AllTask) => {
     if (task._source === "project") navigate("/projects");
     else if (task._source === "customer") navigate("/customers");
@@ -565,7 +556,6 @@ export default function Tasks() {
         employees={employees}
         onSave={handleSave}
         onClose={() => setModal({ open: false, task: null })}
-        onBreakdown={handleBreakdown}
       />
 
       <ConfirmDeleteDialog

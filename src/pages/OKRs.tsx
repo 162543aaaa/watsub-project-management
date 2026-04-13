@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Target, Save, Trash2, Pencil, X, ChevronDown, ChevronRight, CalendarDays, TrendingUp, User, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Target, Save, Trash2, Pencil, X, ChevronDown, ChevronRight, CalendarDays, TrendingUp, User } from "lucide-react";
 import { useOKRs } from "@/hooks/useOKRs";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -7,8 +7,6 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import type { Objective, KeyResult } from "@/types";
-import { getOkrSuggestions } from "@/lib/aiActions";
-
 // ── OKR Confidence Helpers ────────────────────────────────────────────────────
 
 function getQuarterDates(period: string): { start: Date; end: Date; totalDays: number } | null {
@@ -65,26 +63,6 @@ export default function OKRs() {
 
   const [confirmDeleteObj, setConfirmDeleteObj] = useState<string | null>(null);
   const [confirmDeleteKR, setConfirmDeleteKR] = useState<string | null>(null);
-  const [okrSuggestions, setOkrSuggestions] = useState<Record<string, { loading: boolean; steps: string[] }>>({});
-
-  const handleGetSuggestions = async (obj: Objective, pct: number) => {
-    const conf = getConfidence(pct, obj.period ?? "");
-    if (!conf) return;
-    setOkrSuggestions(prev => ({ ...prev, [obj.id]: { loading: true, steps: [] } }));
-    try {
-      const steps = await getOkrSuggestions({
-        title: obj.title,
-        period: obj.period ?? "",
-        progressPct: pct,
-        daysElapsed: conf.daysElapsed,
-        totalDays: conf.totalDays,
-      });
-      setOkrSuggestions(prev => ({ ...prev, [obj.id]: { loading: false, steps } }));
-    } catch (e) {
-      toast({ title: "ไม่สามารถโหลด Suggestions ได้", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
-      setOkrSuggestions(prev => { const next = { ...prev }; delete next[obj.id]; return next; });
-    }
-  };
 
   const filtered = useMemo(() => {
     if (filterQuarter === "All") return objectives;
@@ -344,7 +322,6 @@ export default function OKRs() {
                     </div>
                     {(() => {
                       const conf = getConfidence(pct, obj.period ?? "");
-                      const sugg = okrSuggestions[obj.id];
                       return (
                         <>
                           <div className="flex items-center gap-3">
@@ -360,32 +337,6 @@ export default function OKRs() {
                               </span>
                             )}
                           </div>
-                          {conf?.isAtRisk && (
-                            <div className="mt-2">
-                              {!sugg ? (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleGetSuggestions(obj, pct); }}
-                                  className="flex items-center gap-1 text-[11px] text-violet-500 hover:text-violet-600 font-medium transition-colors"
-                                >
-                                  <Sparkles className="w-3 h-3" /> Get AI suggestions to speed up
-                                </button>
-                              ) : sugg.loading ? (
-                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                                  <Loader2 className="w-3 h-3 animate-spin" /> Generating…
-                                </div>
-                              ) : sugg.steps.length > 0 ? (
-                                <div className="mt-1 space-y-1">
-                                  {sugg.steps.map((step, i) => (
-                                    <div key={i} className="flex items-start gap-1.5 text-[11px] text-foreground">
-                                      <span className="text-violet-500 font-bold flex-shrink-0">{i + 1}.</span>
-                                      <span>{step}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </div>
-                          )}
                         </>
                       );
                     })()}
