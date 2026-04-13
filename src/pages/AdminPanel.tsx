@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Check, X, ChevronDown, UserCog } from "lucide-react";
+import { Shield, Check, X, ChevronDown, UserCog, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import type { Profile, UserRole } from "@/hooks/useAuth";
@@ -14,8 +14,11 @@ const ALL_PAGES = [
   { path: "/customers", label: "Customers" },
   { path: "/calendar", label: "Calendar" },
   { path: "/okrs", label: "OKRs" },
-  { path: "/ai-insights", label: "AI Insights" },
   { path: "/team", label: "Team" },
+  { path: "/workload", label: "Team Workload" },
+  { path: "/wiki", label: "Wiki" },
+  { path: "/meetings", label: "Meetings" },
+  { path: "/onsite-work", label: "On-site Work" },
   { path: "/leave", label: "Leave" },
   { path: "/budget", label: "Budget" },
   { path: "/kpi/overview", label: "KPI Overview" },
@@ -32,14 +35,6 @@ interface UserInfo {
   email: string;
 }
 
-async function callAdmin(action: string, body: Record<string, any>) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const res = await supabase.functions.invoke("admin-users", {
-    body: { action, ...body },
-  });
-  return res;
-}
-
 export default function AdminPanel() {
   const { isAdmin, loading: authLoading } = useAuthContext();
   const [users, setUsers] = useState<UserInfo[]>([]);
@@ -47,35 +42,78 @@ export default function AdminPanel() {
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
   const fetchUsers = async () => {
-    const { data, error } = await callAdmin("list-users", {});
-    if (error) { console.error(error); setLoading(false); return; }
-    setUsers(data as UserInfo[]);
+    setLoading(true);
+    try {
+      const [{ data: profiles, error: profError }, { data: roles }] = await Promise.all([
+        supabase.from("profiles").select("*").order("created_at", { ascending: true }),
+        supabase.from("user_roles").select("*"),
+      ]);
+
+      if (profError) {
+        console.error("profiles error:", profError);
+        toast({ title: "Error loading users", description: profError.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      const usersData: UserInfo[] = (profiles ?? []).map(p => ({
+        profile: p as unknown as Profile,
+        roles: ((roles ?? []) as UserRole[]).filter(r => r.user_id === p.user_id),
+        email: "",
+      }));
+
+      setUsers(usersData);
+    } catch (err) {
+      console.error("fetchUsers error:", err);
+      toast({ title: "Unexpected error", description: String(err), variant: "destructive" });
+    }
     setLoading(false);
   };
 
   useEffect(() => { fetchUsers(); }, []);
 
-  if (authLoading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (authLoading) return (
+    <div className="p-6 flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
   if (!isAdmin) return <Navigate to="/" replace />;
 
   const handleApprove = async (userId: string, approve: boolean) => {
-    const { error } = await callAdmin("approve-user", { user_id: userId, is_approved: approve });
-    if (error) { toast({ title: "Error", description: String(error), variant: "destructive" }); return; }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_approved: approve })
+      .eq("user_id", userId);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     toast({ title: approve ? "อนุมัติสำเร็จ!" : "ระงับสำเร็จ" });
     fetchUsers();
   };
 
   const handleToggleAdmin = async (userId: string, currentlyAdmin: boolean) => {
-    await callAdmin("set-role", { user_id: userId, role: currentlyAdmin ? "member" : "admin" });
+    if (currentlyAdmin) {
+      // Remove admin role
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", "admin");
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    } else {
+      // Add admin role (upsert by trying insert first)
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: "admin" });
+      if (error && !error.message.includes("duplicate")) {
+        toast({ title: "Error", description: error.message, variant: "destructive" }); return;
+      }
+    }
     toast({ title: currentlyAdmin ? "ถอดสิทธิ์ Admin แล้ว" : "เพิ่มสิทธิ์ Admin แล้ว" });
     fetchUsers();
   };
 
   const handleTogglePage = async (userId: string, currentPages: string[], pagePath: string) => {
-    // If currently full-access ('*'), switching to explicit pages minus the toggled one
     let newPages: string[];
-    if (currentPages.includes('*')) {
-      // Switching from full-access: select all pages except the toggled one
+    if (currentPages.includes("*")) {
       newPages = ALL_PAGES.map(p => p.path).filter(p => p !== pagePath);
     } else if (currentPages.includes(pagePath)) {
       newPages = currentPages.filter(p => p !== pagePath);
@@ -83,39 +121,43 @@ export default function AdminPanel() {
       newPages = [...currentPages, pagePath];
     }
     const previousPages = currentPages;
-    // Optimistic update
-    setUsers(prev => prev.map(u => 
-      u.profile.user_id === userId 
-        ? { ...u, profile: { ...u.profile, allowed_pages: newPages } } 
+    setUsers(prev => prev.map(u =>
+      u.profile.user_id === userId
+        ? { ...u, profile: { ...u.profile, allowed_pages: newPages } }
         : u
     ));
-    const { error } = await callAdmin("set-pages", { user_id: userId, allowed_pages: newPages });
+    const { error } = await supabase
+      .from("profiles")
+      .update({ allowed_pages: newPages })
+      .eq("user_id", userId);
     if (error) {
-      // Revert on failure
-      setUsers(prev => prev.map(u => 
-        u.profile.user_id === userId 
-          ? { ...u, profile: { ...u.profile, allowed_pages: previousPages } } 
+      setUsers(prev => prev.map(u =>
+        u.profile.user_id === userId
+          ? { ...u, profile: { ...u.profile, allowed_pages: previousPages } }
           : u
       ));
-      toast({ title: "เกิดข้อผิดพลาด", description: String(error), variant: "destructive" });
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
     }
   };
 
   const handleSetAllPages = async (userId: string) => {
     const previousPages = users.find(u => u.profile.user_id === userId)?.profile.allowed_pages || [];
-    setUsers(prev => prev.map(u => 
-      u.profile.user_id === userId 
-        ? { ...u, profile: { ...u.profile, allowed_pages: ['*'] } } 
+    setUsers(prev => prev.map(u =>
+      u.profile.user_id === userId
+        ? { ...u, profile: { ...u.profile, allowed_pages: ["*"] } }
         : u
     ));
-    const { error } = await callAdmin("set-pages", { user_id: userId, allowed_pages: ['*'] });
+    const { error } = await supabase
+      .from("profiles")
+      .update({ allowed_pages: ["*"] })
+      .eq("user_id", userId);
     if (error) {
-      setUsers(prev => prev.map(u => 
-        u.profile.user_id === userId 
-          ? { ...u, profile: { ...u.profile, allowed_pages: previousPages } } 
+      setUsers(prev => prev.map(u =>
+        u.profile.user_id === userId
+          ? { ...u, profile: { ...u.profile, allowed_pages: previousPages } }
           : u
       ));
-      toast({ title: "เกิดข้อผิดพลาด", description: String(error), variant: "destructive" });
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
       return;
     }
     toast({ title: "เปิดทุกหน้าแล้ว" });
@@ -126,14 +168,19 @@ export default function AdminPanel() {
 
   return (
     <div className="p-4 md:p-6 page-enter">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Shield className="w-5 h-5 text-primary" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">Admin Panel</h1>
+            <p className="text-sm text-muted-foreground">จัดการผู้ใช้และสิทธิ์การเข้าถึง</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground">จัดการผู้ใช้และสิทธิ์การเข้าถึง</p>
-        </div>
+        <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading} className="gap-1.5">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+        </Button>
       </div>
 
       {/* Pending Users */}
@@ -148,11 +195,17 @@ export default function AdminPanel() {
               <div key={u.profile.user_id} className="bg-card rounded-xl border border-border/60 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{u.profile.display_name}</p>
-                  <p className="text-xs text-muted-foreground">{u.email} · {new Date(u.profile.created_at).toLocaleDateString("th")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(u.profile.created_at).toLocaleDateString("th")}
+                  </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => handleApprove(u.profile.user_id, true)} className="gap-1"><Check className="w-3.5 h-3.5" /> อนุมัติ</Button>
-                  <Button size="sm" variant="outline" onClick={() => handleApprove(u.profile.user_id, false)} className="gap-1"><X className="w-3.5 h-3.5" /> ปฏิเสธ</Button>
+                  <Button size="sm" onClick={() => handleApprove(u.profile.user_id, true)} className="gap-1">
+                    <Check className="w-3.5 h-3.5" /> อนุมัติ
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleApprove(u.profile.user_id, false)} className="gap-1">
+                    <X className="w-3.5 h-3.5" /> ปฏิเสธ
+                  </Button>
                 </div>
               </div>
             ))}
@@ -161,13 +214,22 @@ export default function AdminPanel() {
       )}
 
       {/* Approved Users */}
-      <h2 className="text-base font-semibold mb-3">สมาชิกทั้งหมด ({approvedUsers.length})</h2>
+      <h2 className="text-base font-semibold mb-3">
+        สมาชิกทั้งหมด ({approvedUsers.length})
+      </h2>
+
       {loading ? (
-        <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      ) : approvedUsers.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">
+          ยังไม่มีสมาชิกที่ได้รับการอนุมัติ
+        </div>
       ) : (
         <div className="space-y-2">
           {approvedUsers.map(u => {
-            const userIsAdmin = u.roles.some((r: any) => r.role === "admin");
+            const userIsAdmin = u.roles.some(r => r.role === "admin");
             const expanded = expandedUser === u.profile.user_id;
             const pages = u.profile.allowed_pages || [];
             return (
@@ -176,33 +238,72 @@ export default function AdminPanel() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm truncate">{u.profile.display_name}</p>
-                      {userIsAdmin && <span className="text-[10px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-md">ADMIN</span>}
+                      {userIsAdmin && (
+                        <span className="text-[10px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-md">
+                          ADMIN
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{u.email} · {pages.includes('*') ? "เข้าถึงทุกหน้า" : `${pages.length} หน้า`}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {pages.includes("*") ? "เข้าถึงทุกหน้า" : `${pages.length} หน้า`}
+                    </p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" variant={userIsAdmin ? "destructive" : "secondary"} onClick={() => handleToggleAdmin(u.profile.user_id, userIsAdmin)} className="gap-1 text-xs">
+                    <Button
+                      size="sm"
+                      variant={userIsAdmin ? "destructive" : "secondary"}
+                      onClick={() => handleToggleAdmin(u.profile.user_id, userIsAdmin)}
+                      className="gap-1 text-xs"
+                    >
                       <UserCog className="w-3.5 h-3.5" /> {userIsAdmin ? "ถอด Admin" : "ตั้ง Admin"}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setExpandedUser(expanded ? null : u.profile.user_id)} className="gap-1 text-xs">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setExpandedUser(expanded ? null : u.profile.user_id)}
+                      className="gap-1 text-xs"
+                    >
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} /> สิทธิ์หน้า
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleApprove(u.profile.user_id, false)} className="text-xs text-destructive">ระงับ</Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleApprove(u.profile.user_id, false)}
+                      className="text-xs text-destructive"
+                    >
+                      ระงับ
+                    </Button>
                   </div>
                 </div>
+
                 {expanded && (
                   <div className="border-t border-border/40 p-4 bg-muted/30">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-medium text-muted-foreground">หน้าที่เข้าถึงได้ (ว่าง = ทุกหน้า)</p>
-                      <Button size="sm" variant="ghost" className="text-xs" onClick={() => handleSetAllPages(u.profile.user_id)}>เปิดทุกหน้า</Button>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        หน้าที่เข้าถึงได้ (ว่าง = ทุกหน้า)
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs"
+                        onClick={() => handleSetAllPages(u.profile.user_id)}
+                      >
+                        เปิดทุกหน้า
+                      </Button>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {ALL_PAGES.map(page => {
-                        const active = pages.includes('*') || pages.includes(page.path);
+                        const active = pages.includes("*") || pages.includes(page.path);
                         return (
-                          <button key={page.path}
+                          <button
+                            key={page.path}
                             onClick={() => handleTogglePage(u.profile.user_id, pages, page.path)}
-                            className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ease-out active:scale-95 ${active ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "bg-muted/50 border-border/40 text-muted-foreground hover:bg-muted"}`}>
+                            className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ease-out active:scale-95 ${
+                              active
+                                ? "bg-primary/10 border-primary/30 text-primary shadow-sm"
+                                : "bg-muted/50 border-border/40 text-muted-foreground hover:bg-muted"
+                            }`}
+                          >
                             {page.label}
                           </button>
                         );
