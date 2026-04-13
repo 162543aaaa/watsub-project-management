@@ -3,6 +3,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { Task } from "./useProjects";
 
+async function logAudit(params: {
+  userId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
+}) {
+  try {
+    await supabase.from("audit_logs").insert({
+      user_id: params.userId,
+      action: params.action,
+      entity_type: params.entityType,
+      entity_id: params.entityId,
+      old_values: params.oldValues ?? null,
+      new_values: params.newValues ?? null,
+    });
+  } catch {
+    // Silently swallow audit errors so they never block the main operation
+  }
+}
+
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,25 +52,59 @@ export function useTasks() {
   useEffect(() => { fetchTasks(); }, []);
 
   const addTask = async (task: Omit<Task, "id" | "created_at">) => {
+    const { data: { user } } = await supabase.auth.getUser();
     const { data, error } = await supabase.from("tasks").insert(task).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setTasks(prev => [data as Task, ...prev]);
     toast({ title: "เพิ่มงานสำเร็จ!" });
+    await logAudit({
+      userId: user?.id ?? null,
+      action: "created",
+      entityType: "task",
+      entityId: (data as Task).id,
+      newValues: data as Record<string, unknown>,
+    });
     return data;
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    // Capture the current task for old_values
+    const currentTask = tasks.find(t => t.id === id);
     const { data, error } = await supabase.from("tasks").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setTasks(prev => prev.map(t => t.id === id ? data as Task : t));
     toast({ title: "อัปเดตงานสำเร็จ!" });
+
+    // Determine a meaningful action label
+    const action = updates.status && currentTask?.status !== updates.status
+      ? `status_changed:${currentTask?.status}→${updates.status}`
+      : "updated";
+
+    await logAudit({
+      userId: user?.id ?? null,
+      action,
+      entityType: "task",
+      entityId: id,
+      oldValues: currentTask as unknown as Record<string, unknown>,
+      newValues: updates as Record<string, unknown>,
+    });
   };
 
   const deleteTask = async (id: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const currentTask = tasks.find(t => t.id === id);
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setTasks(prev => prev.filter(t => t.id !== id));
     toast({ title: "ลบงานสำเร็จ!" });
+    await logAudit({
+      userId: user?.id ?? null,
+      action: "deleted",
+      entityType: "task",
+      entityId: id,
+      oldValues: currentTask as unknown as Record<string, unknown>,
+    });
   };
 
   // Persist reorder: assign new sort_order within the reordered group,
