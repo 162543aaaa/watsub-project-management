@@ -115,10 +115,12 @@ export type Database = {
       }
       employees: {
         Row: {
+          active: boolean | null
           avatar: string | null
           created_at: string
           email: string
           id: string
+          kpi_role: string | null
           name: string
           note: string | null
           phone: string | null
@@ -126,13 +128,16 @@ export type Database = {
           promptpay_qr: string | null
           role: string
           start_date: string | null
+          type: string | null
           updated_at: string
         }
         Insert: {
+          active?: boolean | null
           avatar?: string | null
           created_at?: string
           email?: string
           id?: string
+          kpi_role?: string | null
           name: string
           note?: string | null
           phone?: string | null
@@ -140,13 +145,16 @@ export type Database = {
           promptpay_qr?: string | null
           role?: string
           start_date?: string | null
+          type?: string | null
           updated_at?: string
         }
         Update: {
+          active?: boolean | null
           avatar?: string | null
           created_at?: string
           email?: string
           id?: string
+          kpi_role?: string | null
           name?: string
           note?: string | null
           phone?: string | null
@@ -154,6 +162,7 @@ export type Database = {
           promptpay_qr?: string | null
           role?: string
           start_date?: string | null
+          type?: string | null
           updated_at?: string
         }
         Relationships: []
