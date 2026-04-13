@@ -20,17 +20,25 @@ export interface WikiPage {
 export function useWiki() {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPages = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    setError(null);
+    const { data, error: fetchError } = await supabase
       .from("wiki_pages")
       .select("*")
       .eq("is_published", true)
       .order("category", { ascending: true })
       .order("title", { ascending: true });
 
-    if (error) { console.error(error); setLoading(false); return; }
+    if (fetchError) {
+      console.error("wiki_pages fetch error:", fetchError);
+      setError(fetchError.message);
+      setLoading(false);
+      return;
+    }
+
     const raw = (data ?? []) as WikiPage[];
 
     // Batch-fetch author display names
@@ -56,14 +64,14 @@ export function useWiki() {
   useEffect(() => { fetchPages(); }, []);
 
   const getPageBySlug = async (slug: string): Promise<WikiPage | null> => {
-    const { data, error } = await supabase
+    const { data, error: slugError } = await supabase
       .from("wiki_pages")
       .select("*")
       .eq("slug", slug)
       .eq("is_published", true)
       .single();
 
-    if (error || !data) return null;
+    if (slugError || !data) return null;
 
     // Increment view count (fire-and-forget)
     supabase
@@ -86,37 +94,47 @@ export function useWiki() {
     return { ...(data as WikiPage), author_name };
   };
 
-  const createPage = async (page: Omit<WikiPage, "id" | "created_at" | "updated_at" | "view_count">) => {
+  const createPage = async (page: Omit<WikiPage, "id" | "created_at" | "updated_at" | "view_count" | "author_name">) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase
+    const { data, error: createError } = await supabase
       .from("wiki_pages")
       .insert({ ...page, author_id: user?.id ?? null, view_count: 0 })
       .select()
       .single();
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+    if (createError) {
+      toast({ title: "Error creating article", description: createError.message, variant: "destructive" });
+      return null;
+    }
     toast({ title: "สร้างบทความสำเร็จ!" });
     await fetchPages();
     return data as WikiPage;
   };
 
   const updatePage = async (id: string, updates: Partial<Omit<WikiPage, "id" | "created_at">>) => {
-    const { data, error } = await supabase
+    const { data, error: updateError } = await supabase
       .from("wiki_pages")
       .update(updates)
       .eq("id", id)
       .select()
       .single();
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (updateError) {
+      toast({ title: "Error", description: updateError.message, variant: "destructive" });
+      return false;
+    }
     setPages(prev => prev.map(p => p.id === id ? { ...p, ...(data as WikiPage) } : p));
     toast({ title: "อัปเดตบทความสำเร็จ!" });
+    return true;
   };
 
   const deletePage = async (id: string) => {
-    const { error } = await supabase.from("wiki_pages").delete().eq("id", id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    const { error: delError } = await supabase.from("wiki_pages").delete().eq("id", id);
+    if (delError) {
+      toast({ title: "Error", description: delError.message, variant: "destructive" });
+      return;
+    }
     setPages(prev => prev.filter(p => p.id !== id));
     toast({ title: "ลบบทความสำเร็จ!" });
   };
 
-  return { pages, loading, fetchPages, getPageBySlug, createPage, updatePage, deletePage };
+  return { pages, loading, error, fetchPages, getPageBySlug, createPage, updatePage, deletePage };
 }
