@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, TrendingUp, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin } from "lucide-react";
+import { Plus, TrendingUp, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin, BookOpen, RefreshCw, X, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects, Task } from "@/hooks/useProjects";
@@ -8,9 +8,14 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useMeetings } from "@/hooks/useMeetings";
 import { useOnsiteWork } from "@/hooks/useOnsiteWork";
+import { useResourceWorkload } from "@/hooks/useResourceWorkload";
+import { useWiki } from "@/hooks/useWiki";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import TaskDetailModal from "@/components/TaskDetailModal";
+import { WikiEditor, WikiViewer } from "@/components/WikiEditor";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 
 const today = new Date();
 const YEARS = [2025, 2026, 2027];
@@ -78,9 +83,43 @@ export default function Dashboard() {
 
   const loading = loadingTasks || loadingProjects || loadingCustomers || loadingEmployees || loadingMeetings || loadingOnsite;
 
+  const { data: workloadData, loading: loadingWorkload, error: workloadError, refetch: refetchWorkload } = useResourceWorkload();
+  const { pages: wikiPages, loading: loadingWiki, createPage } = useWiki();
+
   const [empStatusFilter, setEmpStatusFilter] = useState<Record<string, StatusFilter>>({});
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
+
+  // Wiki quick-create dialog state
+  const [wikiDialogOpen, setWikiDialogOpen] = useState(false);
+  const [wikiTitle, setWikiTitle] = useState("");
+  const [wikiContent, setWikiContent] = useState("");
+  const [wikiCategory, setWikiCategory] = useState("General");
+  const [savingWiki, setSavingWiki] = useState(false);
+  const [selectedWikiPage, setSelectedWikiPage] = useState<string | null>(null);
+
+  const handleSaveWiki = async () => {
+    if (!wikiTitle.trim()) return;
+    setSavingWiki(true);
+    const slug = wikiTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9\u0E00-\u0E7F]+/g, "-")
+      .replace(/^-|-$/g, "")
+      + "-" + Date.now();
+    await createPage({
+      title: wikiTitle.trim(),
+      slug,
+      content: wikiContent,
+      category: wikiCategory,
+      author_id: null,
+      is_published: true,
+    });
+    setWikiTitle("");
+    setWikiContent("");
+    setWikiCategory("General");
+    setSavingWiki(false);
+    setWikiDialogOpen(false);
+  };
 
   const allTasks = useMemo(() => {
     const projectTasks = projects.filter(p => p.year === filterYear).flatMap(p => p.tasks);
@@ -365,6 +404,252 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* ──────────────────────────────────────────────────────
+          Resource Workload Panel
+      ────────────────────────────────────────────────────── */}
+      <div className="mt-5 animate-stagger-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Resource Workload</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Active tasks per team member (next 30 days)</p>
+          </div>
+          <button
+            onClick={refetchWorkload}
+            disabled={loadingWorkload}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${loadingWorkload ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
+
+        {workloadError ? (
+          <div className="bg-card border border-border rounded-2xl p-6 text-center" style={{ boxShadow: "var(--shadow-sm)" }}>
+            <p className="text-xs font-semibold text-destructive mb-1">Could not load workload data</p>
+            <p className="text-xs text-muted-foreground">{workloadError}</p>
+          </div>
+        ) : loadingWorkload ? (
+          <div className="bg-card border border-border rounded-2xl p-4 space-y-3 animate-pulse" style={{ boxShadow: "var(--shadow-sm)" }}>
+            {[1, 2, 3].map(i => <div key={i} className="h-8 bg-muted rounded-lg" />)}
+          </div>
+        ) : workloadData.length === 0 ? (
+          <div className="bg-card border border-border rounded-2xl p-8 text-center text-sm text-muted-foreground" style={{ boxShadow: "var(--shadow-sm)" }}>
+            No workload data available
+          </div>
+        ) : (
+          <div className="bg-card border border-border rounded-2xl p-4" style={{ boxShadow: "var(--shadow-sm)" }}>
+            <div className="space-y-3">
+              {(() => {
+                const maxTasks = Math.max(...workloadData.map(w => w.active_tasks_count), 1);
+                return workloadData.map(w => {
+                  const pct = Math.round((w.active_tasks_count / maxTasks) * 100);
+                  const isHeavy = w.active_tasks_count > 3;
+                  const barColor = isHeavy
+                    ? "hsl(0 84% 60%)"
+                    : w.active_tasks_count > 0
+                    ? "hsl(191 91% 37%)"
+                    : "hsl(215 14% 60%)";
+                  return (
+                    <div key={w.employee_id} className="flex items-center gap-3">
+                      <div className="w-28 sm:w-36 text-xs text-foreground truncate flex-shrink-0 font-medium">
+                        {w.employee_name}
+                      </div>
+                      <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700 ease-out"
+                          style={{ width: `${pct}%`, background: barColor }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5 w-20 justify-end flex-shrink-0">
+                        <span
+                          className="text-xs font-bold"
+                          style={{ color: barColor }}
+                        >
+                          {w.active_tasks_count}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">tasks</span>
+                        {isHeavy && (
+                          <span className="text-[9px] font-semibold px-1 py-0.5 rounded"
+                            style={{ background: "hsl(0 84% 60% / 0.12)", color: "hsl(0 84% 55%)" }}>
+                            HEAVY
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            <p className="text-[10px] text-muted-foreground/60 mt-3 text-right">
+              Red bar = overloaded (&gt;3 active tasks)
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ──────────────────────────────────────────────────────
+          Company Wiki Quick Panel
+      ────────────────────────────────────────────────────── */}
+      <div className="mt-5 animate-stagger-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Company Wiki</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Knowledge base articles</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link to="/wiki" className="flex items-center gap-1 text-xs font-medium text-primary hover:gap-2 transition-all">
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
+            <button
+              onClick={() => setWikiDialogOpen(true)}
+              className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> New Article
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-4" style={{ boxShadow: "var(--shadow-sm)" }}>
+          {loadingWiki ? (
+            <div className="space-y-2 animate-pulse">
+              {[1, 2, 3].map(i => <div key={i} className="h-10 bg-muted rounded-lg" />)}
+            </div>
+          ) : wikiPages.length === 0 ? (
+            <div className="text-center py-8">
+              <BookOpen className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground mb-3">No articles yet</p>
+              <button
+                onClick={() => setWikiDialogOpen(true)}
+                className="btn-primary text-xs px-3 py-1.5"
+              >
+                Create first article
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {/* Show latest 5 articles */}
+              {wikiPages.slice(0, 5).map(page => (
+                <div
+                  key={page.id}
+                  className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted/60 cursor-pointer group transition-colors"
+                  onClick={() => setSelectedWikiPage(selectedWikiPage === page.id ? null : page.id)}
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors truncate block">
+                      {page.title}
+                    </span>
+                  </div>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-md flex-shrink-0"
+                    style={{
+                      background: "hsl(215 20% 45% / 0.12)",
+                      color: "hsl(215 20% 65%)",
+                    }}
+                  >
+                    {page.category}
+                  </span>
+                </div>
+              ))}
+              {/* Inline preview of selected article */}
+              {selectedWikiPage && (() => {
+                const page = wikiPages.find(p => p.id === selectedWikiPage);
+                if (!page) return null;
+                return (
+                  <div className="mt-2 p-3 rounded-xl border border-border bg-muted/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-foreground">{page.title}</span>
+                      <button
+                        onClick={() => setSelectedWikiPage(null)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <WikiViewer
+                      htmlContent={page.content ?? ""}
+                      className="text-xs max-h-32 overflow-y-auto"
+                    />
+                    <Link
+                      to={`/wiki/${page.slug}`}
+                      className="text-[11px] text-primary hover:underline mt-1.5 block"
+                    >
+                      Read full article →
+                    </Link>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ──────────────────────────────────────────────────────
+          Wiki Create Dialog
+      ────────────────────────────────────────────────────── */}
+      <Dialog open={wikiDialogOpen} onOpenChange={setWikiDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <BookOpen className="w-4 h-4" />
+              New Wiki Article
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            {/* Title */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Title *</label>
+              <input
+                type="text"
+                value={wikiTitle}
+                onChange={e => setWikiTitle(e.target.value)}
+                placeholder="Article title…"
+                className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+              />
+            </div>
+            {/* Category */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Category</label>
+              <select
+                value={wikiCategory}
+                onChange={e => setWikiCategory(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+              >
+                {["General", "HR", "IT", "Operations", "Finance"].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            {/* Rich text editor */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Content</label>
+              <WikiEditor
+                initialContent=""
+                onChange={setWikiContent}
+                className="min-h-[200px]"
+              />
+            </div>
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => setWikiDialogOpen(false)}
+                className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveWiki}
+                disabled={savingWiki || !wikiTitle.trim()}
+                className="btn-primary flex items-center gap-2 text-sm disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {savingWiki ? "Saving…" : "Publish Article"}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <TaskDetailModal
         isOpen={!!selectedTask}
