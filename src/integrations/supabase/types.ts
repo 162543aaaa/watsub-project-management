@@ -660,6 +660,7 @@ export type Database = {
           customer_id: string | null
           depends_on: string | null
           due_date: string | null
+          estimated_hours: number
           id: string
           link: string | null
           name: string
@@ -679,6 +680,7 @@ export type Database = {
           customer_id?: string | null
           depends_on?: string | null
           due_date?: string | null
+          estimated_hours?: number
           id?: string
           link?: string | null
           name: string
@@ -698,6 +700,7 @@ export type Database = {
           customer_id?: string | null
           depends_on?: string | null
           due_date?: string | null
+          estimated_hours?: number
           id?: string
           link?: string | null
           name?: string
