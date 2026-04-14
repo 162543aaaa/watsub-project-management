@@ -27,6 +27,19 @@ vi.mock("@/hooks/useCompanyInfo", () => ({
         type: "fulltime",
       },
     ],
+    teamSummary: [
+      {
+        label: "fulltime",
+        total: 1,
+        percentage: 100,
+      },
+    ],
+    stats: {
+      totalEmployees: 4,
+      activeCount: 3,
+      leadershipCount: 1,
+      teamModels: 2,
+    },
   }),
 }));
 
@@ -38,6 +51,6 @@ describe("Organization page", () => {
     expect(screen.getByText("Vision")).toBeInTheDocument();
     expect(screen.getByText("Mission")).toBeInTheDocument();
     expect(screen.getByText("Innovation")).toBeInTheDocument();
-    expect(screen.getByText("Jane Admin")).toBeInTheDocument();
+    expect(screen.getByText("จำนวนพนักงานทั้งหมด")).toBeInTheDocument();
   });
 });
