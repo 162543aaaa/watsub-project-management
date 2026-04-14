@@ -27,13 +27,6 @@ export default function Organization() {
 
   return (
     <div className="min-h-full p-4 sm:p-6 space-y-6">
-      {error && (
-        <Card className="border-amber-500/40 bg-amber-500/5">
-          <CardContent className="p-4">
-            <p className="text-xs text-amber-200">{error}</p>
-          </CardContent>
-        </Card>
-      )}
       <section className="rounded-2xl border border-border p-6 sm:p-8 bg-gradient-to-br from-sky-500/15 via-cyan-500/10 to-violet-500/15">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-card/70 border border-border flex items-center justify-center overflow-hidden">
