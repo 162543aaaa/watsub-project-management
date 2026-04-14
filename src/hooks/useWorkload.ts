@@ -1,16 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-/** Weekly hours considered "full capacity" for utilization calculations */
 export const DEFAULT_WEEKLY_CAPACITY = 40;
+// ปรับลด Default ลงกรณีที่ไม่ได้กรอกเวลา เพื่อไม่ให้กราฟบวมเกินจริง
+const DEFAULT_HOURS_PER_TASK = 1;
+const HOURS_PER_LEAVE_DAY = 8;
 
-/**
- * Fallback estimated hours applied to each task when the task has no
- * explicit estimated_hours value (column added by migration; may be 0
- * on older rows or if the migration has not yet been applied).
- */
-const DEFAULT_HOURS_PER_TASK = 2;
+type TaskRow = Pick<
+  Database["public"]["Tables"]["tasks"]["Row"],
+  "id" | "name" | "assigned_to" | "status" | "due_date" | "estimated_hours" | "priority"
+>;
+
+type EmployeeRow = Pick<
+  Database["public"]["Tables"]["employees"]["Row"],
+  "id" | "name" | "avatar" | "position"
+>;
+
+type LeaveRow = Pick<
+  Database["public"]["Tables"]["leave_requests"]["Row"],
+  "requested_by" | "leave_start" | "leave_end" | "status"
+>;
 
 export interface WorkloadData {
   employee_id: string;
@@ -18,10 +29,38 @@ export interface WorkloadData {
   avatar_url: string | null;
   position: string;
   active_tasks_count: number;
-  /** Effective hours = sum of per-task hours (actual if set, else DEFAULT_HOURS_PER_TASK) */
   total_estimated_hours: number;
-  /** (total_estimated_hours / DEFAULT_WEEKLY_CAPACITY) * 100, rounded to nearest integer */
   utilization_percentage: number;
+  tasks: TaskRow[];
+}
+
+function overlapsDateRange(
+  leaveStart: string,
+  leaveEnd: string,
+  rangeStart: string,
+  rangeEnd: string,
+): boolean {
+  return !(leaveEnd < rangeStart || leaveStart > rangeEnd);
+}
+
+function getLeaveDaysInRange(
+  leaveStart: string,
+  leaveEnd: string,
+  rangeStart: string,
+  rangeEnd: string,
+): number {
+  const start = new Date(`${leaveStart}T00:00:00`);
+  const end = new Date(`${leaveEnd}T00:00:00`);
+  const windowStart = new Date(`${rangeStart}T00:00:00`);
+  const windowEnd = new Date(`${rangeEnd}T00:00:00`);
+
+  const actualStart = start > windowStart ? start : windowStart;
+  const actualEnd = end < windowEnd ? end : windowEnd;
+
+  const diffMs = actualEnd.getTime() - actualStart.getTime();
+  if (diffMs < 0) return 0;
+
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 }
 
 export function useWorkload(startDate?: string, endDate?: string) {
@@ -40,10 +79,7 @@ export function useWorkload(startDate?: string, endDate?: string) {
     setIsLoading(true);
     setError(null);
     try {
-      // ── 1. Fetch TEAM MEMBERS only ─────────────────────────────────────
-      //    • active = true  → not deactivated / no longer with the company
-      //    • type  = 'fulltime' → internal staff only; excludes outsource /
-      //      freelance workers (type = 'outsource') such as external contractors
+      // 1. Fetch Employees
       const { data: employees, error: empError } = await supabase
         .from("employees")
         .select("id, name, avatar, position")
@@ -53,40 +89,61 @@ export function useWorkload(startDate?: string, endDate?: string) {
 
       if (empError) throw empError;
 
-      // ── 2. Fetch active tasks (not Done) ───────────────────────────────
-      //    We deliberately avoid selecting `estimated_hours` here so the
-      //    query keeps working even when the migration has not been applied
-      //    yet (adding the column is a separate migration step).
+      // 2. Fetch Tasks
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
-        .select("id, assigned_to, status, due_date")
+        .select("id, name, assigned_to, status, due_date, estimated_hours, priority")
         .neq("status", "Done");
 
       if (tasksError) throw tasksError;
 
-      const activeTasks = tasks ?? [];
+      // 3. Optional prep for Dynamic Capacity:
+      //    subtract approved leave hours from weekly capacity if leave rows exist.
+      const { data: leaves, error: leavesError } = await supabase
+        .from("leave_requests")
+        .select("requested_by, leave_start, leave_end, status")
+        .eq("status", "Approved")
+        .lte("leave_start", resolvedEnd)
+        .gte("leave_end", resolvedStart);
 
-      // ── 3. Aggregate per employee ──────────────────────────────────────
-      const workload: WorkloadData[] = (employees ?? []).map((emp) => {
+      // If leave table/policy is unavailable in some environments, continue safely.
+      if (leavesError) {
+        console.warn("Leave capacity adjustment skipped:", leavesError.message);
+      }
+
+      const activeTasks: TaskRow[] = (tasks ?? []) as TaskRow[];
+      const approvedLeaves: LeaveRow[] = (leaves ?? []) as LeaveRow[];
+
+      // 4. Aggregate per employee
+      const workload: WorkloadData[] = ((employees ?? []) as EmployeeRow[]).map((emp) => {
         const myTasks = activeTasks.filter((task) => {
           const assignees: string[] = task.assigned_to ?? [];
           if (!assignees.includes(emp.name)) return false;
 
-          // Respect the date window when a due_date is set
+          // ถ้ามี Date ให้อยู่ในกรอบเวลาที่เลือก
           if (task.due_date) {
-            return (
-              task.due_date >= resolvedStart &&
-              task.due_date <= resolvedEnd
-            );
+            return task.due_date >= resolvedStart && task.due_date <= resolvedEnd;
           }
-          // No due_date → always include (no deadline = always relevant)
-          return true;
+
+          // ถ้าไม่มี Due Date (งาน Backlog) ให้ข้ามไปก่อนเพื่อไม่ให้กระทบ Capacity สัปดาห์นี้
+          return false;
         });
 
-        const totalHours = myTasks.length * DEFAULT_HOURS_PER_TASK;
-        const utilization = Math.round(
-          (totalHours / DEFAULT_WEEKLY_CAPACITY) * 100
-        );
+        const totalHours = myTasks.reduce((sum, task) => {
+          return sum + (task.estimated_hours ?? DEFAULT_HOURS_PER_TASK);
+        }, 0);
+
+        const leaveDays = approvedLeaves.reduce((sum, leave) => {
+          if (leave.requested_by !== emp.name) return sum;
+          if (!overlapsDateRange(leave.leave_start, leave.leave_end, resolvedStart, resolvedEnd)) {
+            return sum;
+          }
+
+          return sum + getLeaveDaysInRange(leave.leave_start, leave.leave_end, resolvedStart, resolvedEnd);
+        }, 0);
+
+        const dynamicCapacity = Math.max(DEFAULT_WEEKLY_CAPACITY - leaveDays * HOURS_PER_LEAVE_DAY, 1);
+        const utilization = Math.round((totalHours / dynamicCapacity) * 100);
 
         return {
           employee_id: emp.id,
@@ -96,10 +153,11 @@ export function useWorkload(startDate?: string, endDate?: string) {
           active_tasks_count: myTasks.length,
           total_estimated_hours: totalHours,
           utilization_percentage: utilization,
+          tasks: myTasks,
         };
       });
 
-      // Sort: overloaded first → nearing limit → normal, then alphabetically
+      // Sort
       workload.sort((a, b) => {
         if (b.utilization_percentage !== a.utilization_percentage) {
           return b.utilization_percentage - a.utilization_percentage;
@@ -109,9 +167,7 @@ export function useWorkload(startDate?: string, endDate?: string) {
 
       setData(workload);
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load workload data"
-      );
+      setError(err instanceof Error ? err.message : "Failed to load workload data");
     } finally {
       setIsLoading(false);
     }
