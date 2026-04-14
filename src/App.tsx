@@ -34,6 +34,7 @@ import KpiPeriodSummary from "./pages/kpi/KpiPeriodSummary";
 import Wiki from "./pages/Wiki";
 import WikiArticle from "./pages/WikiArticle";
 import Workload from "./pages/Workload";
+import Organization from "./pages/Organization";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -82,6 +83,7 @@ const App = () => (
                 <Route path="/wiki" element={<Wiki />} />
                 <Route path="/wiki/:slug" element={<WikiArticle />} />
                 <Route path="/workload" element={<Workload />} />
+                <Route path="/organization" element={<Organization />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

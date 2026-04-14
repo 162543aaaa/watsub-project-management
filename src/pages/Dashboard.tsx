@@ -414,14 +414,23 @@ export default function Dashboard() {
             <h2 className="text-base font-semibold text-foreground">Resource Workload</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Active tasks per team member (next 30 days)</p>
           </div>
-          <button
-            onClick={refetchWorkload}
-            disabled={loadingWorkload}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3 h-3 ${loadingWorkload ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/workload"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs hover:bg-muted transition-colors"
+            >
+              View Resource Workload
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+            <button
+              onClick={refetchWorkload}
+              disabled={loadingWorkload}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${loadingWorkload ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {workloadError ? (

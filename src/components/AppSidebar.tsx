@@ -2,7 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
   Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin, TrendingUp,
-  BookOpen, LayoutGrid
+  BookOpen, LayoutGrid, Building2
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -17,6 +17,7 @@ const navItems = [
   { label: "OKRs", icon: Target, path: "/okrs" },
   { label: "Team", icon: Users, path: "/team" },
   { label: "Team Workload", icon: LayoutGrid, path: "/workload" },
+  { label: "Organization Hub", icon: Building2, path: "/organization" },
   { label: "Wiki", icon: BookOpen, path: "/wiki" },
   { label: "Meetings", icon: Video, path: "/meetings" },
   { label: "On-site Work", icon: MapPin, path: "/onsite-work" },

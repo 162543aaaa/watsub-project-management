@@ -16,6 +16,7 @@ const ALL_PAGES = [
   { path: "/okrs", label: "OKRs" },
   { path: "/team", label: "Team" },
   { path: "/workload", label: "Team Workload" },
+  { path: "/organization", label: "Organization Hub" },
   { path: "/wiki", label: "Wiki" },
   { path: "/meetings", label: "Meetings" },
   { path: "/onsite-work", label: "On-site Work" },
