@@ -29,7 +29,6 @@ type EmployeeLeadershipRow = Pick<
   Database["public"]["Tables"]["employees"]["Row"],
   "id" | "name" | "position" | "avatar" | "role" | "type" | "active"
 >;
-
 function normalizeCoreValues(values: CompanyInfoRow["core_values"]): string[] {
   if (!Array.isArray(values)) return [];
   return values.filter((value): value is string => typeof value === "string");
@@ -45,26 +44,6 @@ export function useCompanyInfo() {
     const fetchOrganizationData = async () => {
       setIsLoading(true);
       setError(null);
-
-      try {
-        const [companyRes, leadershipRes] = await Promise.all([
-          supabase.from("company_info").select("*").eq("id", 1).single(),
-          supabase
-            .from("employees")
-            .select("id, name, position, avatar, role, type, active")
-            .or("role.eq.admin,type.eq.fulltime")
-            .eq("active", true)
-            .order("created_at", { ascending: true })
-            .limit(5),
-        ]);
-
-        if (companyRes.error) throw companyRes.error;
-        if (leadershipRes.error) throw leadershipRes.error;
-
-        const company = companyRes.data as CompanyInfoRow;
-        const leaders = (leadershipRes.data ?? []) as EmployeeLeadershipRow[];
-
-        setCompanyInfo({
           id: company.id,
           name: company.name,
           tagline: company.tagline,
@@ -74,23 +53,6 @@ export function useCompanyInfo() {
           logo_url: company.logo_url,
           contact_email: company.contact_email,
           updated_at: company.updated_at,
-        });
-
-        setLeadershipTeam(
-          leaders.map((member) => ({
-            id: member.id,
-            name: member.name,
-            position: member.position,
-            avatar: member.avatar,
-            role: member.role,
-            type: member.type,
-          })),
-        );
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Failed to load organization data");
-      } finally {
-        setIsLoading(false);
-      }
     };
 
     fetchOrganizationData();

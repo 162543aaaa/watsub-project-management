@@ -13,19 +13,6 @@ function getInitial(name: string) {
 export default function Organization() {
   const { companyInfo, leadershipTeam, isLoading, error } = useCompanyInfo();
 
-  if (error) {
-    return (
-      <div className="min-h-full p-6">
-        <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="p-6">
-            <p className="text-sm font-semibold text-destructive">Failed to load organization profile</p>
-            <p className="text-xs text-muted-foreground mt-1">{error}</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (isLoading || !companyInfo) {
     return (
       <div className="min-h-full p-6 space-y-4">
