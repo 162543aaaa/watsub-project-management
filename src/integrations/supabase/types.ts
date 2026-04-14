@@ -115,10 +115,19 @@ export type Database = {
       }
       company_info: {
         Row: {
+          benefits_summary: string | null
+          brand_assets_url: string | null
+          brand_colors: Json | null
           contact_email: string | null
           core_values: Json | null
+          handbook_url: string | null
+          history: string | null
           id: number
+          leadership_agreement: string | null
+          location: string | null
+          location_link: string | null
           logo_url: string | null
+          milestones: Json | null
           mission: string | null
           name: string | null
           tagline: string | null
@@ -126,10 +135,19 @@ export type Database = {
           vision: string | null
         }
         Insert: {
+          benefits_summary?: string | null
+          brand_assets_url?: string | null
+          brand_colors?: Json | null
           contact_email?: string | null
           core_values?: Json | null
+          handbook_url?: string | null
+          history?: string | null
           id?: number
+          leadership_agreement?: string | null
+          location?: string | null
+          location_link?: string | null
           logo_url?: string | null
+          milestones?: Json | null
           mission?: string | null
           name?: string | null
           tagline?: string | null
@@ -137,15 +155,57 @@ export type Database = {
           vision?: string | null
         }
         Update: {
+          benefits_summary?: string | null
+          brand_assets_url?: string | null
+          brand_colors?: Json | null
           contact_email?: string | null
           core_values?: Json | null
+          handbook_url?: string | null
+          history?: string | null
           id?: number
+          leadership_agreement?: string | null
+          location?: string | null
+          location_link?: string | null
           logo_url?: string | null
+          milestones?: Json | null
           mission?: string | null
           name?: string | null
           tagline?: string | null
           updated_at?: string | null
           vision?: string | null
+        }
+        Relationships: []
+      }
+      organization_chart_members: {
+        Row: {
+          created_at: string
+          detail: string
+          group_key: "core" | "leadership" | "specialist"
+          id: string
+          name: string
+          role: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string
+          group_key: "core" | "leadership" | "specialist"
+          id?: string
+          name: string
+          role: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string
+          group_key?: "core" | "leadership" | "specialist"
+          id?: string
+          name?: string
+          role?: string
+          sort_order?: number | null
+          updated_at?: string
         }
         Relationships: []
       }

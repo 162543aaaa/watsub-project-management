@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 export interface CompanyInfo {
   id: number;
@@ -12,6 +12,15 @@ export interface CompanyInfo {
   logo_url: string | null;
   contact_email: string | null;
   updated_at: string | null;
+  history: string | null;
+  milestones: string[];
+  location: string | null;
+  location_link: string | null;
+  leadership_agreement: string | null;
+  handbook_url: string | null;
+  brand_assets_url: string | null;
+  benefits_summary: string | null;
+  brand_colors: Array<{ label: string; hex: string }>;
 }
 
 export interface LeadershipMember {
@@ -29,8 +38,18 @@ export interface TeamSummary {
   percentage: number;
 }
 
+export interface OrgMember {
+  id: string;
+  name: string;
+  role: string;
+  detail: string;
+  group_key: "leadership" | "core" | "specialist";
+  sort_order: number;
+}
+
 type CompanyInfoRow = Database["public"]["Tables"]["company_info"]["Row"];
 type EmployeeRow = Database["public"]["Tables"]["employees"]["Row"];
+type OrgChartRow = Database["public"]["Tables"]["organization_chart_members"]["Row"];
 
 interface OrganizationStats {
   totalEmployees: number;
@@ -39,9 +58,20 @@ interface OrganizationStats {
   teamModels: number;
 }
 
-function normalizeCoreValues(values: CompanyInfoRow["core_values"]): string[] {
+function normalizeStringArray(values: Json | null | undefined): string[] {
   if (!Array.isArray(values)) return [];
   return values.filter((value): value is string => typeof value === "string");
+}
+
+function normalizeBrandColors(values: Json | null | undefined): Array<{ label: string; hex: string }> {
+  if (!Array.isArray(values)) return [];
+  return values
+    .filter((value): value is Record<string, unknown> => typeof value === "object" && value !== null)
+    .map((value) => ({
+      label: String(value.label ?? ""),
+      hex: String(value.hex ?? ""),
+    }))
+    .filter((value) => value.label && value.hex);
 }
 
 function toCompanyInfo(company: CompanyInfoRow | null): CompanyInfo | null {
@@ -53,10 +83,19 @@ function toCompanyInfo(company: CompanyInfoRow | null): CompanyInfo | null {
     tagline: company.tagline,
     vision: company.vision,
     mission: company.mission,
-    core_values: normalizeCoreValues(company.core_values),
+    core_values: normalizeStringArray(company.core_values),
     logo_url: company.logo_url,
     contact_email: company.contact_email,
     updated_at: company.updated_at,
+    history: company.history,
+    milestones: normalizeStringArray(company.milestones),
+    location: company.location,
+    location_link: company.location_link,
+    leadership_agreement: company.leadership_agreement,
+    handbook_url: company.handbook_url,
+    brand_assets_url: company.brand_assets_url,
+    benefits_summary: company.benefits_summary,
+    brand_colors: normalizeBrandColors(company.brand_colors),
   };
 }
 
@@ -91,51 +130,61 @@ export function useCompanyInfo() {
   const [leadershipTeam, setLeadershipTeam] = useState<LeadershipMember[]>([]);
   const [allEmployees, setAllEmployees] = useState<EmployeeRow[]>([]);
   const [teamSummary, setTeamSummary] = useState<TeamSummary[]>([]);
+  const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchOrganizationData = async () => {
-      setIsLoading(true);
-      setError(null);
+  const fetchOrganizationData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
-      const [companyRes, employeesRes] = await Promise.all([
-        supabase.from("company_info").select("*").order("id", { ascending: true }).limit(1).maybeSingle(),
-        supabase.from("employees").select("*").order("created_at", { ascending: true }),
-      ]);
+    const [companyRes, employeesRes, orgMembersRes] = await Promise.all([
+      supabase.from("company_info").select("*").order("id", { ascending: true }).limit(1).maybeSingle(),
+      supabase.from("employees").select("*").order("created_at", { ascending: true }),
+      supabase
+        .from("organization_chart_members")
+        .select("*")
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true }),
+    ]);
 
-      if (companyRes.error) {
-        setError(companyRes.error.message);
-      }
+    const nextError = companyRes.error?.message ?? employeesRes.error?.message ?? orgMembersRes.error?.message ?? null;
+    if (nextError) setError(nextError);
 
-      if (employeesRes.error) {
-        setError(employeesRes.error.message);
-      }
+    const company = toCompanyInfo(companyRes.data ?? null);
+    const employees = (employeesRes.data ?? []) as EmployeeRow[];
+    const chartMembers = ((orgMembersRes.data ?? []) as OrgChartRow[]).map((member) => ({
+      id: member.id,
+      name: member.name,
+      role: member.role,
+      detail: member.detail,
+      group_key: member.group_key,
+      sort_order: member.sort_order ?? 0,
+    }));
 
-      const company = toCompanyInfo(companyRes.data ?? null);
-      const employees = (employeesRes.data ?? []) as EmployeeRow[];
+    setCompanyInfo(company);
+    setAllEmployees(employees);
+    setOrgMembers(chartMembers);
 
-      setCompanyInfo(company);
-      setAllEmployees(employees);
+    const leadership = employees
+      .filter((employee) => (employee.active ?? true) && isLeadershipMember(employee))
+      .map((employee) => ({
+        id: employee.id,
+        name: employee.name,
+        position: employee.position,
+        avatar: employee.avatar,
+        role: employee.role,
+        type: employee.type,
+      }));
 
-      const leadership = employees
-        .filter((employee) => (employee.active ?? true) && isLeadershipMember(employee))
-        .map((employee) => ({
-          id: employee.id,
-          name: employee.name,
-          position: employee.position,
-          avatar: employee.avatar,
-          role: employee.role,
-          type: employee.type,
-        }));
-
-      setLeadershipTeam(leadership);
-      setTeamSummary(buildTeamSummary(employees.filter((employee) => employee.active ?? true)));
-      setIsLoading(false);
-    };
-
-    fetchOrganizationData();
+    setLeadershipTeam(leadership);
+    setTeamSummary(buildTeamSummary(employees.filter((employee) => employee.active ?? true)));
+    setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    void fetchOrganizationData();
+  }, [fetchOrganizationData]);
 
   const stats = useMemo<OrganizationStats>(() => {
     const activeEmployees = allEmployees.filter((employee) => employee.active ?? true);
@@ -151,8 +200,10 @@ export function useCompanyInfo() {
     companyInfo,
     leadershipTeam,
     teamSummary,
+    orgMembers,
     stats,
     isLoading,
     error,
+    refetch: fetchOrganizationData,
   };
 }
