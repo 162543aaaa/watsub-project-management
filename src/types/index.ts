@@ -1,3 +1,37 @@
+// ─── Organisation system ──────────────────────────────────────
+export interface BrandColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+  info: string;
+  light: string;
+  dark: string;
+}
+
+export interface LocationLinks {
+  label: string;
+  map_url: string;
+}
+
+export interface ResourceLink {
+  label: string;
+  url: string;
+}
+
+export interface OrgMember {
+  id: string;
+  name: string;
+  position: string;
+  role_type: "leadership" | "core" | "specialist";
+  parent_id: string | null;
+  avatar_url: string | null;
+}
+
+export interface OrgTreeNode extends OrgMember {
+  children: OrgTreeNode[];
+}
+// ─────────────────────────────────────────────────────────────
+
 export interface Objective {
   id: string;
   title: string;

@@ -2,6 +2,25 @@ import { render, screen } from "@testing-library/react";
 import Organization from "@/pages/Organization";
 import { vi } from "vitest";
 
+// ─── Mock useAuth ──────────────────────────────────────────────
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({
+    isAdmin: false,
+    user: null,
+    session: null,
+    profile: null,
+    roles: [],
+    loading: false,
+    isApproved: true,
+    canAccessPage: () => true,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    signUp: vi.fn(),
+    refetchProfile: vi.fn(),
+  }),
+}));
+
+// ─── Mock useCompanyInfo (new schema) ─────────────────────────
 vi.mock("@/hooks/useCompanyInfo", () => ({
   useCompanyInfo: () => ({
     isLoading: false,
@@ -12,11 +31,66 @@ vi.mock("@/hooks/useCompanyInfo", () => ({
       tagline: "A Space for Creative Connectivity",
       vision: "Vision text",
       mission: "Mission text",
-      core_values: ["Innovation", "Integrity"],
+      core_values: ["#VIBES: CITY & LIFESTYLE", "#SOUL: HUMAN & IDEA", "#JOINT: WORK & OPPORTUNITY"],
       logo_url: null,
       contact_email: "hello@watsub.com",
       updated_at: null,
+      history: "ประวัติ WatSUB! Studio ตั้งแต่ปี 2023",
+      milestones: ["2023: ก่อตั้ง", "2024: ขยายทีม", "2025: ecosystem"],
+      location_links: { label: "จังหวัดปัตตานี", map_url: "https://maps.app.goo.gl/example" },
+      resources: [
+        { label: "Employee Handbook", url: "https://drive.google.com/example1" },
+        { label: "Brand Assets", url: "https://drive.google.com/example2" },
+      ],
+      benefits: ["ค่าประกันสุขภาพ", "วันหยุดพักผ่อน 10 วัน"],
+      brand_colors: {
+        primary: "#D2FA00",
+        secondary: "#F4622A",
+        accent: "#6B3FA0",
+        info: "#3EADD4",
+        light: "#F5F0E8",
+        dark: "#0D0D0D",
+      },
     },
+    orgTree: [
+      {
+        id: "00000000-0000-0000-0001-000000000001",
+        name: "ต้า (Tarmisi Wani)",
+        position: "Founding Partner & Creative Lead",
+        role_type: "leadership",
+        parent_id: null,
+        avatar_url: null,
+        children: [
+          {
+            id: "00000000-0000-0000-0002-000000000004",
+            name: "ฮาฟีซ ดอเลาะ",
+            position: "Videographer & Graphic Designer",
+            role_type: "core",
+            parent_id: "00000000-0000-0000-0001-000000000001",
+            avatar_url: null,
+            children: [],
+          },
+        ],
+      },
+    ],
+    orgMembers: [
+      {
+        id: "00000000-0000-0000-0001-000000000001",
+        name: "ต้า (Tarmisi Wani)",
+        position: "Founding Partner & Creative Lead",
+        role_type: "leadership",
+        parent_id: null,
+        avatar_url: null,
+      },
+      {
+        id: "00000000-0000-0000-0002-000000000004",
+        name: "ฮาฟีซ ดอเลาะ",
+        position: "Videographer & Graphic Designer",
+        role_type: "core",
+        parent_id: "00000000-0000-0000-0001-000000000001",
+        avatar_url: null,
+      },
+    ],
     leadershipTeam: [],
     teamSummary: [],
     stats: {
@@ -25,17 +99,52 @@ vi.mock("@/hooks/useCompanyInfo", () => ({
       leadershipCount: 3,
       teamModels: 3,
     },
+    updateCompanyInfo: vi.fn(),
+    addOrgMember: vi.fn(),
+    updateOrgMember: vi.fn(),
+    deleteOrgMember: vi.fn(),
+    refetch: vi.fn(),
   }),
 }));
 
 describe("Organization page", () => {
-  it("renders company profile sections", () => {
+  it("renders company name", () => {
     render(<Organization />);
+    expect(
+      screen.getByText("WatSUB! Studio (วาตซับ สตูดิโอ)"),
+    ).toBeInTheDocument();
+  });
 
-    expect(screen.getByText("WatSUB! Studio (วาตซับ สตูดิโอ)")).toBeInTheDocument();
+  it("renders Vision and Mission sections", () => {
+    render(<Organization />);
     expect(screen.getByText("Vision 2026")).toBeInTheDocument();
     expect(screen.getByText("Mission")).toBeInTheDocument();
+  });
+
+  it("renders Interactive Org Chart section", () => {
+    render(<Organization />);
     expect(screen.getByText("Interactive Org Chart")).toBeInTheDocument();
+  });
+
+  it("renders Brand Colors section", () => {
+    render(<Organization />);
     expect(screen.getByText("Brand Colors")).toBeInTheDocument();
+  });
+
+  it("renders milestones from mock data", () => {
+    render(<Organization />);
+    expect(screen.getByText("2023: ก่อตั้ง")).toBeInTheDocument();
+  });
+
+  it("renders benefits from mock data", () => {
+    render(<Organization />);
+    expect(screen.getByText("ค่าประกันสุขภาพ")).toBeInTheDocument();
+  });
+
+  it("does NOT render admin edit button for non-admin user", () => {
+    render(<Organization />);
+    expect(
+      screen.queryByText("Edit Organization"),
+    ).not.toBeInTheDocument();
   });
 });

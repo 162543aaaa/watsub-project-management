@@ -115,34 +115,52 @@ export type Database = {
       }
       company_info: {
         Row: {
+          benefits: Json
+          brand_colors: Json
           contact_email: string | null
           core_values: Json | null
+          history: string | null
           id: number
+          location_links: Json
           logo_url: string | null
+          milestones: Json
           mission: string | null
           name: string | null
+          resources: Json
           tagline: string | null
           updated_at: string | null
           vision: string | null
         }
         Insert: {
+          benefits?: Json
+          brand_colors?: Json
           contact_email?: string | null
           core_values?: Json | null
+          history?: string | null
           id?: number
+          location_links?: Json
           logo_url?: string | null
+          milestones?: Json
           mission?: string | null
           name?: string | null
+          resources?: Json
           tagline?: string | null
           updated_at?: string | null
           vision?: string | null
         }
         Update: {
+          benefits?: Json
+          brand_colors?: Json
           contact_email?: string | null
           core_values?: Json | null
+          history?: string | null
           id?: number
+          location_links?: Json
           logo_url?: string | null
+          milestones?: Json
           mission?: string | null
           name?: string | null
+          resources?: Json
           tagline?: string | null
           updated_at?: string | null
           vision?: string | null
@@ -623,6 +641,47 @@ export type Database = {
           work_date?: string
         }
         Relationships: []
+      }
+      organization_chart_members: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          position: string
+          role_type: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          position?: string
+          role_type?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          position?: string
+          role_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_chart_members_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "organization_chart_members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
