@@ -8,8 +8,8 @@ vi.mock("@/hooks/useCompanyInfo", () => ({
     error: null,
     companyInfo: {
       id: 1,
-      name: "Watsub",
-      tagline: "Empowering project management",
+      name: "WatSUB! Studio (วาตซับ สตูดิโอ)",
+      tagline: "A Space for Creative Connectivity",
       vision: "Vision text",
       mission: "Mission text",
       core_values: ["Innovation", "Integrity"],
@@ -17,28 +17,13 @@ vi.mock("@/hooks/useCompanyInfo", () => ({
       contact_email: "hello@watsub.com",
       updated_at: null,
     },
-    leadershipTeam: [
-      {
-        id: "1",
-        name: "Jane Admin",
-        position: "CEO",
-        avatar: null,
-        role: "admin",
-        type: "fulltime",
-      },
-    ],
-    teamSummary: [
-      {
-        label: "fulltime",
-        total: 1,
-        percentage: 100,
-      },
-    ],
+    leadershipTeam: [],
+    teamSummary: [],
     stats: {
-      totalEmployees: 4,
-      activeCount: 3,
-      leadershipCount: 1,
-      teamModels: 2,
+      totalEmployees: 8,
+      activeCount: 8,
+      leadershipCount: 3,
+      teamModels: 3,
     },
   }),
 }));
@@ -47,10 +32,10 @@ describe("Organization page", () => {
   it("renders company profile sections", () => {
     render(<Organization />);
 
-    expect(screen.getByText("Watsub")).toBeInTheDocument();
-    expect(screen.getByText("Vision")).toBeInTheDocument();
+    expect(screen.getByText("WatSUB! Studio (วาตซับ สตูดิโอ)")).toBeInTheDocument();
+    expect(screen.getByText("Vision 2026")).toBeInTheDocument();
     expect(screen.getByText("Mission")).toBeInTheDocument();
-    expect(screen.getByText("Innovation")).toBeInTheDocument();
-    expect(screen.getByText("จำนวนพนักงานทั้งหมด")).toBeInTheDocument();
+    expect(screen.getByText("Interactive Org Chart")).toBeInTheDocument();
+    expect(screen.getByText("Brand Colors")).toBeInTheDocument();
   });
 });
