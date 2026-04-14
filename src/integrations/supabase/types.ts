@@ -113,6 +113,42 @@ export type Database = {
         }
         Relationships: []
       }
+      company_info: {
+        Row: {
+          contact_email: string | null
+          core_values: Json | null
+          id: number
+          logo_url: string | null
+          mission: string | null
+          name: string | null
+          tagline: string | null
+          updated_at: string | null
+          vision: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          core_values?: Json | null
+          id?: number
+          logo_url?: string | null
+          mission?: string | null
+          name?: string | null
+          tagline?: string | null
+          updated_at?: string | null
+          vision?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          core_values?: Json | null
+          id?: number
+          logo_url?: string | null
+          mission?: string | null
+          name?: string | null
+          tagline?: string | null
+          updated_at?: string | null
+          vision?: string | null
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           active: boolean | null

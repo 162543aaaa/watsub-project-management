@@ -14,6 +14,8 @@ import { useWorkload, DEFAULT_WEEKLY_CAPACITY, WorkloadData } from "@/hooks/useW
 import { supabase } from "@/integrations/supabase/client";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import WorkloadDrillDown from "@/components/WorkloadDrillDown";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utility helpers
@@ -122,16 +124,27 @@ function UtilizationBar({
 function EmployeeCard({
   item,
   index,
+  onOpenDetails,
 }: {
   item: WorkloadData;
   index: number;
+  onOpenDetails: (employee: WorkloadData) => void;
 }) {
   const tier = getTier(item.utilization_percentage);
   const cfg = TIER_CONFIG[tier];
 
   return (
     <Card
-      className="relative overflow-hidden transition-shadow hover:shadow-md"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenDetails(item)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenDetails(item);
+        }
+      }}
+      className="relative overflow-hidden transition-shadow hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
       style={{
         borderColor: cfg.border,
         background: "hsl(var(--card))",
@@ -205,6 +218,21 @@ function EmployeeCard({
               </span>
             )}
           </span>
+        </div>
+
+        <div className="mt-3">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDetails(item);
+            }}
+          >
+            View Details
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -376,6 +404,8 @@ export default function Workload() {
     format(endOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd")
   );
   const [activeTab, setActiveTab] = useState<ViewTab>("utilization");
+  const [selectedEmployee, setSelectedEmployee] = useState<WorkloadData | null>(null);
+  const [isDrillDownOpen, setIsDrillDownOpen] = useState(false);
 
   const { data, isLoading, error, refetch } = useWorkload(startDate, endDate);
 
@@ -548,7 +578,15 @@ export default function Workload() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {data.map((item, idx) => (
-              <EmployeeCard key={item.employee_id} item={item} index={idx} />
+              <EmployeeCard
+                key={item.employee_id}
+                item={item}
+                index={idx}
+                onOpenDetails={(employee) => {
+                  setSelectedEmployee(employee);
+                  setIsDrillDownOpen(true);
+                }}
+              />
             ))}
           </div>
         )
@@ -570,6 +608,13 @@ export default function Workload() {
           <HeatmapView />
         </>
       )}
+
+      <WorkloadDrillDown
+        isOpen={isDrillDownOpen}
+        onClose={() => setIsDrillDownOpen(false)}
+        employee={selectedEmployee}
+        onTaskReassigned={refetch}
+      />
     </div>
   );
 }
