@@ -15,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useCompanyInfo } from "@/hooks/useCompanyInfo";
 import { OrgAdminEditor } from "@/components/OrgAdminEditor";
 import { InteractiveOrgChart } from "@/components/InteractiveOrgChart";
@@ -87,7 +87,7 @@ function EditHint({ onClick, className }: { onClick: () => void; className?: str
 
 // ─── Page ─────────────────────────────────────────────────────
 export default function Organization() {
-  const { isAdmin } = useAuth();
+  const { isAdmin } = useAuthContext();
   const {
     companyInfo, orgTree, orgMembers, stats, isLoading, error,
     updateCompanyInfo, addOrgMember, updateOrgMember, deleteOrgMember, refetch,

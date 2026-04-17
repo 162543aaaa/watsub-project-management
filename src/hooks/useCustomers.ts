@@ -32,10 +32,10 @@ export function useCustomers(showArchived = false) {
 
   const fetchCustomers = async () => {
     setLoading(true);
-    const { data: custData, error: custError } = await supabase
+    // Fetch all customers then filter in JS so this works even before migration runs
+    const { data: allCustData, error: custError } = await supabase
       .from("customers")
       .select("*")
-      .eq("is_archived", showArchived)
       .order("sort_order", { ascending: true });
     if (custError) { console.error(custError); setLoading(false); return; }
 
@@ -46,7 +46,8 @@ export function useCustomers(showArchived = false) {
       .order("sort_order", { ascending: true });
     if (taskError) { console.error(taskError); }
 
-    const customers = (custData || []).map(c => ({
+    const custData = (allCustData || []).filter(c => (c.is_archived ?? false) === showArchived);
+    const customers = custData.map(c => ({
       ...c,
       tasks: (taskData || []).filter(t => t.customer_id === c.id) as Task[],
     }));

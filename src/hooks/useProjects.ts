@@ -43,10 +43,10 @@ export function useProjects(showArchived = false) {
 
   const fetchProjects = async () => {
     setLoading(true);
-    const { data: projData, error: projError } = await supabase
+    // Fetch all projects then filter in JS so this works even before migration runs
+    const { data: allProjData, error: projError } = await supabase
       .from("projects")
       .select("*")
-      .eq("is_archived", showArchived)
       .order("sort_order", { ascending: true });
     if (projError) { console.error(projError); setLoading(false); return; }
 
@@ -57,7 +57,8 @@ export function useProjects(showArchived = false) {
       .order("sort_order", { ascending: true });
     if (taskError) { console.error(taskError); }
 
-    const projects = (projData || []).map(p => ({
+    const projData = (allProjData || []).filter(p => (p.is_archived ?? false) === showArchived);
+    const projects = projData.map(p => ({
       ...p,
       pillar: p.pillar as Pillar,
       tasks: (taskData || []).filter(t => t.project_id === p.id) as Task[],
