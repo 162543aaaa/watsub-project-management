@@ -31,19 +31,22 @@ export interface Project {
   note?: string;
   link?: string;
   pillar: Pillar;
+  is_archived?: boolean;
   created_at?: string;
   sort_order?: number;
   tasks: Task[];
 }
 
-export function useProjects() {
+export function useProjects(showArchived = false) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProjects = async () => {
+    setLoading(true);
     const { data: projData, error: projError } = await supabase
       .from("projects")
       .select("*")
+      .eq("is_archived", showArchived)
       .order("sort_order", { ascending: true });
     if (projError) { console.error(projError); setLoading(false); return; }
 
@@ -63,7 +66,8 @@ export function useProjects() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchProjects(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchProjects(); }, [showArchived]);
 
   const addProject = async (proj: { name: string; month: number; year?: number; note?: string; link?: string; pillar: Pillar }) => {
     const { data, error } = await supabase.from("projects").insert(proj).select().single();
@@ -85,6 +89,20 @@ export function useProjects() {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setProjects(prev => prev.filter(p => p.id !== id));
     toast({ title: "ลบโปรเจกต์สำเร็จ!" });
+  };
+
+  const archiveProject = async (id: string) => {
+    const { error } = await supabase.from("projects").update({ is_archived: true }).eq("id", id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setProjects(prev => prev.filter(p => p.id !== id));
+    toast({ title: "เก็บโปรเจกต์แล้ว!" });
+  };
+
+  const unarchiveProject = async (id: string) => {
+    const { error } = await supabase.from("projects").update({ is_archived: false }).eq("id", id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setProjects(prev => prev.filter(p => p.id !== id));
+    toast({ title: "กู้คืนโปรเจกต์สำเร็จ!" });
   };
 
   const addTask = async (task: Omit<Task, "id" | "created_at">) => {
@@ -143,5 +161,5 @@ export function useProjects() {
     );
   };
 
-  return { projects, loading, addProject, updateProject, deleteProject, addTask, updateTask, deleteTask, refetch: fetchProjects, reorderProjects };
+  return { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, refetch: fetchProjects, reorderProjects };
 }
