@@ -56,6 +56,7 @@ export type Database = {
           detail: string | null
           feedback_channel: string | null
           id: string
+          is_archived: boolean | null
           job_description: string | null
           link: string | null
           month: number
@@ -77,6 +78,7 @@ export type Database = {
           detail?: string | null
           feedback_channel?: string | null
           id?: string
+          is_archived?: boolean | null
           job_description?: string | null
           link?: string | null
           month?: number
@@ -98,6 +100,7 @@ export type Database = {
           detail?: string | null
           feedback_channel?: string | null
           id?: string
+          is_archived?: boolean | null
           job_description?: string | null
           link?: string | null
           month?: number
@@ -718,6 +721,7 @@ export type Database = {
           created_at: string
           embedding: string | null
           id: string
+          is_archived: boolean | null
           link: string | null
           month: number
           name: string
@@ -731,6 +735,7 @@ export type Database = {
           created_at?: string
           embedding?: string | null
           id?: string
+          is_archived?: boolean | null
           link?: string | null
           month?: number
           name: string
@@ -744,6 +749,7 @@ export type Database = {
           created_at?: string
           embedding?: string | null
           id?: string
+          is_archived?: boolean | null
           link?: string | null
           month?: number
           name?: string
