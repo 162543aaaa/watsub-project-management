@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2, Archive, ArchiveRestore } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
@@ -64,7 +65,8 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
 
 
 export default function Customers() {
-  const { customers, loading, addCustomer, deleteCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer } = useCustomers();
+  const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
+  const { customers, loading, addCustomer, deleteCustomer, archiveCustomer, unarchiveCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer } = useCustomers(activeTab === "archived");
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
@@ -247,6 +249,16 @@ export default function Customers() {
         </div>
       </div>
 
+      {/* Archive Tabs */}
+      <div className="mb-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived")}>
+          <TabsList>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="archived">Archived</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       {/* Add Customer Modal */}
       {showAdd && (
         <CustomerModal
@@ -342,6 +354,19 @@ export default function Customers() {
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
+                              {activeTab === "active" ? (
+                                <button onClick={(e) => { e.stopPropagation(); archiveCustomer(cust.id); }}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-500/10 text-amber-600 transition-all hover:scale-110 active:scale-95"
+                                  title="Archive customer">
+                                  <Archive className="w-3.5 h-3.5" />
+                                </button>
+                              ) : (
+                                <button onClick={(e) => { e.stopPropagation(); unarchiveCustomer(cust.id); }}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-green-500/10 text-green-600 transition-all hover:scale-110 active:scale-95"
+                                  title="Restore customer">
+                                  <ArchiveRestore className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "customer", id: cust.id, name: cust.name }); }}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
                                 <Trash2 className="w-3.5 h-3.5 text-destructive" />

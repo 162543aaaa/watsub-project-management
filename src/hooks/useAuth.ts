@@ -134,9 +134,11 @@ export function useAuth() {
     if (pages.includes('*')) return true;
     if (pages.length === 0) return false;
     return pages.some((p) => {
-      if (path === p) return true;
-      const topSection = "/" + p.split("/").filter(Boolean)[0];
-      return path.startsWith(topSection + "/");
+      const normalizedPath = path.startsWith("/") ? path : "/" + path;
+      const normalizedP = p.startsWith("/") ? p : "/" + p;
+      if (normalizedPath === normalizedP) return true;
+      const topSection = "/" + normalizedP.split("/").filter(Boolean)[0];
+      return normalizedPath.startsWith(topSection + "/");
     });
   };
 
