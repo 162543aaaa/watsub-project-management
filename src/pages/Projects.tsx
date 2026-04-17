@@ -1,5 +1,6 @@
 import { useState, useRef, lazy, Suspense } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle, LayoutList, GanttChartSquare } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle, LayoutList, GanttChartSquare, Archive, ArchiveRestore } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
@@ -72,7 +73,8 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
 
 
 export default function Projects() {
-  const { projects, loading, addProject, updateProject, deleteProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects();
+  const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
+  const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(activeTab === "archived");
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAddProject, setShowAddProject] = useState(false);
@@ -274,6 +276,16 @@ export default function Projects() {
         </div>
       </div>
 
+      {/* Archive Tabs */}
+      <div className="mb-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived")}>
+          <TabsList>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="archived">Archived</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       {/* Add Project Modal */}
       {showAddProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
@@ -415,6 +427,19 @@ export default function Projects() {
                                   className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
                                   <Plus className="w-3.5 h-3.5" />
                                 </button>
+                                {activeTab === "active" ? (
+                                  <button onClick={(e) => { e.stopPropagation(); archiveProject(proj.id); }}
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-500/10 text-amber-600 transition-all hover:scale-110 active:scale-95"
+                                    title="Archive project">
+                                    <Archive className="w-3.5 h-3.5" />
+                                  </button>
+                                ) : (
+                                  <button onClick={(e) => { e.stopPropagation(); unarchiveProject(proj.id); }}
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-green-500/10 text-green-600 transition-all hover:scale-110 active:scale-95"
+                                    title="Restore project">
+                                    <ArchiveRestore className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "project", id: proj.id, name: proj.name }); }}
                                   className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
                                   <Trash2 className="w-3.5 h-3.5 text-destructive" />

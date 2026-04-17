@@ -13,6 +13,7 @@ export interface Customer {
   link?: string;
   month: number;
   year: number;
+  is_archived?: boolean;
   created_at?: string;
   sort_order?: number;
   contact_name?: string;
@@ -25,14 +26,16 @@ export interface Customer {
   tasks: Task[];
 }
 
-export function useCustomers() {
+export function useCustomers(showArchived = false) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCustomers = async () => {
+    setLoading(true);
     const { data: custData, error: custError } = await supabase
       .from("customers")
       .select("*")
+      .eq("is_archived", showArchived)
       .order("sort_order", { ascending: true });
     if (custError) { console.error(custError); setLoading(false); return; }
 
@@ -51,7 +54,8 @@ export function useCustomers() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchCustomers(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchCustomers(); }, [showArchived]);
 
   const addCustomer = async (cust: Omit<Customer, "id" | "created_at" | "tasks">) => {
     const { data, error } = await supabase.from("customers").insert(cust).select().single();
@@ -73,6 +77,20 @@ export function useCustomers() {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "ลบลูกค้าสำเร็จ!" });
+  };
+
+  const archiveCustomer = async (id: string) => {
+    const { error } = await supabase.from("customers").update({ is_archived: true }).eq("id", id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setCustomers(prev => prev.filter(c => c.id !== id));
+    toast({ title: "เก็บลูกค้าแล้ว!" });
+  };
+
+  const unarchiveCustomer = async (id: string) => {
+    const { error } = await supabase.from("customers").update({ is_archived: false }).eq("id", id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setCustomers(prev => prev.filter(c => c.id !== id));
+    toast({ title: "กู้คืนลูกค้าสำเร็จ!" });
   };
 
   const addTask = async (task: Omit<Task, "id" | "created_at">) => {
@@ -126,5 +144,5 @@ export function useCustomers() {
     );
   };
 
-  return { customers, loading, addCustomer, updateCustomer, deleteCustomer, addTask, updateTask, deleteTask, refetch: fetchCustomers, reorderCustomers };
+  return { customers, loading, addCustomer, updateCustomer, deleteCustomer, archiveCustomer, unarchiveCustomer, addTask, updateTask, deleteTask, refetch: fetchCustomers, reorderCustomers };
 }
