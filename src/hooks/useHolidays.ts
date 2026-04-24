@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -16,7 +16,7 @@ export function useHolidays() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchHolidays = async () => {
+  const fetchHolidays = useCallback(async () => {
     const { data, error } = await supabase
       .from("holidays")
       .select("*")
@@ -27,11 +27,13 @@ export function useHolidays() {
       setHolidays(data || []);
     }
     setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { fetchHolidays(); }, []);
+  useEffect(() => { fetchHolidays(); }, [fetchHolidays]);
 
   const addHoliday = async (holiday: Omit<Holiday, "id">) => {
+    // start_date/end_date are custom columns not yet in the generated Supabase types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await supabase.from("holidays").insert(holiday as any);
     if (error) {
       toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
@@ -42,6 +44,8 @@ export function useHolidays() {
   };
 
   const updateHoliday = async (id: string, updates: Partial<Omit<Holiday, "id">>) => {
+    // start_date/end_date are custom columns not yet in the generated Supabase types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await supabase.from("holidays").update(updates as any).eq("id", id);
     if (error) {
       toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });

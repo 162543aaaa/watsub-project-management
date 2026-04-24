@@ -560,6 +560,8 @@ export async function loadKpiFormConfig(
 
   if (!dbRole) return fallback;
 
+  // kpi_question_templates is not yet in the generated Supabase types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from("kpi_question_templates")
     .select("section_id, section_title, section_weight, question_text, question_type, auto_source, order_index")
