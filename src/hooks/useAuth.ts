@@ -80,7 +80,9 @@ export function useAuth() {
       if (!mounted || event === "INITIAL_SESSION") return;
 
       setLoading(true);
+      // setTimeout(0) defers to avoid Supabase's internal deadlock on synchronous auth events
       window.setTimeout(() => {
+        if (!mounted) return;
         void syncAuthState(nextSession);
       }, 0);
     });

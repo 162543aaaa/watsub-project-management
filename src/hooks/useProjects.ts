@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -41,7 +41,7 @@ export function useProjects(showArchived = false) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setLoading(true);
     // Fetch all projects then filter in JS so this works even before migration runs
     const { data: allProjData, error: projError } = await supabase
@@ -65,10 +65,9 @@ export function useProjects(showArchived = false) {
     }));
     setProjects(projects);
     setLoading(false);
-  };
+  }, [showArchived]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchProjects(); }, [showArchived]);
+  useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
   const addProject = async (proj: { name: string; month: number; year?: number; note?: string; link?: string; pillar: Pillar }) => {
     const { data, error } = await supabase.from("projects").insert(proj).select().single();

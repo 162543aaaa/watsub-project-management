@@ -107,7 +107,7 @@ export default function Reports() {
   ];
 
   const topPerformers = useMemo(() => employees.map(emp => {
-    const myTasks = tasks.filter(t => t.assigned_to.includes(emp.name));
+    const myTasks = tasks.filter(t => t.assigned_to?.includes(emp.name));
     const done = myTasks.filter(t => t.status === "Done").length;
     return { ...emp, total: myTasks.length, done, pct: myTasks.length ? Math.round((done / myTasks.length) * 100) : 0 };
   }).filter(e => e.total > 0).sort((a, b) => b.pct - a.pct || b.done - a.done), [employees, tasks]);
@@ -169,7 +169,7 @@ export default function Reports() {
       [],
       ["=== OVERDUE TASKS ==="],
       ["Task Name", "Due Date", "Priority", "Assigned To", "Context"],
-      ...overdueTasks.map(t => [t.name, t.due_date || "-", t.priority, t.assigned_to.join(", "), getTaskContext(t)]),
+      ...overdueTasks.map(t => [t.name, t.due_date || "-", t.priority, (t.assigned_to ?? []).join(", "), getTaskContext(t)]),
     ];
     exportCSV(rows, `reports-${periodLabel.replace(/ /g, "-")}.csv`);
   };
@@ -189,7 +189,7 @@ export default function Reports() {
        <td><div class="bar-wrap"><div class="bar" style="width:${allTasks.length ? (d.count / allTasks.length) * 100 : 0}%"></div></div></td></tr>`
     ).join("");
     const overdueHtml = overdueTasks.map(t =>
-      `<tr><td>${escapeHtml(t.name)}</td><td>${t.due_date ? escapeHtml(new Date(t.due_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })) : "-"}</td><td>${escapeHtml(t.priority)}</td><td>${escapeHtml(t.assigned_to.join(", "))}</td></tr>`
+      `<tr><td>${escapeHtml(t.name)}</td><td>${t.due_date ? escapeHtml(new Date(t.due_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })) : "-"}</td><td>${escapeHtml(t.priority)}</td><td>${escapeHtml((t.assigned_to ?? []).join(", "))}</td></tr>`
     ).join("");
 
     printWindow.document.write(`<html><head><title>Reports – ${escapeHtml(periodLabel)}</title>

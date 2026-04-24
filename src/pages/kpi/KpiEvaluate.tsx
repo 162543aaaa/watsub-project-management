@@ -31,8 +31,13 @@ const getReviewType = (e: { reviewer_type?: string | null; type?: string | null 
   (e.reviewer_type ?? e.type ?? "").toLowerCase();
 
 async function computeAutoValues(empId: string, periodId: string): Promise<AutoValues> {
+  // period_id / member_ids are pending-migration columns absent from generated types;
+  // we cast only the query chain (not supabase itself) and fall back gracefully.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const q = supabase as any;
+
   const fetchTasks = async () => {
-    const withPeriod = await (supabase as any)
+    const withPeriod = await q
       .from("tasks")
       .select("status,due_date,comments,customer_id")
       .contains("assigned_to", [empId])
@@ -46,13 +51,13 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 
   const fetchProjects = async () => {
-    const withPeriod = await (supabase as any)
+    const withPeriod = await q
       .from("projects")
       .select("id,status")
       .contains("member_ids", [empId])
       .eq("period_id", periodId);
     if (!withPeriod.error) return withPeriod.data ?? [];
-    const fallback = await (supabase as any)
+    const fallback = await q
       .from("projects")
       .select("id,status")
       .contains("member_ids", [empId]);
@@ -60,7 +65,7 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 
   const fetchCustomers = async () => {
-    const withPeriod = await (supabase as any)
+    const withPeriod = await q
       .from("customers")
       .select("id,payment_fee")
       .eq("period_id", periodId);
@@ -70,7 +75,7 @@ async function computeAutoValues(empId: string, periodId: string): Promise<AutoV
   };
 
   const fetchGoals = async () => {
-    const withPeriod = await (supabase as any)
+    const withPeriod = await q
       .from("goals")
       .select("target_value,assigned_to")
       .eq("period_id", periodId);

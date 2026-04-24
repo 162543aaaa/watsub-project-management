@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Task } from "./useProjects";
@@ -30,7 +30,7 @@ export function useCustomers(showArchived = false) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     // Fetch all customers then filter in JS so this works even before migration runs
     const { data: allCustData, error: custError } = await supabase
@@ -53,10 +53,9 @@ export function useCustomers(showArchived = false) {
     }));
     setCustomers(customers);
     setLoading(false);
-  };
+  }, [showArchived]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchCustomers(); }, [showArchived]);
+  useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
   const addCustomer = async (cust: Omit<Customer, "id" | "created_at" | "tasks">) => {
     const { data, error } = await supabase.from("customers").insert(cust).select().single();

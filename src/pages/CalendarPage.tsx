@@ -10,8 +10,8 @@ import {
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
-import { useMeetings } from "@/hooks/useMeetings";
-import { useOnsiteWork } from "@/hooks/useOnsiteWork";
+import { useMeetings, type Meeting } from "@/hooks/useMeetings";
+import { useOnsiteWork, type OnsiteWork } from "@/hooks/useOnsiteWork";
 import { useHolidays } from "@/hooks/useHolidays";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -326,10 +326,10 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
   employees: { name: string; avatar?: string }[];
   projects?: { id: string; name: string }[];
   customers?: { id: string; name: string }[];
-  onSave?: (id: string, updates: Record<string, any>) => void;
-  onAdd?: (data: Record<string, any>) => void;
+  onSave?: (id: string, updates: Record<string, unknown>) => void;
+  onAdd?: (data: Omit<Meeting, "id" | "created_at" | "updated_at">) => void;
   onClose: () => void;
-  onCreateLinkedTask?: (task: Record<string, any>) => void;
+  onCreateLinkedTask?: (task: Record<string, unknown>) => void;
 }) {
   const isEdit = !!item;
   const [form, setForm] = useState({
@@ -433,7 +433,7 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
               </div>
               <div className="bg-muted/40 rounded-xl p-3 space-y-3">
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
-                  value={linkType} onChange={e => { setLinkType(e.target.value as any); setLinkId(""); }}>
+                  value={linkType} onChange={e => { setLinkType(e.target.value as "none" | "project" | "customer"); setLinkId(""); }}>
                   <option value="none">— ไม่เชื่อมโยง —</option>
                   <option value="project">🚀 Project</option>
                   <option value="customer">💼 Customer</option>
@@ -481,10 +481,10 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
   employees: { name: string; avatar?: string }[];
   projects?: { id: string; name: string }[];
   customers?: { id: string; name: string }[];
-  onSave?: (id: string, updates: Record<string, any>) => void;
-  onAdd?: (data: Record<string, any>) => void;
+  onSave?: (id: string, updates: Record<string, unknown>) => void;
+  onAdd?: (data: Omit<OnsiteWork, "id" | "created_at" | "updated_at">) => void;
   onClose: () => void;
-  onCreateLinkedTask?: (task: Record<string, any>) => void;
+  onCreateLinkedTask?: (task: Record<string, unknown>) => void;
 }) {
   const isEdit = !!item;
   const [form, setForm] = useState({
@@ -574,7 +574,7 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
               </div>
               <div className="bg-muted/40 rounded-xl p-3 space-y-3">
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
-                  value={linkType} onChange={e => { setLinkType(e.target.value as any); setLinkId(""); }}>
+                  value={linkType} onChange={e => { setLinkType(e.target.value as "none" | "project" | "customer"); setLinkId(""); }}>
                   <option value="none">— ไม่เชื่อมโยง —</option>
                   <option value="project">🚀 Project</option>
                   <option value="customer">💼 Customer</option>
@@ -1127,7 +1127,7 @@ export default function CalendarPage() {
           employees={employees}
           projects={projects.map(p => ({ id: p.id, name: p.name }))}
           customers={customers.map(c => ({ id: c.id, name: c.name }))}
-          onAdd={async (data) => { await addMeeting(data as any); }}
+          onAdd={addMeeting}
           onClose={() => setShowAddMeeting(false)}
           onCreateLinkedTask={handleCreateLinkedTask}
         />
@@ -1137,7 +1137,7 @@ export default function CalendarPage() {
           employees={employees}
           projects={projects.map(p => ({ id: p.id, name: p.name }))}
           customers={customers.map(c => ({ id: c.id, name: c.name }))}
-          onAdd={async (data) => { await addOnsiteWork(data as any); }}
+          onAdd={addOnsiteWork}
           onClose={() => setShowAddOnsite(false)}
           onCreateLinkedTask={handleCreateLinkedTask}
         />

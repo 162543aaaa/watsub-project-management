@@ -73,12 +73,14 @@ export function useWiki() {
 
     if (slugError || !data) return null;
 
-    // Increment view count (fire-and-forget)
+    // Increment view count (fire-and-forget — non-critical)
     supabase
       .from("wiki_pages")
       .update({ view_count: (data.view_count ?? 0) + 1 })
       .eq("id", data.id)
-      .then(() => {});
+      .then(({ error }) => {
+        if (error) console.warn("view_count update failed:", error.message);
+      });
 
     // Fetch author name
     let author_name: string | undefined;
