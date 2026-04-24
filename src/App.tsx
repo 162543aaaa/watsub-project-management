@@ -38,7 +38,18 @@ import Organization from "./pages/Organization";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
-const queryClient = new QueryClient();
+// staleTime prevents refetchOnWindowFocus from hitting the network when the
+// user quickly switches tabs — data fetched within the last 5 minutes is
+// treated as fresh and skipped. After 5 minutes the next focus/mount will
+// still trigger a background refresh, so users never see permanently stale data.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes — fresh window; no refetch on tab switch
+      retry: 1,                  // one retry on failure is enough; avoid hammering the server
+    },
+  },
+});
 
 const App = () => (
   <ErrorBoundary>
