@@ -79,6 +79,14 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted || event === "INITIAL_SESSION") return;
 
+      // TOKEN_REFRESHED is a silent background operation — the user identity has not
+      // changed, only the JWT was rotated. Updating session without setLoading(true)
+      // prevents the full-page spinner from flashing every ~55 minutes.
+      if (event === "TOKEN_REFRESHED") {
+        if (mounted) setSession(nextSession);
+        return;
+      }
+
       setLoading(true);
       // setTimeout(0) defers to avoid Supabase's internal deadlock on synchronous auth events
       window.setTimeout(() => {
