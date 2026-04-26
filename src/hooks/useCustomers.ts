@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 import { Task } from "./useProjects";
 
 export interface Customer {
@@ -62,6 +63,7 @@ export function useCustomers(showArchived = false) {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setCustomers(prev => [...prev, { ...data, tasks: [] }]);
     toast({ title: "เพิ่มลูกค้าสำเร็จ!" });
+    void syncToGoogleSheets("customers", data);
     return data;
   };
 
@@ -70,6 +72,7 @@ export function useCustomers(showArchived = false) {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
     toast({ title: "อัปเดตลูกค้าสำเร็จ!" });
+    void syncToGoogleSheets("customers", data);
   };
 
   const deleteCustomer = async (id: string) => {
@@ -100,6 +103,7 @@ export function useCustomers(showArchived = false) {
       c.id === task.customer_id ? { ...c, tasks: [...c.tasks, data as Task] } : c
     ));
     toast({ title: "เพิ่มงานสำเร็จ!" });
+    void syncToGoogleSheets("tasks", data);
     return data;
   };
 
@@ -110,6 +114,7 @@ export function useCustomers(showArchived = false) {
       ...c,
       tasks: c.tasks.map(t => t.id === id ? data as Task : t)
     })));
+    void syncToGoogleSheets("tasks", data);
   };
 
   const deleteTask = async (id: string, customerId: string) => {

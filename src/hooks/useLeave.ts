@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useNotifications } from "./useNotifications";
+import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 
 export interface LeaveRequest {
   id: string;
@@ -36,6 +37,7 @@ export function useLeave() {
     const { data, error } = await supabase.from("leave_requests").insert(leave).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setLeaves(prev => [data as LeaveRequest, ...prev]);
+    void syncToGoogleSheets("leave_requests", data);
     // Add notification
     await addNotification({
       title: "คำขอลาใหม่",
@@ -52,6 +54,7 @@ export function useLeave() {
     const { data, error } = await supabase.from("leave_requests").update({ status }).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setLeaves(prev => prev.map(l => l.id === id ? data as LeaveRequest : l));
+    void syncToGoogleSheets("leave_requests", data);
     if (leave) {
       await addNotification({
         title: status === "Approved" ? "อนุมัติการลา" : "ปฏิเสธการลา",

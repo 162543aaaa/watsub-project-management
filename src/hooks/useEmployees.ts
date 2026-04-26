@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 
 export interface Employee {
   id: string;
@@ -40,6 +41,7 @@ export function useEmployees() {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setEmployees(prev => [...prev, data]);
     toast({ title: "เพิ่มพนักงานสำเร็จ!" });
+    void syncToGoogleSheets("employees", data);
     return data;
   };
 
@@ -48,6 +50,7 @@ export function useEmployees() {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setEmployees(prev => prev.map(e => e.id === id ? data : e));
     toast({ title: "อัปเดตพนักงานสำเร็จ!" });
+    void syncToGoogleSheets("employees", data);
   };
 
   const deleteEmployee = async (id: string) => {
