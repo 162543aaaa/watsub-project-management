@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 import type { Task } from "./useProjects";
 
 async function logAudit(params: {
@@ -57,6 +58,7 @@ export function useTasks() {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setTasks(prev => [data as Task, ...prev]);
     toast({ title: "เพิ่มงานสำเร็จ!" });
+    void syncToGoogleSheets("tasks", data);
     await logAudit({
       userId: user?.id ?? null,
       action: "created",
@@ -75,6 +77,7 @@ export function useTasks() {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setTasks(prev => prev.map(t => t.id === id ? data as Task : t));
     toast({ title: "อัปเดตงานสำเร็จ!" });
+    void syncToGoogleSheets("tasks", data);
 
     // Determine a meaningful action label
     const action = updates.status && currentTask?.status !== updates.status

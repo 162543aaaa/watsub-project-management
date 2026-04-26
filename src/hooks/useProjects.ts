@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 
 export interface Task {
   id: string;
@@ -74,6 +75,7 @@ export function useProjects(showArchived = false) {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setProjects(prev => [...prev, { ...data, pillar: data.pillar as Pillar, tasks: [] }]);
     toast({ title: "สร้างโปรเจกต์สำเร็จ!" });
+    void syncToGoogleSheets("projects", data);
     return data;
   };
 
@@ -82,6 +84,7 @@ export function useProjects(showArchived = false) {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data, pillar: (data.pillar as Pillar) } : p));
     toast({ title: "อัปเดตโปรเจกต์สำเร็จ!" });
+    void syncToGoogleSheets("projects", data);
   };
 
   const deleteProject = async (id: string) => {
@@ -112,6 +115,7 @@ export function useProjects(showArchived = false) {
       p.id === task.project_id ? { ...p, tasks: [...p.tasks, data as Task] } : p
     ));
     toast({ title: "เพิ่มงานสำเร็จ!" });
+    void syncToGoogleSheets("tasks", data);
     return data;
   };
 
@@ -123,6 +127,7 @@ export function useProjects(showArchived = false) {
       tasks: p.tasks.map(t => t.id === id ? data as Task : t)
     })));
     toast({ title: "อัปเดตงานสำเร็จ!" });
+    void syncToGoogleSheets("tasks", data);
   };
 
   const deleteTask = async (id: string, projectId: string) => {
