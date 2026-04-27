@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
 import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
+import { supabase } from "@/integrations/supabase/client";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -67,7 +68,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
 
 export default function Customers() {
   const [showArchived, setShowArchived] = useState(false);
-  const { customers, loading, addCustomer, deleteCustomer, archiveCustomer, unarchiveCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer } = useCustomers(showArchived);
+  const { customers, loading, deleteCustomer, archiveCustomer, unarchiveCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer, refetch } = useCustomers(showArchived);
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
@@ -96,15 +97,37 @@ export default function Customers() {
   const handleAddCustomer = async () => {
     try {
       if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-      const data = await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month, year: form.year, contact_name: form.contact_name, contact_info: form.contact_info, feedback_channel: form.feedback_channel, job_description: form.job_description, responsible_person: form.responsible_person, start_date: form.start_date, deadline: form.deadline });
-      if (data) {
-        console.log("🚀 Triggering Google Sheets Sync...", { table: "customers", payload: data });
-        void syncToGoogleSheets("customers", data);
-      }
+      const values = {
+        name: form.name,
+        detail: form.detail,
+        payment_fee: form.payment_fee,
+        project_title: form.project_title,
+        note: form.note,
+        link: form.link,
+        month: form.month,
+        year: form.year,
+        contact_name: form.contact_name,
+        contact_info: form.contact_info,
+        feedback_channel: form.feedback_channel,
+        job_description: form.job_description,
+        responsible_person: form.responsible_person,
+        start_date: form.start_date,
+        deadline: form.deadline,
+      };
+      const { data, error } = await supabase.from("customers").insert(values).select().single();
+      if (error) throw error;
+
+      toast({ title: "Success" });
+
+      console.log("🚀 Triggering Google Sheets Sync...", data);
+      void syncToGoogleSheets("customers", data);
+
+      await refetch();
       setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, year: new Date().getFullYear(), contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [], start_date: "", deadline: "" });
       setShowAdd(false);
     } catch (err) {
       console.error("Error saving data:", err);
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to save customer", variant: "destructive" });
     }
   };
 
