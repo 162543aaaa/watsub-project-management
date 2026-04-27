@@ -186,7 +186,7 @@ export default function AdminPanel() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
           <Button onClick={handleSyncAll} disabled={isSyncing}>
-            {isSyncing ? "กำลัง Sync..." : "Sync Data to Sheets"}
+            {isSyncing ? "กำลัง Sync All Data..." : "Sync All Data"}
           </Button>
         </div>
       </div>
