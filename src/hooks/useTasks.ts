@@ -57,8 +57,8 @@ export function useTasks() {
     const { data, error } = await supabase.from("tasks").insert(task).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setTasks(prev => [data as Task, ...prev]);
+    await syncToGoogleSheets("tasks", data);
     toast({ title: "เพิ่มงานสำเร็จ!" });
-    void syncToGoogleSheets("tasks", data);
     await logAudit({
       userId: user?.id ?? null,
       action: "created",
@@ -76,8 +76,8 @@ export function useTasks() {
     const { data, error } = await supabase.from("tasks").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setTasks(prev => prev.map(t => t.id === id ? data as Task : t));
+    await syncToGoogleSheets("tasks", data);
     toast({ title: "อัปเดตงานสำเร็จ!" });
-    void syncToGoogleSheets("tasks", data);
 
     // Determine a meaningful action label
     const action = updates.status && currentTask?.status !== updates.status

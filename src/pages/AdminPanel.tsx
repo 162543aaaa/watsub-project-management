@@ -6,6 +6,7 @@ import { Shield, Check, X, ChevronDown, UserCog, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import type { Profile, UserRole } from "@/hooks/useAuth";
+import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 
 const ALL_PAGES = [
   { path: "/", label: "Dashboard" },
@@ -30,6 +31,16 @@ const ALL_PAGES = [
   { path: "/import", label: "Import" },
 ];
 
+const TABLES_TO_SYNC = [
+  "projects",
+  "tasks",
+  "customers",
+  "employees",
+  "leave_requests",
+  "kpi_evaluations",
+  "goals",
+];
+
 interface UserInfo {
   profile: Profile;
   roles: UserRole[];
@@ -41,6 +52,8 @@ export default function AdminPanel() {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [syncingAllData, setSyncingAllData] = useState(false);
+  const [currentSyncTable, setCurrentSyncTable] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -164,6 +177,36 @@ export default function AdminPanel() {
     toast({ title: "เปิดทุกหน้าแล้ว" });
   };
 
+  const handleSyncAllDataToGoogleSheets = async () => {
+    setSyncingAllData(true);
+    try {
+      for (const tableName of TABLES_TO_SYNC) {
+        setCurrentSyncTable(tableName);
+        const { data, error } = await (supabase as any).from(tableName).select("*");
+
+        if (error) {
+          throw new Error(`ไม่สามารถดึงข้อมูลจากตาราง ${tableName}: ${error.message}`);
+        }
+
+        for (const rowData of data ?? []) {
+          await syncToGoogleSheets(tableName, rowData);
+          await new Promise(res => setTimeout(res, 500));
+        }
+      }
+
+      toast({ title: "สำรองข้อมูลทั้งหมดเรียบร้อยแล้ว" });
+    } catch (err) {
+      toast({
+        title: "ซิงค์ข้อมูลไม่สำเร็จ",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    } finally {
+      setCurrentSyncTable(null);
+      setSyncingAllData(false);
+    }
+  };
+
   const pendingUsers = users.filter(u => !u.profile.is_approved);
   const approvedUsers = users.filter(u => u.profile.is_approved);
 
@@ -179,9 +222,20 @@ export default function AdminPanel() {
             <p className="text-sm text-muted-foreground">จัดการผู้ใช้และสิทธิ์การเข้าถึง</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading} className="gap-1.5">
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading} className="gap-1.5">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSyncAllDataToGoogleSheets}
+            disabled={syncingAllData}
+          >
+            {syncingAllData && currentSyncTable
+              ? `กำลังซิงค์ตาราง ${currentSyncTable}...`
+              : "Sync All Data to Google Sheets"}
+          </Button>
+        </div>
       </div>
 
       {/* Pending Users */}

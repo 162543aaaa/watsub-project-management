@@ -40,8 +40,8 @@ export function useEmployees() {
     const { data, error } = await supabase.from("employees").insert(emp).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setEmployees(prev => [...prev, data]);
+    await syncToGoogleSheets("employees", data);
     toast({ title: "เพิ่มพนักงานสำเร็จ!" });
-    void syncToGoogleSheets("employees", data);
     return data;
   };
 
@@ -49,8 +49,8 @@ export function useEmployees() {
     const { data, error } = await supabase.from("employees").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setEmployees(prev => prev.map(e => e.id === id ? data : e));
+    await syncToGoogleSheets("employees", data);
     toast({ title: "อัปเดตพนักงานสำเร็จ!" });
-    void syncToGoogleSheets("employees", data);
   };
 
   const deleteEmployee = async (id: string) => {
