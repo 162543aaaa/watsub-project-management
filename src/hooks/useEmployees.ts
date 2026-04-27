@@ -56,6 +56,7 @@ export function useEmployees() {
   const deleteEmployee = async (id: string) => {
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    void autoSyncToGoogleSheets("employees", { id }, "delete");
     setEmployees(prev => prev.filter(e => e.id !== id));
     toast({ title: "ลบพนักงานสำเร็จ!" });
   };

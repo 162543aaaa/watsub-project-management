@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 
 export interface OnsiteWork {
   id: string;
@@ -47,6 +48,7 @@ export function useOnsiteWork() {
   const deleteOnsiteWork = async (id: string) => {
     const { error } = await supabase.from("onsite_work").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    void autoSyncToGoogleSheets("onsite_work", { id }, "delete");
     setOnsiteWork(prev => prev.filter(w => w.id !== id));
     toast({ title: "ลบงานออกกองสำเร็จ!" });
   };

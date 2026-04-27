@@ -98,7 +98,11 @@ export function useOKRs(filterYear: number) {
       const { error } = await supabase.from("objectives").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast({ title: "ลบ Objective สำเร็จ!" }); },
+    onSuccess: (_data, id) => {
+      void autoSyncToGoogleSheets("objectives", { id }, "delete");
+      invalidate();
+      toast({ title: "ลบ Objective สำเร็จ!" });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -107,7 +111,11 @@ export function useOKRs(filterYear: number) {
       const { error } = await supabase.from("key_results").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast({ title: "ลบ Key Result สำเร็จ!" }); },
+    onSuccess: (_data, id) => {
+      void autoSyncToGoogleSheets("key_results", { id }, "delete");
+      invalidate();
+      toast({ title: "ลบ Key Result สำเร็จ!" });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
