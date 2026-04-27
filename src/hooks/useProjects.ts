@@ -74,8 +74,8 @@ export function useProjects(showArchived = false) {
     const { data, error } = await supabase.from("projects").insert(proj).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setProjects(prev => [...prev, { ...data, pillar: data.pillar as Pillar, tasks: [] }]);
+    await syncToGoogleSheets("projects", data);
     toast({ title: "สร้างโปรเจกต์สำเร็จ!" });
-    void syncToGoogleSheets("projects", data);
     return data;
   };
 
@@ -83,8 +83,8 @@ export function useProjects(showArchived = false) {
     const { data, error } = await supabase.from("projects").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data, pillar: (data.pillar as Pillar) } : p));
+    await syncToGoogleSheets("projects", data);
     toast({ title: "อัปเดตโปรเจกต์สำเร็จ!" });
-    void syncToGoogleSheets("projects", data);
   };
 
   const deleteProject = async (id: string) => {
@@ -114,8 +114,8 @@ export function useProjects(showArchived = false) {
     setProjects(prev => prev.map(p =>
       p.id === task.project_id ? { ...p, tasks: [...p.tasks, data as Task] } : p
     ));
+    await syncToGoogleSheets("tasks", data);
     toast({ title: "เพิ่มงานสำเร็จ!" });
-    void syncToGoogleSheets("tasks", data);
     return data;
   };
 
@@ -126,8 +126,8 @@ export function useProjects(showArchived = false) {
       ...p,
       tasks: p.tasks.map(t => t.id === id ? data as Task : t)
     })));
+    await syncToGoogleSheets("tasks", data);
     toast({ title: "อัปเดตงานสำเร็จ!" });
-    void syncToGoogleSheets("tasks", data);
   };
 
   const deleteTask = async (id: string, projectId: string) => {

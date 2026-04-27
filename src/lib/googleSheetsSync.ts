@@ -3,7 +3,8 @@ const GOOGLE_SHEETS_WEBHOOK_URL =
 
 export async function syncToGoogleSheets(tableName: string, data: any) {
   try {
-    await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+    console.log("🚀 Triggering Google Sheets Sync...", { table: tableName, payload: data });
+    const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -13,7 +14,10 @@ export async function syncToGoogleSheets(tableName: string, data: any) {
         data,
       }),
     });
-  } catch {
-    // Silent fail by design: Google Sheets sync should never block UI flows
+    if (!response.ok) {
+      console.error("Google Sheets sync failed", { table: tableName, status: response.status });
+    }
+  } catch (error) {
+    console.error("Google Sheets sync error", { table: tableName, error });
   }
 }

@@ -227,13 +227,13 @@ export function useKpiEvaluations(periodId?: string) {
         .from("kpi_evaluations").update(payload).eq("id", existing.id).select().single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setEvaluations(prev => prev.map(e => e.id === existing.id ? data as KpiEvaluation : e));
-      void syncToGoogleSheets("kpi_evaluations", data);
+      await syncToGoogleSheets("kpi_evaluations", data);
       return data as KpiEvaluation;
     } else {
       const { data, error } = await supabase.from("kpi_evaluations").insert(payload).select().single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setEvaluations(prev => [...prev, data as KpiEvaluation]);
-      void syncToGoogleSheets("kpi_evaluations", data);
+      await syncToGoogleSheets("kpi_evaluations", data);
       return data as KpiEvaluation;
     }
   };

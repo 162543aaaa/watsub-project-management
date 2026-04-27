@@ -10,6 +10,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import type { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
+import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, useDroppable,
   rectIntersection,
@@ -305,15 +306,29 @@ export default function Tasks() {
   };
 
   const handleSave = async (form: Partial<AllTask>) => {
-    const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments, link: form.link, category: form.category || "none" };
-    if (form.id && form._source === "project" && form.project_id) {
-      await updateProjectTask(form.id, updates);
-    } else if (form.id && form._source === "customer" && form.customer_id) {
-      await updateCustomerTask(form.id, updates);
-    } else if (form.id) {
-      await updateTask(form.id, updates);
-    } else {
-      await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", link: form.link || "", task_type: "standalone", category: form.category || "none" });
+    try {
+      const triggerTaskSync = (data: unknown) => {
+        if (!data) return;
+        console.log("🚀 Triggering Google Sheets Sync...", { table: "tasks", payload: data });
+        void syncToGoogleSheets("tasks", data);
+      };
+
+      const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments, link: form.link, category: form.category || "none" };
+      if (form.id && form._source === "project" && form.project_id) {
+        const data = await updateProjectTask(form.id, updates);
+        triggerTaskSync(data);
+      } else if (form.id && form._source === "customer" && form.customer_id) {
+        const data = await updateCustomerTask(form.id, updates);
+        triggerTaskSync(data);
+      } else if (form.id) {
+        const data = await updateTask(form.id, updates);
+        triggerTaskSync(data);
+      } else {
+        const data = await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", link: form.link || "", task_type: "standalone", category: form.category || "none" });
+        triggerTaskSync(data);
+      }
+    } catch (err) {
+      console.error("Error saving data:", err);
     }
   };
 
