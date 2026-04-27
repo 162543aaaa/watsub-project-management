@@ -11,8 +11,6 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
-import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
-import { supabase } from "@/integrations/supabase/client";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -68,7 +66,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
 
 export default function Customers() {
   const [showArchived, setShowArchived] = useState(false);
-  const { customers, loading, deleteCustomer, archiveCustomer, unarchiveCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer, refetch } = useCustomers(showArchived);
+  const { customers, loading, addCustomer, deleteCustomer, archiveCustomer, unarchiveCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer, refetch } = useCustomers(showArchived);
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
@@ -114,13 +112,10 @@ export default function Customers() {
         start_date: form.start_date,
         deadline: form.deadline,
       };
-      const { data, error } = await supabase.from("customers").insert(values).select().single();
-      if (error) throw error;
+      const createdCustomer = await addCustomer(values);
+      if (!createdCustomer) throw new Error("Failed to create customer");
 
       toast({ title: "Success" });
-
-      console.log("🚀 Triggering Google Sheets Sync...", data);
-      void syncToGoogleSheets("customers", data);
 
       await refetch();
       setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, year: new Date().getFullYear(), contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [], start_date: "", deadline: "" });
@@ -138,11 +133,7 @@ export default function Customers() {
   const handleEditCustomer = async () => {
     try {
       if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-      const data = await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, link: editModal.link, month: editModal.month, year: editModal.year });
-      if (data) {
-        console.log("🚀 Triggering Google Sheets Sync...", { table: "customers", payload: data });
-        void syncToGoogleSheets("customers", data);
-      }
+      await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, link: editModal.link, month: editModal.month, year: editModal.year });
       setEditModal(null);
     } catch (err) {
       console.error("Error saving data:", err);
@@ -161,17 +152,9 @@ export default function Customers() {
     try {
       if (!taskModal) return;
       if (taskModal.task) {
-        const data = await updateTask(taskModal.task.id, formData);
-        if (data) {
-          console.log("🚀 Triggering Google Sheets Sync...", { table: "tasks", payload: data });
-          void syncToGoogleSheets("tasks", data);
-        }
+        await updateTask(taskModal.task.id, formData);
       } else {
-        const data = await addTask({ ...formData, name: formData.name || "", task_type: "customer", customer_id: taskModal.customerId } as Omit<Task, "created_at" | "id">);
-        if (data) {
-          console.log("🚀 Triggering Google Sheets Sync...", { table: "tasks", payload: data });
-          void syncToGoogleSheets("tasks", data);
-        }
+        await addTask({ ...formData, name: formData.name || "", task_type: "customer", customer_id: taskModal.customerId } as Omit<Task, "created_at" | "id">);
       }
       setTaskModal(null);
     } catch (err) {
