@@ -11,6 +11,7 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
+import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -93,10 +94,18 @@ export default function Customers() {
   filtered.forEach(c => { if (!grouped[c.month]) grouped[c.month] = []; grouped[c.month].push(c); });
 
   const handleAddCustomer = async () => {
-    if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month, year: form.year, contact_name: form.contact_name, contact_info: form.contact_info, feedback_channel: form.feedback_channel, job_description: form.job_description, responsible_person: form.responsible_person, start_date: form.start_date, deadline: form.deadline });
-    setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, year: new Date().getFullYear(), contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [], start_date: "", deadline: "" });
-    setShowAdd(false);
+    try {
+      if (!form.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
+      const data = await addCustomer({ name: form.name, detail: form.detail, payment_fee: form.payment_fee, project_title: form.project_title, note: form.note, link: form.link, month: form.month, year: form.year, contact_name: form.contact_name, contact_info: form.contact_info, feedback_channel: form.feedback_channel, job_description: form.job_description, responsible_person: form.responsible_person, start_date: form.start_date, deadline: form.deadline });
+      if (data) {
+        console.log("🚀 Triggering Google Sheets Sync...", { table: "customers", payload: data });
+        void syncToGoogleSheets("customers", data);
+      }
+      setForm({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, year: new Date().getFullYear(), contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [], start_date: "", deadline: "" });
+      setShowAdd(false);
+    } catch (err) {
+      console.error("Error saving data:", err);
+    }
   };
 
   const openEditCustomer = (cust: typeof customers[0]) => {
@@ -104,9 +113,17 @@ export default function Customers() {
   };
 
   const handleEditCustomer = async () => {
-    if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
-    await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, link: editModal.link, month: editModal.month, year: editModal.year });
-    setEditModal(null);
+    try {
+      if (!editModal || !editModal.name.trim()) { toast({ title: "กรุณากรอกชื่อลูกค้า", variant: "destructive" }); return; }
+      const data = await updateCustomer(editModal.id, { name: editModal.name, detail: editModal.detail, payment_fee: editModal.payment_fee, project_title: editModal.project_title, note: editModal.note, link: editModal.link, month: editModal.month, year: editModal.year });
+      if (data) {
+        console.log("🚀 Triggering Google Sheets Sync...", { table: "customers", payload: data });
+        void syncToGoogleSheets("customers", data);
+      }
+      setEditModal(null);
+    } catch (err) {
+      console.error("Error saving data:", err);
+    }
   };
 
   const openAddTask = (customerId: string) => {
@@ -118,13 +135,25 @@ export default function Customers() {
   };
 
   const handleSaveTask = async (formData: Partial<Task>) => {
-    if (!taskModal) return;
-    if (taskModal.task) {
-      await updateTask(taskModal.task.id, formData);
-    } else {
-      await addTask({ ...formData, name: formData.name || "", task_type: "customer", customer_id: taskModal.customerId } as Omit<Task, "created_at" | "id">);
+    try {
+      if (!taskModal) return;
+      if (taskModal.task) {
+        const data = await updateTask(taskModal.task.id, formData);
+        if (data) {
+          console.log("🚀 Triggering Google Sheets Sync...", { table: "tasks", payload: data });
+          void syncToGoogleSheets("tasks", data);
+        }
+      } else {
+        const data = await addTask({ ...formData, name: formData.name || "", task_type: "customer", customer_id: taskModal.customerId } as Omit<Task, "created_at" | "id">);
+        if (data) {
+          console.log("🚀 Triggering Google Sheets Sync...", { table: "tasks", payload: data });
+          void syncToGoogleSheets("tasks", data);
+        }
+      }
+      setTaskModal(null);
+    } catch (err) {
+      console.error("Error saving data:", err);
     }
-    setTaskModal(null);
   };
 
   const getOrdered = (_monthNum: number, custs: typeof customers) => custs;
@@ -509,7 +538,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
   title: string;
   form: any;
   setForm: (f: any) => void;
-  onSave: () => void;
+  onSave: () => Promise<void> | void;
   onClose: () => void;
   monthNames: string[];
   employees?: { name: string; avatar?: string }[];
@@ -525,6 +554,13 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
           </DialogHeader>
         </div>
 
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await onSave();
+          }}
+          className="contents"
+        >
         {/* --- Scrollable Body --- */}
         <div className="p-6 pt-4 overflow-y-auto flex-1 overscroll-contain space-y-5">
           {/* === Basic Information === */}
@@ -630,11 +666,11 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
 
         {/* --- Footer (fixed) --- */}
         <div className="flex justify-end gap-3 p-6 pt-4 border-t border-border shrink-0">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all">Cancel</button>
-          <button onClick={onSave} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
+          <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all">Cancel</button>
+          <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
         </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
 }
-

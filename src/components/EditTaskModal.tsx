@@ -16,7 +16,7 @@ interface EditTaskModalProps {
   onClose: () => void;
   task: Partial<Task> | null;
   employees: Employee[];
-  onSave: (data: Partial<Task>) => void;
+  onSave: (data: Partial<Task>) => Promise<void> | void;
 }
 
 type Tab = "details" | "activity";
@@ -37,7 +37,7 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
 
   if (!isOpen) return null;
 
-  const save = () => {
+  const save = async () => {
     if (!form.name?.trim()) {
       toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" });
       return;
@@ -51,7 +51,7 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
       });
       return;
     }
-    onSave(form);
+    await onSave(form);
     onClose();
   };
 
@@ -102,6 +102,13 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
           </div>
         )}
 
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await save();
+          }}
+          className="contents"
+        >
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 px-6 pb-2 pt-4">
           {activeTab === "details" ? (
@@ -229,16 +236,18 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
         <div className="flex gap-3 p-6 pt-4 border-t border-border shrink-0">
           <button
             onClick={onClose}
+            type="button"
             className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
           >
             Cancel
           </button>
           {activeTab === "details" && (
-            <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
+            <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
               <Save className="w-4 h-4" /> {isExistingTask ? "Save" : "Add Task"}
             </button>
           )}
         </div>
+        </form>
       </div>
     </div>,
     document.body

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 import type { Task } from "./useProjects";
 
 async function logAudit(params: {
@@ -92,6 +91,7 @@ export function useTasks() {
       oldValues: currentTask as unknown as Record<string, unknown>,
       newValues: updates as Record<string, unknown>,
     });
+    return data as Task;
   };
 
   const deleteTask = async (id: string) => {

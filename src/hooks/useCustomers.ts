@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
 import { Task } from "./useProjects";
 
 export interface Customer {
@@ -114,7 +113,6 @@ export function useCustomers(showArchived = false) {
       ...c,
       tasks: c.tasks.map(t => t.id === id ? data as Task : t)
     })));
-    await syncToGoogleSheets("tasks", data);
   };
 
   const deleteTask = async (id: string, customerId: string) => {
