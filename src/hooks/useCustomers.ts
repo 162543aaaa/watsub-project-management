@@ -62,8 +62,8 @@ export function useCustomers(showArchived = false) {
     const { data, error } = await supabase.from("customers").insert(cust).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setCustomers(prev => [...prev, { ...data, tasks: [] }]);
+    await syncToGoogleSheets("customers", data);
     toast({ title: "เพิ่มลูกค้าสำเร็จ!" });
-    void syncToGoogleSheets("customers", data);
     return data;
   };
 
@@ -71,8 +71,8 @@ export function useCustomers(showArchived = false) {
     const { data, error } = await supabase.from("customers").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
+    await syncToGoogleSheets("customers", data);
     toast({ title: "อัปเดตลูกค้าสำเร็จ!" });
-    void syncToGoogleSheets("customers", data);
   };
 
   const deleteCustomer = async (id: string) => {
@@ -102,8 +102,8 @@ export function useCustomers(showArchived = false) {
     setCustomers(prev => prev.map(c =>
       c.id === task.customer_id ? { ...c, tasks: [...c.tasks, data as Task] } : c
     ));
+    await syncToGoogleSheets("tasks", data);
     toast({ title: "เพิ่มงานสำเร็จ!" });
-    void syncToGoogleSheets("tasks", data);
     return data;
   };
 
@@ -114,7 +114,7 @@ export function useCustomers(showArchived = false) {
       ...c,
       tasks: c.tasks.map(t => t.id === id ? data as Task : t)
     })));
-    void syncToGoogleSheets("tasks", data);
+    await syncToGoogleSheets("tasks", data);
   };
 
   const deleteTask = async (id: string, customerId: string) => {
