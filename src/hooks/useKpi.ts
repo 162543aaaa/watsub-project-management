@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 
 // ─── KPI Categories ───────────────────────────────────────────────────────────
 
@@ -227,13 +227,13 @@ export function useKpiEvaluations(periodId?: string) {
         .from("kpi_evaluations").update(payload).eq("id", existing.id).select().single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setEvaluations(prev => prev.map(e => e.id === existing.id ? data as KpiEvaluation : e));
-      await syncToGoogleSheets("kpi_evaluations", data);
+      void autoSyncToGoogleSheets("kpi_evaluations", data);
       return data as KpiEvaluation;
     } else {
       const { data, error } = await supabase.from("kpi_evaluations").insert(payload).select().single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setEvaluations(prev => [...prev, data as KpiEvaluation]);
-      await syncToGoogleSheets("kpi_evaluations", data);
+      void autoSyncToGoogleSheets("kpi_evaluations", data);
       return data as KpiEvaluation;
     }
   };
