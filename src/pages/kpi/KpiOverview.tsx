@@ -6,6 +6,7 @@ import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import { getEligiblePeerReviewers, getSelfEvaluationType, resolveRoleKey } from "@/config/kpiQuestions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -136,12 +137,17 @@ export default function KpiOverview() {
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
+    const deletedId = confirmDelete.id;
     setDeleting(true);
-    const { error } = await supabase.from("kpi_evaluations").delete().eq("id", confirmDelete.id);
+    const { error } = await supabase.from("kpi_evaluations").delete().eq("id", deletedId);
     setDeleting(false);
     setConfirmDelete(null);
     if (error) toast({ title: "ลบไม่สำเร็จ", description: error.message, variant: "destructive" });
-    else { toast({ title: "ลบการประเมินแล้ว" }); refetch(); }
+    else {
+      void autoSyncToGoogleSheets("kpi_evaluations", { id: deletedId }, "delete");
+      toast({ title: "ลบการประเมินแล้ว" });
+      refetch();
+    }
   };
 
   if (loading) return (

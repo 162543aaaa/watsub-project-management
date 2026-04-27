@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import type { Objective, KeyResult } from "@/types";
 
 const OKR_KEY = "okrs";
@@ -29,7 +30,11 @@ export function useOKRs(filterYear: number) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { invalidate(); toast({ title: "เพิ่ม Objective สำเร็จ!" }); },
+    onSuccess: (data) => {
+      void autoSyncToGoogleSheets("objectives", data);
+      invalidate();
+      toast({ title: "เพิ่ม Objective สำเร็จ!" });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -39,7 +44,11 @@ export function useOKRs(filterYear: number) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { invalidate(); toast({ title: "เพิ่ม Key Result สำเร็จ!" }); },
+    onSuccess: (data) => {
+      void autoSyncToGoogleSheets("key_results", data);
+      invalidate();
+      toast({ title: "เพิ่ม Key Result สำเร็จ!" });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -64,6 +73,9 @@ export function useOKRs(filterYear: number) {
       if (ctx?.prev) qc.setQueryData([OKR_KEY, filterYear], ctx.prev);
       toast({ title: "Error", description: "อัปเดตไม่สำเร็จ", variant: "destructive" });
     },
+    onSuccess: (data) => {
+      void autoSyncToGoogleSheets("key_results", data);
+    },
     onSettled: () => invalidate(),
   });
 
@@ -73,7 +85,11 @@ export function useOKRs(filterYear: number) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { invalidate(); toast({ title: "อัปเดต Objective สำเร็จ!" }); },
+    onSuccess: (data) => {
+      void autoSyncToGoogleSheets("objectives", data);
+      invalidate();
+      toast({ title: "อัปเดต Objective สำเร็จ!" });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -82,7 +98,11 @@ export function useOKRs(filterYear: number) {
       const { error } = await supabase.from("objectives").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast({ title: "ลบ Objective สำเร็จ!" }); },
+    onSuccess: (_data, id) => {
+      void autoSyncToGoogleSheets("objectives", { id }, "delete");
+      invalidate();
+      toast({ title: "ลบ Objective สำเร็จ!" });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -91,7 +111,11 @@ export function useOKRs(filterYear: number) {
       const { error } = await supabase.from("key_results").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast({ title: "ลบ Key Result สำเร็จ!" }); },
+    onSuccess: (_data, id) => {
+      void autoSyncToGoogleSheets("key_results", { id }, "delete");
+      invalidate();
+      toast({ title: "ลบ Key Result สำเร็จ!" });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 

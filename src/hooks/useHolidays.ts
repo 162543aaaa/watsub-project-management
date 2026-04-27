@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 
 export interface Holiday {
   id: string;
@@ -60,6 +61,7 @@ export function useHolidays() {
     if (error) {
       toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
     } else {
+      void autoSyncToGoogleSheets("holidays", { id }, "delete");
       toast({ title: "ลบวันหยุดสำเร็จ!" });
       fetchHolidays();
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import type { Task } from "./useProjects";
 
 async function logAudit(params: {
@@ -56,7 +57,7 @@ export function useTasks() {
     const { data, error } = await supabase.from("tasks").insert(task).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setTasks(prev => [data as Task, ...prev]);
-    await syncToGoogleSheets("tasks", data);
+    void autoSyncToGoogleSheets("tasks", data);
     toast({ title: "เพิ่มงานสำเร็จ!" });
     await logAudit({
       userId: user?.id ?? null,
@@ -75,7 +76,7 @@ export function useTasks() {
     const { data, error } = await supabase.from("tasks").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setTasks(prev => prev.map(t => t.id === id ? data as Task : t));
-    await syncToGoogleSheets("tasks", data);
+    void autoSyncToGoogleSheets("tasks", data);
     toast({ title: "อัปเดตงานสำเร็จ!" });
 
     // Determine a meaningful action label
@@ -99,6 +100,7 @@ export function useTasks() {
     const currentTask = tasks.find(t => t.id === id);
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    void autoSyncToGoogleSheets("tasks", { id }, "delete");
     setTasks(prev => prev.filter(t => t.id !== id));
     toast({ title: "ลบงานสำเร็จ!" });
     await logAudit({

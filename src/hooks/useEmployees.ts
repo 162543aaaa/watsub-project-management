@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { syncToGoogleSheets } from "@/lib/googleSheetsSync";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 
 export interface Employee {
   id: string;
@@ -40,7 +40,7 @@ export function useEmployees() {
     const { data, error } = await supabase.from("employees").insert(emp).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setEmployees(prev => [...prev, data]);
-    await syncToGoogleSheets("employees", data);
+    void autoSyncToGoogleSheets("employees", data);
     toast({ title: "เพิ่มพนักงานสำเร็จ!" });
     return data;
   };
@@ -49,13 +49,14 @@ export function useEmployees() {
     const { data, error } = await supabase.from("employees").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setEmployees(prev => prev.map(e => e.id === id ? data : e));
-    await syncToGoogleSheets("employees", data);
+    void autoSyncToGoogleSheets("employees", data);
     toast({ title: "อัปเดตพนักงานสำเร็จ!" });
   };
 
   const deleteEmployee = async (id: string) => {
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    void autoSyncToGoogleSheets("employees", { id }, "delete");
     setEmployees(prev => prev.filter(e => e.id !== id));
     toast({ title: "ลบพนักงานสำเร็จ!" });
   };
