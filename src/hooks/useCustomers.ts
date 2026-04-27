@@ -78,6 +78,7 @@ export function useCustomers(showArchived = false) {
   const deleteCustomer = async (id: string) => {
     const { error } = await supabase.from("customers").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    void autoSyncToGoogleSheets("customers", { id }, "delete");
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "ลบลูกค้าสำเร็จ!" });
   };
@@ -121,6 +122,7 @@ export function useCustomers(showArchived = false) {
   const deleteTask = async (id: string, customerId: string) => {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    void autoSyncToGoogleSheets("tasks", { id }, "delete");
     setCustomers(prev => prev.map(c =>
       c.id === customerId ? { ...c, tasks: c.tasks.filter(t => t.id !== id) } : c
     ));

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import type {
   BrandColors,
   LocationLinks,
@@ -298,6 +299,7 @@ export function useCompanyInfo() {
     const { error: err } = await supabase
       .from("organization_chart_members").delete().eq("id", id);
     if (err) throw new Error(err.message);
+    void autoSyncToGoogleSheets("organization_chart_members", { id }, "delete");
   }, []);
 
   const refetch = useCallback(() => { void fetchData(); }, [fetchData]);

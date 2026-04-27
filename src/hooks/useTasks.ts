@@ -100,6 +100,7 @@ export function useTasks() {
     const currentTask = tasks.find(t => t.id === id);
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    void autoSyncToGoogleSheets("tasks", { id }, "delete");
     setTasks(prev => prev.filter(t => t.id !== id));
     toast({ title: "ลบงานสำเร็จ!" });
     await logAudit({

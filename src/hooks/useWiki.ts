@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 
 export interface WikiPage {
   id: string;
@@ -134,6 +135,7 @@ export function useWiki() {
       toast({ title: "Error", description: delError.message, variant: "destructive" });
       return;
     }
+    void autoSyncToGoogleSheets("wiki_pages", { id }, "delete");
     setPages(prev => prev.filter(p => p.id !== id));
     toast({ title: "ลบบทความสำเร็จ!" });
   };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 
 export interface Meeting {
   id: string;
@@ -49,6 +50,7 @@ export function useMeetings() {
   const deleteMeeting = async (id: string) => {
     const { error } = await supabase.from("meetings").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    void autoSyncToGoogleSheets("meetings", { id }, "delete");
     setMeetings(prev => prev.filter(m => m.id !== id));
     toast({ title: "ลบการประชุมสำเร็จ!" });
   };

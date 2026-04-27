@@ -1,6 +1,10 @@
-const GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxt1Mcm6Kz3qLSo4oojML2wqnrB3P161zSu7MAlwrdtPrRzu0bls6RL_bW-LiI5sIWU/exec";
+const GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzPHyrRSwyThY61PRR37sUlUfvcuIFEyiGdU2ZG7b0pWu5BubMzyXntJNsXyIe5liaU/exec";
 
-export const autoSyncToGoogleSheets = async (tableName: string, data: any) => {
+export const autoSyncToGoogleSheets = async (
+  tableName: string,
+  data: any,
+  action: "upsert" | "delete" = "upsert",
+) => {
   try {
     const normalizedData =
       data && typeof data === "object" && !Array.isArray(data)
@@ -23,6 +27,7 @@ export const autoSyncToGoogleSheets = async (tableName: string, data: any) => {
       body: JSON.stringify({
         table_name: tableName,
         data: normalizedData,
+        action,
       }),
     }).catch((err) => console.error(`Background Sync Error (${tableName}):`, err));
   } catch (error) {

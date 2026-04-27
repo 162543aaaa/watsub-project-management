@@ -184,6 +184,7 @@ export function useKpiPeriods() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return false;
     }
+    void autoSyncToGoogleSheets("kpi_periods", { id }, "delete");
     setPeriods((prev) => prev.filter((p) => p.id !== id));
     toast({ title: "ลบรอบประเมินสำเร็จ" });
     return true;

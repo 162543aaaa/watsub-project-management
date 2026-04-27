@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import { supabase } from "@/integrations/supabase/client";
 import { Shield, Check, X, ChevronDown, UserCog, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,7 @@ export default function AdminPanel() {
         .eq("user_id", userId)
         .eq("role", "admin");
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      void autoSyncToGoogleSheets("user_roles", { id: userId }, "delete");
     } else {
       // Add admin role (upsert by trying insert first)
       const { error } = await supabase
