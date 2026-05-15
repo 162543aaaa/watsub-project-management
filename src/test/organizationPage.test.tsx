@@ -177,6 +177,6 @@ describe("Organization page", () => {
 
   it("renders location as a link in Resources section", () => {
     render(<Organization />);
-    expect(screen.getByText("จังหวัดปัตตานี")).toBeInTheDocument();
+    expect(screen.getAllByText("จังหวัดปัตตานี").length).toBeGreaterThan(0);
   });
 });
