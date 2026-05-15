@@ -10,9 +10,9 @@ import { useCustomers } from "@/hooks/useCustomers";
 import type { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, useDroppable,
-  rectIntersection,
 } from "@dnd-kit/core";
 import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
@@ -117,9 +117,9 @@ function DroppableColumn({ id, children, style }: { id: string; children: React.
 }
 
 export default function Tasks() {
-  const { tasks, loading: loadingTasks, addTask, updateTask, deleteTask, reorderTasks } = useTasks();
-  const { projects, loading: loadingProjects, updateTask: updateProjectTask, deleteTask: deleteProjectTask } = useProjects();
-  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask, deleteTask: deleteCustomerTask } = useCustomers();
+  const { tasks, loading: loadingTasks, addTask, updateTask, deleteTask, refetch: refetchTasks } = useTasks();
+  const { projects, loading: loadingProjects, updateTask: updateProjectTask, deleteTask: deleteProjectTask, refetch: refetchProjects } = useProjects();
+  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask, deleteTask: deleteCustomerTask, refetch: refetchCustomers } = useCustomers();
   const { employees } = useEmployees();
   const navigate = useNavigate();
   const [modal, setModal] = useState<{ open: boolean; task: Partial<AllTask> | null }>({ open: false, task: null });
@@ -133,7 +133,7 @@ export default function Tasks() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 200, tolerance: 5 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 120, tolerance: 5 } }));
 
   // Keyboard shortcut: "N" to open New Task modal
   useEffect(() => {
@@ -246,6 +246,21 @@ export default function Tasks() {
     if (!activeTask || activeTask.status === targetCol) return;
   };
 
+  // Persist sort_order for a list of tasks, regardless of source.
+  // All tasks live in the same `tasks` table, so we can update by id directly.
+  const persistOrder = async (orderedTasks: AllTask[], colIndex: number) => {
+    const base = colIndex * 10000;
+    await Promise.all(
+      orderedTasks.map((t, idx) =>
+        supabase.from("tasks").update({ sort_order: base + idx }).eq("id", t.id)
+      )
+    );
+  };
+
+  const refetchAll = async () => {
+    await Promise.all([refetchTasks(), refetchProjects(), refetchCustomers()]);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -267,7 +282,7 @@ export default function Tasks() {
 
     if (!targetCol) return;
 
-    // Cross-column move: update status
+    // Cross-column move: update status AND sort_order
     if (activeTask.status !== targetCol) {
       if (targetCol === "Done" && !activeTask.link && (!activeTask.comments || activeTask.comments.trim().length < 20)) {
         toast({
@@ -277,6 +292,18 @@ export default function Tasks() {
         });
         return;
       }
+
+      // Compute insertion index in the target column
+      const targetColTasks = getColTasks(targetCol);
+      let insertIdx = targetColTasks.length;
+      if (!COLUMNS.includes(overId as TaskStatus)) {
+        const overIdx = targetColTasks.findIndex(t => getCardId(t) === overId);
+        if (overIdx !== -1) insertIdx = overIdx;
+      }
+      const movedTask: AllTask = { ...activeTask, status: targetCol };
+      const newCol = [...targetColTasks];
+      newCol.splice(insertIdx, 0, movedTask);
+
       const updates = { status: targetCol };
       if (activeTask._source === "project") {
         await updateProjectTask(activeTask.id, updates);
@@ -285,6 +312,9 @@ export default function Tasks() {
       } else {
         await updateTask(activeTask.id, updates);
       }
+      const colIndex = COLUMNS.indexOf(targetCol);
+      await persistOrder(newCol, colIndex);
+      await refetchAll();
       toast({ title: `ย้ายงานไป ${targetCol} สำเร็จ!` });
       return;
     }
@@ -294,14 +324,13 @@ export default function Tasks() {
     const colT = getColTasks(targetCol);
     const ids = colT.map(t => getCardId(t));
     const oldIdx = ids.indexOf(activeCardId);
-    const newIdx = ids.indexOf(overId);
-    if (oldIdx === -1 || newIdx === -1) return;
+    let newIdx = ids.indexOf(overId);
+    if (oldIdx === -1) return;
+    if (newIdx === -1) newIdx = colT.length - 1; // dropped on column area
     const reordered = arrayMove(colT, oldIdx, newIdx);
     const colIndex = COLUMNS.indexOf(targetCol);
-    const standaloneReordered = reordered.filter(t => t._source === "standalone") as Task[];
-    if (standaloneReordered.length > 0) {
-      await reorderTasks(standaloneReordered, colIndex);
-    }
+    await persistOrder(reordered, colIndex);
+    await refetchAll();
   };
 
   const handleSave = async (form: Partial<AllTask>) => {
@@ -449,7 +478,7 @@ export default function Tasks() {
       {/* Fix #1: columns align at top so page scrolls as one unit */}
       <DndContext
         sensors={sensors}
-        collisionDetection={rectIntersection}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -539,7 +568,7 @@ export default function Tasks() {
         {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
-            <div className="opacity-90 rotate-2 scale-105">
+            <div className="opacity-95 shadow-card-hover">
               <TaskCard
                 task={activeTask}
                 col={activeTask.status as TaskStatus}
