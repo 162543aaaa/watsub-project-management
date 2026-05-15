@@ -26,7 +26,6 @@ export function WikiViewer({ htmlContent, className = "" }: WikiViewerProps) {
   return (
     <div
       className={`prose prose-sm dark:prose-invert max-w-none ${className}`}
-      // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: clean }}
     />
   );

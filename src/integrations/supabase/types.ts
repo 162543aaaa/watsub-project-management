@@ -16,34 +16,81 @@ export type Database = {
     Tables: {
       audit_logs: {
         Row: {
-          id: string
-          user_id: string | null
           action: string
-          entity_type: string
+          created_at: string | null
           entity_id: string
-          old_values: Json | null
+          entity_type: string
+          id: string
           new_values: Json | null
-          created_at: string
+          old_values: Json | null
+          user_id: string | null
         }
         Insert: {
-          id?: string
-          user_id?: string | null
           action: string
-          entity_type: string
+          created_at?: string | null
           entity_id: string
-          old_values?: Json | null
+          entity_type: string
+          id?: string
           new_values?: Json | null
-          created_at?: string
+          old_values?: Json | null
+          user_id?: string | null
         }
         Update: {
-          id?: string
-          user_id?: string | null
           action?: string
-          entity_type?: string
+          created_at?: string | null
           entity_id?: string
-          old_values?: Json | null
+          entity_type?: string
+          id?: string
           new_values?: Json | null
-          created_at?: string
+          old_values?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      company_info: {
+        Row: {
+          benefits_summary: string | null
+          contact_email: string | null
+          core_values: Json | null
+          id: number
+          logo_url: string | null
+          mission: string | null
+          name: string | null
+          tagline: string | null
+          updated_at: string | null
+          vision: string | null
+        }
+        Insert: {
+          benefits_summary?: string | null
+          contact_email?: string | null
+          core_values?: Json | null
+          id?: number
+          logo_url?: string | null
+          mission?: string | null
+          name?: string | null
+          tagline?: string | null
+          updated_at?: string | null
+          vision?: string | null
+        }
+        Update: {
+          benefits_summary?: string | null
+          contact_email?: string | null
+          core_values?: Json | null
+          id?: number
+          logo_url?: string | null
+          mission?: string | null
+          name?: string | null
+          tagline?: string | null
+          updated_at?: string | null
+          vision?: string | null
         }
         Relationships: []
       }
@@ -56,7 +103,6 @@ export type Database = {
           detail: string | null
           feedback_channel: string | null
           id: string
-          is_archived: boolean | null
           job_description: string | null
           link: string | null
           month: number
@@ -78,7 +124,6 @@ export type Database = {
           detail?: string | null
           feedback_channel?: string | null
           id?: string
-          is_archived?: boolean | null
           job_description?: string | null
           link?: string | null
           month?: number
@@ -100,7 +145,6 @@ export type Database = {
           detail?: string | null
           feedback_channel?: string | null
           id?: string
-          is_archived?: boolean | null
           job_description?: string | null
           link?: string | null
           month?: number
@@ -116,68 +160,12 @@ export type Database = {
         }
         Relationships: []
       }
-      company_info: {
-        Row: {
-          benefits: Json
-          brand_colors: Json
-          contact_email: string | null
-          core_values: Json | null
-          history: string | null
-          id: number
-          location_links: Json
-          logo_url: string | null
-          milestones: Json
-          mission: string | null
-          name: string | null
-          resources: Json
-          tagline: string | null
-          updated_at: string | null
-          vision: string | null
-        }
-        Insert: {
-          benefits?: Json
-          brand_colors?: Json
-          contact_email?: string | null
-          core_values?: Json | null
-          history?: string | null
-          id?: number
-          location_links?: Json
-          logo_url?: string | null
-          milestones?: Json
-          mission?: string | null
-          name?: string | null
-          resources?: Json
-          tagline?: string | null
-          updated_at?: string | null
-          vision?: string | null
-        }
-        Update: {
-          benefits?: Json
-          brand_colors?: Json
-          contact_email?: string | null
-          core_values?: Json | null
-          history?: string | null
-          id?: number
-          location_links?: Json
-          logo_url?: string | null
-          milestones?: Json
-          mission?: string | null
-          name?: string | null
-          resources?: Json
-          tagline?: string | null
-          updated_at?: string | null
-          vision?: string | null
-        }
-        Relationships: []
-      }
       employees: {
         Row: {
-          active: boolean | null
           avatar: string | null
           created_at: string
           email: string
           id: string
-          kpi_role: string | null
           name: string
           note: string | null
           phone: string | null
@@ -185,16 +173,13 @@ export type Database = {
           promptpay_qr: string | null
           role: string
           start_date: string | null
-          type: string | null
           updated_at: string
         }
         Insert: {
-          active?: boolean | null
           avatar?: string | null
           created_at?: string
           email?: string
           id?: string
-          kpi_role?: string | null
           name: string
           note?: string | null
           phone?: string | null
@@ -202,16 +187,13 @@ export type Database = {
           promptpay_qr?: string | null
           role?: string
           start_date?: string | null
-          type?: string | null
           updated_at?: string
         }
         Update: {
-          active?: boolean | null
           avatar?: string | null
           created_at?: string
           email?: string
           id?: string
-          kpi_role?: string | null
           name?: string
           note?: string | null
           phone?: string | null
@@ -219,7 +201,6 @@ export type Database = {
           promptpay_qr?: string | null
           role?: string
           start_date?: string | null
-          type?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -645,47 +626,6 @@ export type Database = {
         }
         Relationships: []
       }
-      organization_chart_members: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          id: string
-          name: string
-          parent_id: string | null
-          position: string
-          role_type: string
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          id?: string
-          name: string
-          parent_id?: string | null
-          position?: string
-          role_type?: string
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          id?: string
-          name?: string
-          parent_id?: string | null
-          position?: string
-          role_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_chart_members_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "organization_chart_members"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           allowed_pages: string[]
@@ -693,6 +633,7 @@ export type Database = {
           display_name: string
           id: string
           is_approved: boolean
+          preferences: Json | null
           updated_at: string
           user_id: string
         }
@@ -702,6 +643,7 @@ export type Database = {
           display_name?: string
           id?: string
           is_approved?: boolean
+          preferences?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -711,6 +653,7 @@ export type Database = {
           display_name?: string
           id?: string
           is_approved?: boolean
+          preferences?: Json | null
           updated_at?: string
           user_id?: string
         }
@@ -721,8 +664,8 @@ export type Database = {
           created_at: string
           embedding: string | null
           id: string
-          is_archived: boolean | null
           link: string | null
+          metadata: Json | null
           month: number
           name: string
           note: string | null
@@ -735,8 +678,8 @@ export type Database = {
           created_at?: string
           embedding?: string | null
           id?: string
-          is_archived?: boolean | null
           link?: string | null
+          metadata?: Json | null
           month?: number
           name: string
           note?: string | null
@@ -749,8 +692,8 @@ export type Database = {
           created_at?: string
           embedding?: string | null
           id?: string
-          is_archived?: boolean | null
           link?: string | null
+          metadata?: Json | null
           month?: number
           name?: string
           note?: string | null
@@ -770,9 +713,10 @@ export type Database = {
           customer_id: string | null
           depends_on: string | null
           due_date: string | null
-          estimated_hours: number
+          embedding: string | null
           id: string
           link: string | null
+          metadata: Json | null
           name: string
           priority: string
           project_id: string | null
@@ -790,9 +734,10 @@ export type Database = {
           customer_id?: string | null
           depends_on?: string | null
           due_date?: string | null
-          estimated_hours?: number
+          embedding?: string | null
           id?: string
           link?: string | null
+          metadata?: Json | null
           name: string
           priority?: string
           project_id?: string | null
@@ -810,9 +755,10 @@ export type Database = {
           customer_id?: string | null
           depends_on?: string | null
           due_date?: string | null
-          estimated_hours?: number
+          embedding?: string | null
           id?: string
           link?: string | null
+          metadata?: Json | null
           name?: string
           priority?: string
           project_id?: string | null
@@ -866,48 +812,75 @@ export type Database = {
       }
       wiki_pages: {
         Row: {
-          id: string
-          title: string
-          slug: string
-          content: string | null
-          category: string
           author_id: string | null
-          is_published: boolean
-          view_count: number
-          created_at: string
-          updated_at: string
+          category: string | null
+          content: string | null
+          created_at: string | null
+          id: string
+          is_published: boolean | null
+          slug: string
+          title: string
+          updated_at: string | null
+          view_count: number | null
         }
         Insert: {
-          id?: string
-          title: string
-          slug: string
-          content?: string | null
-          category?: string
           author_id?: string | null
-          is_published?: boolean
-          view_count?: number
-          created_at?: string
-          updated_at?: string
+          category?: string | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          slug: string
+          title: string
+          updated_at?: string | null
+          view_count?: number | null
         }
         Update: {
-          id?: string
-          title?: string
-          slug?: string
-          content?: string | null
-          category?: string
           author_id?: string | null
-          is_published?: boolean
-          view_count?: number
-          created_at?: string
-          updated_at?: string
+          category?: string | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          slug?: string
+          title?: string
+          updated_at?: string | null
+          view_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "wiki_pages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_project_health_summary: {
+        Args: never
+        Returns: {
+          completed_tasks: number
+          overdue_tasks: number
+          project_id: string
+          total_tasks: number
+        }[]
+      }
+      get_team_workload_heatmap: {
+        Args: { end_date: string; start_date: string }
+        Returns: {
+          employee_id: string
+          employee_name: string
+          is_on_leave: boolean
+          task_count: number
+          task_date: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -916,6 +889,21 @@ export type Database = {
         Returns: boolean
       }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      match_tasks: {
+        Args: {
+          caller_id: string
+          match_count: number
+          match_threshold: number
+          query_embedding: string
+        }
+        Returns: {
+          due_date: string
+          id: string
+          name: string
+          similarity: number
+          status: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "member"

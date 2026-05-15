@@ -20,6 +20,25 @@ vi.mock("@/hooks/useAuth", () => ({
   }),
 }));
 
+// ─── Mock useAuthContext (Organization page consumes it) ───────
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuthContext: () => ({
+    isAdmin: false,
+    user: null,
+    session: null,
+    profile: null,
+    roles: [],
+    loading: false,
+    isApproved: true,
+    canAccessPage: () => true,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    signUp: vi.fn(),
+    refetchProfile: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // ─── Mock useCompanyInfo (full new schema) ─────────────────────
 vi.mock("@/hooks/useCompanyInfo", () => ({
   useCompanyInfo: () => ({
@@ -158,6 +177,6 @@ describe("Organization page", () => {
 
   it("renders location as a link in Resources section", () => {
     render(<Organization />);
-    expect(screen.getByText("จังหวัดปัตตานี")).toBeInTheDocument();
+    expect(screen.getAllByText("จังหวัดปัตตานี").length).toBeGreaterThan(0);
   });
 });

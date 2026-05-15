@@ -44,7 +44,7 @@ export function useWiki() {
 
     // Batch-fetch author display names
     const authorIds = [...new Set(raw.map(p => p.author_id).filter(Boolean))] as string[];
-    let nameMap: Record<string, string> = {};
+    const nameMap: Record<string, string> = {};
     if (authorIds.length > 0) {
       const { data: profiles } = await supabase
         .from("profiles")

@@ -97,7 +97,7 @@ export default function TaskActivityLog({ taskId }: TaskActivityLogProps) {
 
       // Batch-fetch display names for all unique user_ids
       const userIds = [...new Set(rawLogs.map(l => l.user_id).filter(Boolean))] as string[];
-      let nameMap: Record<string, string> = {};
+      const nameMap: Record<string, string> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
