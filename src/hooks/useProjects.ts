@@ -43,7 +43,6 @@ export function useProjects(showArchived = false) {
   const [loading, setLoading] = useState(true);
 
   const fetchProjects = useCallback(async () => {
-    setLoading(true);
     // Fetch all projects then filter in JS so this works even before migration runs
     const { data: allProjData, error: projError } = await supabase
       .from("projects")
