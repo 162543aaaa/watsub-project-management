@@ -32,7 +32,6 @@ export function useCustomers(showArchived = false) {
   const [loading, setLoading] = useState(true);
 
   const fetchCustomers = useCallback(async () => {
-    setLoading(true);
     // Fetch all customers then filter in JS so this works even before migration runs
     const { data: allCustData, error: custError } = await supabase
       .from("customers")
