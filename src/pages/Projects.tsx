@@ -9,6 +9,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useProjects } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { Task, Pillar } from "@/hooks/useProjects";
+import { filterDoneTasks } from "@/lib/taskFilters";
 import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
@@ -74,6 +75,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
 
 export default function Projects() {
   const [showArchived, setShowArchived] = useState(false);
+  const [showDone, setShowDone] = useState(false);
   const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(showArchived);
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -286,6 +288,15 @@ export default function Projects() {
         <label htmlFor="show-archived-projects" className="text-sm font-medium cursor-pointer select-none text-muted-foreground">
           Show Archived Projects
         </label>
+        <div className="w-px h-5 bg-border mx-2" />
+        <Switch
+          id="show-done-projects"
+          checked={showDone}
+          onCheckedChange={setShowDone}
+        />
+        <label htmlFor="show-done-projects" className="text-sm font-medium cursor-pointer select-none text-muted-foreground">
+          Show Completed Tasks
+        </label>
       </div>
 
       {/* Add Project Modal */}
@@ -470,7 +481,7 @@ export default function Projects() {
                                     <p className="text-xs text-muted-foreground">No tasks yet</p>
                                     <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
                                   </div>
-                                ) : proj.tasks.map(task => (
+                                ) : filterDoneTasks(proj.tasks, showDone).map(task => (
                                   <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={() => openEditTask(proj.id, task)}>
                                      <div className="flex items-center gap-2">
                                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
