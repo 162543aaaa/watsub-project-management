@@ -862,6 +862,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_employee_id: { Args: never; Returns: string }
+      current_employee_name: { Args: never; Returns: string }
       get_project_health_summary: {
         Args: never
         Returns: {
@@ -888,7 +890,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      intern_visible_names: { Args: never; Returns: string[] }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      is_intern: { Args: { _user_id: string }; Returns: boolean }
       match_tasks: {
         Args: {
           caller_id: string
