@@ -9,6 +9,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
 import type { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
+import { filterDoneTasks } from "@/lib/taskFilters";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -129,6 +130,7 @@ export default function Tasks() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [groupByProject, setGroupByProject] = useState(false);
+  const [showDone, setShowDone] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<AllTask | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
@@ -202,15 +204,22 @@ export default function Tasks() {
     return result;
   }, [allTasks, search, priorityFilter, filterMonth, filterSource, filterYear]);
 
+  // Hide Done tasks when the toggle is off (display-only).
+  const visibleTasks = useMemo(() => filterDoneTasks(filtered, showDone), [filtered, showDone]);
+  const visibleColumns = useMemo<TaskStatus[]>(
+    () => (showDone ? COLUMNS : COLUMNS.filter(c => c !== "Done")),
+    [showDone],
+  );
+
   const loading = loadingTasks || loadingProjects || loadingCustomers;
 
-  const getColTasks = useCallback((col: TaskStatus) => filtered.filter(t => t.status === col), [filtered]);
+  const getColTasks = useCallback((col: TaskStatus) => visibleTasks.filter(t => t.status === col), [visibleTasks]);
 
   const getCardId = (t: AllTask) => `${t._source}-${t.id}`;
 
   const findTaskByCardId = useCallback((cardId: string): AllTask | undefined => {
-    return filtered.find(t => getCardId(t) === cardId);
-  }, [filtered]);
+    return visibleTasks.find(t => getCardId(t) === cardId);
+  }, [visibleTasks]);
 
   // Find which column a card belongs to
   const findColumnOfCard = useCallback((cardId: string): TaskStatus | null => {
@@ -447,6 +456,13 @@ export default function Tasks() {
             <Layers className="w-3.5 h-3.5" />
             Group by Project
           </button>
+          <button
+            onClick={() => setShowDone(s => !s)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${showDone ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
+            title={showDone ? "Hide completed tasks" : "Show completed tasks"}
+          >
+            {showDone ? "Hide Done" : "Show Done"}
+          </button>
         </div>
         {/* Fix #10: Show all 12 months with horizontal scroll */}
         <div className="flex flex-wrap items-center gap-2">
@@ -483,8 +499,8 @@ export default function Tasks() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start animate-stagger-3">
-          {COLUMNS.map((col) => {
+        <div className={`grid grid-cols-1 ${showDone ? "md:grid-cols-3" : "md:grid-cols-2"} gap-5 items-start animate-stagger-3`}>
+          {visibleColumns.map((col) => {
             const style = getColStyle(col);
             const colT = getColTasks(col);
             const ids = colT.map(t => getCardId(t));

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useCustomers, Customer } from "@/hooks/useCustomers";
 import { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
+import { filterDoneTasks } from "@/lib/taskFilters";
 import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
@@ -78,6 +79,7 @@ export default function Customers() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "customer" | "task"; id: string; name: string; parentId?: string } | null>(null);
+  const [showDone, setShowDone] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -294,6 +296,15 @@ export default function Customers() {
         <label htmlFor="show-archived-customers" className="text-sm font-medium cursor-pointer select-none text-muted-foreground">
           Show Archived Customers
         </label>
+        <div className="w-px h-5 bg-border mx-2" />
+        <Switch
+          id="show-done-customers"
+          checked={showDone}
+          onCheckedChange={setShowDone}
+        />
+        <label htmlFor="show-done-customers" className="text-sm font-medium cursor-pointer select-none text-muted-foreground">
+          Show Completed Tasks
+        </label>
       </div>
 
       {/* Add Customer Modal */}
@@ -434,7 +445,7 @@ export default function Customers() {
                             <div className="mt-3 space-y-2" onClick={e => e.stopPropagation()}>
                               {cust.tasks.length === 0 ? (
                                 <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
-                              ) : cust.tasks.map(task => (
+                              ) : filterDoneTasks(cust.tasks, showDone).map(task => (
                                 <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={() => openEditTask(cust.id, task)}>
                                    <div className="flex items-center gap-3">
                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
