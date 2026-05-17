@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from "react";
 
 const primaryNav = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { label: "My Work", icon: CheckSquare, path: "/my-work" },
   { label: "Tasks", icon: CheckSquare, path: "/tasks" },
   { label: "Projects", icon: FolderOpen, path: "/projects" },
   { label: "Customers", icon: Users2, path: "/customers" },

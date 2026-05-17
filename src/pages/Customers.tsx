@@ -15,6 +15,8 @@ import EditTaskModal from "@/components/EditTaskModal";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { HideDoneToggle } from "@/components/HideDoneToggle";
+import { useEffect } from "react";
 
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const YEARS = [2025, 2026, 2027];
@@ -79,7 +81,11 @@ export default function Customers() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "customer" | "task"; id: string; name: string; parentId?: string } | null>(null);
-  const [showDone, setShowDone] = useState(false);
+  const [showDone, setShowDone] = useState(() => localStorage.getItem("hideDoneTasks") !== "true");
+
+  useEffect(() => {
+    localStorage.setItem("hideDoneTasks", String(!showDone));
+  }, [showDone]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -297,14 +303,7 @@ export default function Customers() {
           Show Archived Customers
         </label>
         <div className="w-px h-5 bg-border mx-2" />
-        <Switch
-          id="show-done-customers"
-          checked={showDone}
-          onCheckedChange={setShowDone}
-        />
-        <label htmlFor="show-done-customers" className="text-sm font-medium cursor-pointer select-none text-muted-foreground">
-          Show Completed Tasks
-        </label>
+        <HideDoneToggle hideDone={!showDone} setHideDone={(val) => setShowDone(!val)} />
       </div>
 
       {/* Add Customer Modal */}

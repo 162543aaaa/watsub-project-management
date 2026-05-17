@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
+import { resolveCurrentEmployee, isIntern } from "@/lib/employeeHelpers";
 
 export interface Employee {
   id: string;
@@ -23,13 +24,18 @@ export interface Employee {
 export function useEmployees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
 
   const fetchEmployees = async () => {
     const { data, error } = await supabase
       .from("employees")
       .select("*")
       .order("created_at", { ascending: true });
-    if (error) { console.error(error); return; }
+    
+    const currEmp = await resolveCurrentEmployee(supabase);
+    setCurrentEmployee(currEmp);
+
+    if (error) { console.error(error); setEmployees([]); setLoading(false); return; }
     setEmployees(data || []);
     setLoading(false);
   };
@@ -61,5 +67,14 @@ export function useEmployees() {
     toast({ title: "ลบพนักงานสำเร็จ!" });
   };
 
-  return { employees, loading, addEmployee, updateEmployee, deleteEmployee, refetch: fetchEmployees };
+  return { 
+    employees, 
+    loading, 
+    addEmployee, 
+    updateEmployee, 
+    deleteEmployee, 
+    refetch: fetchEmployees,
+    currentEmployee,
+    isIntern: isIntern(currentEmployee)
+  };
 }

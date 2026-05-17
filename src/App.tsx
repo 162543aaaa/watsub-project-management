@@ -36,6 +36,7 @@ import WikiArticle from "./pages/WikiArticle";
 import Workload from "./pages/Workload";
 import Organization from "./pages/Organization";
 import NotFound from "./pages/NotFound";
+import MyWork from "./pages/MyWork";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 // staleTime prevents refetchOnWindowFocus from hitting the network when the
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="/wiki/:slug" element={<WikiArticle />} />
                 <Route path="/workload" element={<Workload />} />
                 <Route path="/organization" element={<Organization />} />
+                <Route path="/my-work" element={<MyWork />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
