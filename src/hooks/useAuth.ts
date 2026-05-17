@@ -8,6 +8,7 @@ export interface Profile {
   display_name: string;
   is_approved: boolean;
   allowed_pages: string[];
+  permission_preset?: string;
   created_at: string;
   updated_at: string;
 }
