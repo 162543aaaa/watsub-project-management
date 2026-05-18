@@ -85,7 +85,6 @@ export default function Projects() {
 
   const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(showArchived);
   const { employees } = useEmployees();
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", month: 1, year: new Date().getFullYear(), note: "", link: "", pillar: "SOUL" as Pillar });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
@@ -403,140 +402,22 @@ export default function Projects() {
                   }}>
                   <SortableContext items={ids} strategy={verticalListSortingStrategy}>
                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
-                      {projs.map(proj => {
-                        const donePct = proj.tasks.length ? Math.round(proj.tasks.filter(t => t.status === "Done").length / proj.tasks.length * 100) : 0;
-                        const isExpanded = !!expanded[proj.id];
-                        return <SortableProjCard key={proj.id} id={proj.id}>
-                          <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer"
-                            onClick={() => setExpanded(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
-                            onDoubleClick={() => openEditProject(proj)}>
-                            <div className="flex items-start gap-2 mb-3">
-                              <div className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
-                                style={{ background: donePct === 100 ? "hsl(142 71% 45%)" : donePct > 0 ? "hsl(191 91% 37%)" : "hsl(215 14% 75%)" }} />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <h3 className="font-bold text-foreground leading-tight">{proj.name}</h3>
-                                  {proj.link && (
-                                    <a href={proj.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                                      className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
-                                      title={proj.link}>
-                                      <ExternalLink className="w-3.5 h-3.5" />
-                                    </a>
-                                  )}
-                                </div>
-                                {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
-                                <span
-                                  className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold leading-tight w-fit"
-                                  style={{ background: PILLAR_CONFIG[proj.pillar]?.color || "#888", color: PILLAR_CONFIG[proj.pillar]?.textColor || "#fff" }}>
-                                  {PILLAR_CONFIG[proj.pillar]?.label || `#${proj.pillar}`}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                                <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
-                                {!showArchived ? (
-                                  <button onClick={(e) => { e.stopPropagation(); archiveProject(proj.id); }}
-                                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-500/10 text-amber-600 transition-all hover:scale-110 active:scale-95"
-                                    title="Archive project">
-                                    <Archive className="w-3.5 h-3.5" />
-                                  </button>
-                                ) : (
-                                  <button onClick={(e) => { e.stopPropagation(); unarchiveProject(proj.id); }}
-                                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-green-500/10 text-green-600 transition-all hover:scale-110 active:scale-95"
-                                    title="Unarchive project">
-                                    <RefreshCw className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                                <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "project", id: proj.id, name: proj.name }); }}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
-                                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{proj.tasks.length} tasks</span>
-                              {donePct === 100 && proj.tasks.length > 0 && <span className="badge-done text-xs">✓ Complete</span>}
-                            </div>
-                            {proj.tasks.length > 0 && <div className="mb-4"><ProgressBar tasks={proj.tasks} /></div>}
-                            <div className="flex items-center gap-3 mt-auto pt-1">
-                              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                {isExpanded ? "Hide" : "Show"} tasks
-                              </span>
-                              <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
-                                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-semibold transition-all hover:scale-105">
-                                <Plus className="w-3.5 h-3.5" /> Add task
-                              </button>
-                            </div>
-                            {isExpanded && (
-                              <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3" onClick={e => e.stopPropagation()}>
-                                {proj.tasks.length === 0 ? (
-                                  <div className="text-center py-4">
-                                    <p className="text-xs text-muted-foreground">No tasks yet</p>
-                                    <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
-                                  </div>
-                                ) : filterDoneTasks(proj.tasks, showDone).map(task => (
-                                  <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={() => openEditTask(proj.id, task)}>
-                                     <div className="flex items-center gap-2">
-                                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                                       <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-medium text-foreground truncate">{task.name}</span>
-                                            {task.category && task.category !== "none" && (
-                                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${task.category === "meeting" ? "bg-violet-100 text-violet-700" : "bg-rose-100 text-rose-700"}`}>
-                                                {task.category === "meeting" ? "🗓" : "📍"}
-                                              </span>
-                                            )}
-                                          </div>
-                                          <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
-                                       </div>
-                                       {task.assigned_to && task.assigned_to.length > 0 && (
-                                         <div className="flex -space-x-1.5 flex-shrink-0">
-                                           {task.assigned_to.slice(0, 3).map((name, idx) => {
-                                             const emp = employees.find(e => e.name === name);
-                                             return <EmployeeAvatar key={name} name={name} avatar={emp?.avatar} size="xs" index={employees.indexOf(emp!)} />;
-                                           })}
-                                           {task.assigned_to.length > 3 && (
-                                             <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground flex-shrink-0 border border-background">
-                                               +{task.assigned_to.length - 3}
-                                             </div>
-                                           )}
-                                         </div>
-                                       )}
-                                       <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
-                                          {task.link && (
-                                            <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
-                                              <ExternalLink className="w-3 h-3 text-primary" />
-                                            </a>
-                                          )}
-                                       <button onClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
-                                         <Pencil className="w-3 h-3 text-primary" />
-                                       </button>
-                                       <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "task", id: task.id, name: task.name, parentId: proj.id }); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
-                                         <Trash2 className="w-3 h-3 text-destructive" />
-                                      </button>
-                                       </div>
-                                     </div>
-                                     {task.link && (
-                                       <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                                          className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-4 truncate transition-colors">
-                                         <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
-                                         <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
-                                       </a>
-                                     )}
-                                   </div>
-                                 ))}
-                              </div>
-                            )}
-                          </div>
-                        </SortableProjCard>;
-                      })}
+                      {projs.map(proj => (
+                        <SortableProjCard key={proj.id} id={proj.id}>
+                          <ProjectCardComponent
+                            proj={proj}
+                            showDone={showDone}
+                            showArchived={showArchived}
+                            openEditProject={openEditProject}
+                            openAddTask={openAddTask}
+                            openEditTask={openEditTask}
+                            archiveProject={archiveProject}
+                            unarchiveProject={unarchiveProject}
+                            setConfirmDeleteItem={setConfirmDeleteItem}
+                            employees={employees}
+                          />
+                        </SortableProjCard>
+                      ))}
                     </div>
                   </SortableContext>
                 </DndContext>
@@ -582,6 +463,166 @@ function SortableProjCard({ id, children }: { id: string; children: React.ReactN
         <GripVertical className="w-3.5 h-3.5" />
       </div>
       {children}
+    </div>
+  );
+}
+
+interface ProjectCardComponentProps {
+  proj: any;
+  showDone: boolean;
+  showArchived: boolean;
+  openEditProject: (proj: any) => void;
+  openAddTask: (projectId: string) => void;
+  openEditTask: (projectId: string, task: Task) => void;
+  archiveProject: (id: string) => Promise<void>;
+  unarchiveProject: (id: string) => Promise<void>;
+  setConfirmDeleteItem: (val: any) => void;
+  employees: any[];
+}
+
+function ProjectCardComponent({
+  proj,
+  showDone,
+  showArchived,
+  openEditProject,
+  openAddTask,
+  openEditTask,
+  archiveProject,
+  unarchiveProject,
+  setConfirmDeleteItem,
+  employees,
+}: ProjectCardComponentProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const donePct = proj.tasks.length ? Math.round(proj.tasks.filter((t: any) => t.status === "Done").length / proj.tasks.length * 100) : 0;
+
+  return (
+    <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer"
+      onClick={() => setIsExpanded(prev => !prev)}
+      onDoubleClick={() => openEditProject(proj)}>
+      <div className="flex items-start gap-2 mb-3">
+        <div className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
+          style={{ background: donePct === 100 ? "hsl(142 71% 45%)" : donePct > 0 ? "hsl(191 91% 37%)" : "hsl(215 14% 75%)" }} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-bold text-foreground leading-tight">{proj.name}</h3>
+            {proj.link && (
+              <a href={proj.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
+                title={proj.link}>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+          {proj.note && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{proj.note}</p>}
+          <span
+            className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold leading-tight w-fit"
+            style={{ background: PILLAR_CONFIG[proj.pillar]?.color || "#888", color: PILLAR_CONFIG[proj.pillar]?.textColor || "#fff" }}>
+            {PILLAR_CONFIG[proj.pillar]?.label || `#${proj.pillar}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
+          <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+          {!showArchived ? (
+            <button onClick={(e) => { e.stopPropagation(); archiveProject(proj.id); }}
+              className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-500/10 text-amber-600 transition-all hover:scale-110 active:scale-95"
+              title="Archive project">
+              <Archive className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button onClick={(e) => { e.stopPropagation(); unarchiveProject(proj.id); }}
+              className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-green-500/10 text-green-600 transition-all hover:scale-110 active:scale-95"
+              title="Unarchive project">
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "project", id: proj.id, name: proj.name }); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
+            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+          </button>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{proj.tasks.length} tasks</span>
+        {donePct === 100 && proj.tasks.length > 0 && <span className="badge-done text-xs">✓ Complete</span>}
+      </div>
+      {proj.tasks.length > 0 && <div className="mb-4"><ProgressBar tasks={proj.tasks} /></div>}
+      <div className="flex items-center gap-3 mt-auto pt-1">
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          {isExpanded ? "Hide" : "Show"} tasks
+        </span>
+        <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
+          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-semibold transition-all hover:scale-105">
+          <Plus className="w-3.5 h-3.5" /> Add task
+        </button>
+      </div>
+      {isExpanded && (
+        <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3" onClick={e => e.stopPropagation()}>
+          {proj.tasks.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-xs text-muted-foreground">No tasks yet</p>
+              <button onClick={() => openAddTask(proj.id)} className="text-xs text-primary font-semibold mt-1 hover:underline">Add first task →</button>
+            </div>
+          ) : filterDoneTasks(proj.tasks, showDone).map(task => (
+            <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={() => openEditTask(proj.id, task)}>
+               <div className="flex items-center gap-2">
+                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                 <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-medium text-foreground truncate">{task.name}</span>
+                      {task.category && task.category !== "none" && (
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${task.category === "meeting" ? "bg-violet-100 text-violet-700" : "bg-rose-100 text-rose-700"}`}>
+                          {task.category === "meeting" ? "🗓" : "📍"}
+                        </span>
+                      )}
+                    </div>
+                    <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+                 </div>
+                 {task.assigned_to && task.assigned_to.length > 0 && (
+                   <div className="flex -space-x-1.5 flex-shrink-0">
+                     {task.assigned_to.slice(0, 3).map((name, idx) => {
+                       const emp = employees.find(e => e.name === name);
+                       return <EmployeeAvatar key={name} name={name} avatar={emp?.avatar} size="xs" index={employees.indexOf(emp!)} />;
+                     })}
+                     {task.assigned_to.length > 3 && (
+                       <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground flex-shrink-0 border border-background">
+                         +{task.assigned_to.length - 3}
+                       </div>
+                     )}
+                   </div>
+                 )}
+                 <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
+                    {task.link && (
+                      <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
+                        <ExternalLink className="w-3 h-3 text-primary" />
+                      </a>
+                    )}
+                 <button onClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
+                   <Pencil className="w-3 h-3 text-primary" />
+                 </button>
+                 <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "task", id: task.id, name: task.name, parentId: proj.id }); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
+                   <Trash2 className="w-3 h-3 text-destructive" />
+                </button>
+                 </div>
+               </div>
+               {task.link && (
+                 <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-4 truncate transition-colors">
+                   <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                   <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
+                 </a>
+               )}
+             </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
