@@ -14,6 +14,8 @@ import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
 import EditProjectModal from "@/components/EditProjectModal";
+import { HideDoneToggle } from "@/components/HideDoneToggle";
+import { useEffect } from "react";
 
 const GanttView = lazy(() => import("@/components/GanttView"));
 
@@ -75,7 +77,12 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
 
 export default function Projects() {
   const [showArchived, setShowArchived] = useState(false);
-  const [showDone, setShowDone] = useState(false);
+  const [showDone, setShowDone] = useState(() => localStorage.getItem("hideDoneTasks") !== "true");
+
+  useEffect(() => {
+    localStorage.setItem("hideDoneTasks", String(!showDone));
+  }, [showDone]);
+
   const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(showArchived);
   const { employees } = useEmployees();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -289,14 +296,7 @@ export default function Projects() {
           Show Archived Projects
         </label>
         <div className="w-px h-5 bg-border mx-2" />
-        <Switch
-          id="show-done-projects"
-          checked={showDone}
-          onCheckedChange={setShowDone}
-        />
-        <label htmlFor="show-done-projects" className="text-sm font-medium cursor-pointer select-none text-muted-foreground">
-          Show Completed Tasks
-        </label>
+        <HideDoneToggle hideDone={!showDone} setHideDone={(val) => setShowDone(!val)} />
       </div>
 
       {/* Add Project Modal */}

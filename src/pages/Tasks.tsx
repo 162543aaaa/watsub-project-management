@@ -10,6 +10,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import type { Task } from "@/hooks/useProjects";
 import { useEmployees } from "@/hooks/useEmployees";
 import { filterDoneTasks } from "@/lib/taskFilters";
+import { HideDoneToggle } from "@/components/HideDoneToggle";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -130,7 +131,12 @@ export default function Tasks() {
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [groupByProject, setGroupByProject] = useState(false);
-  const [showDone, setShowDone] = useState(false);
+  const [showDone, setShowDone] = useState(() => localStorage.getItem("hideDoneTasks") !== "true");
+
+  useEffect(() => {
+    localStorage.setItem("hideDoneTasks", String(!showDone));
+  }, [showDone]);
+
   const [confirmDelete, setConfirmDelete] = useState<AllTask | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
@@ -447,7 +453,6 @@ export default function Tasks() {
               <option key={key} value={key}>{label}</option>
             ))}
           </select>
-          {/* Fix #7: Group by Project toggle */}
           <button
             onClick={() => setGroupByProject(g => !g)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupByProject ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
@@ -456,13 +461,7 @@ export default function Tasks() {
             <Layers className="w-3.5 h-3.5" />
             Group by Project
           </button>
-          <button
-            onClick={() => setShowDone(s => !s)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${showDone ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
-            title={showDone ? "Hide completed tasks" : "Show completed tasks"}
-          >
-            {showDone ? "Hide Done" : "Show Done"}
-          </button>
+          <HideDoneToggle hideDone={!showDone} setHideDone={(val) => setShowDone(!val)} />
         </div>
         {/* Fix #10: Show all 12 months with horizontal scroll */}
         <div className="flex flex-wrap items-center gap-2">
