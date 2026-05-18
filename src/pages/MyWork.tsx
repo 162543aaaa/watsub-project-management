@@ -1,124 +1,103 @@
-import { useState, useMemo } from "react";
-import { useTasks } from "@/hooks/useTasks";
-import { useProjects } from "@/hooks/useProjects";
-import { useCustomers } from "@/hooks/useCustomers";
-import { useEmployees } from "@/hooks/useEmployees";
-import { Task } from "@/hooks/useProjects";
-import { HideDoneToggle } from "@/components/HideDoneToggle";
-import { filterDoneTasks } from "@/lib/taskFilters";
-import { toast } from "@/hooks/use-toast";
-import { ExternalLink, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMyWork } from "@/hooks/useMyWork";
+import { Link } from "react-router-dom";
+import { AlertCircle, Clock, CalendarDays, Loader2, CheckCircle2, AlertTriangle, ListTodo } from "lucide-react";
+import type { MyWorkTask } from "@/hooks/useMyWork";
 
-interface MyTask extends Task {
-  _source: "standalone" | "project" | "customer";
-  _sourceName?: string;
-  _sourceId?: string;
+const SECTION_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  overdue:           { label: "Overdue / เลยกำหนด",          icon: AlertCircle,    color: "hsl(0 84% 55%)" },
+  today:             { label: "Due Today / ครบกำหนดวันนี้",   icon: CalendarDays,   color: "hsl(35 90% 50%)" },
+  dueSoon:           { label: "Due Soon (7 days)",            icon: Clock,          color: "hsl(191 91% 45%)" },
+  inProgress:        { label: "In Progress",                  icon: Loader2,        color: "hsl(220 70% 55%)" },
+  waitingEvidence:   { label: "Waiting for Evidence / Link",  icon: AlertTriangle,  color: "hsl(280 70% 55%)" },
+  recentlyCompleted: { label: "Recently Completed",           icon: CheckCircle2,   color: "hsl(142 71% 45%)" },
+};
+
+function sourceLink(t: MyWorkTask): string {
+  if (t._source === "project") return "/projects";
+  if (t._source === "customer") return "/customers";
+  return "/tasks";
+}
+
+function TaskRow({ t }: { t: MyWorkTask }) {
+  return (
+    <Link
+      to={sourceLink(t)}
+      className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card hover:bg-muted/30 transition-colors"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium truncate">{t.name}</span>
+          <span className={t.priority === "High" ? "badge-high" : t.priority === "Medium" ? "badge-medium" : "badge-low"}>
+            {t.priority}
+          </span>
+        </div>
+        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+          <span className="capitalize">{t._source}</span>
+          {t._sourceName && <span>· {t._sourceName}</span>}
+          {t.due_date && <span>· due {t.due_date}</span>}
+          <span>· {t.status}</span>
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 export default function MyWork() {
-  const { currentEmployee, loading: loadingEmp } = useEmployees();
-  const { tasks: standaloneTasks, loading: loadingTasks, updateTask } = useTasks();
-  const { projects, loading: loadingProjects, updateTask: updateProjectTask } = useProjects();
-  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask } = useCustomers();
-
-  const [showDone, setShowDone] = useState(() => localStorage.getItem("hideDoneTasks") !== "true");
-
-  const myTasks = useMemo(() => {
-    if (!currentEmployee) return [];
-    const empName = currentEmployee.name;
-
-    const st: MyTask[] = standaloneTasks
-      .filter(t => t.assigned_to?.includes(empName))
-      .map(t => ({ ...t, _source: "standalone" }));
-
-    const pt: MyTask[] = projects.flatMap(p => 
-      p.tasks.filter(t => t.assigned_to?.includes(empName)).map(t => ({
-        ...t, _source: "project", _sourceName: p.name, _sourceId: p.id
-      }))
-    );
-
-    const ct: MyTask[] = customers.flatMap(c => 
-      c.tasks.filter(t => t.assigned_to?.includes(empName)).map(t => ({
-        ...t, _source: "customer", _sourceName: c.name, _sourceId: c.id
-      }))
-    );
-
-    return [...st, ...pt, ...ct];
-  }, [currentEmployee, standaloneTasks, projects, customers]);
-
-  const visibleTasks = useMemo(() => filterDoneTasks(myTasks, showDone), [myTasks, showDone]);
-
-  const loading = loadingEmp || loadingTasks || loadingProjects || loadingCustomers;
-
-  const handleStatusToggle = async (task: MyTask) => {
-    const nextStatus: Record<string, string> = { "To Do": "In Progress", "In Progress": "Done", "Done": "To Do" };
-    const newStatus = nextStatus[task.status] || "To Do";
-    if (newStatus === "Done" && !task.link && (!task.comments || task.comments.trim().length < 20)) {
-      toast({
-        title: "กรุณาเพิ่มรายละเอียดหรือ Link ก่อนปิดงาน",
-        description: "Please add a note (≥20 chars) or a link before completing this task.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (task._source === "project" && task._sourceId) {
-      await updateProjectTask(task.id, { status: newStatus as any });
-    } else if (task._source === "customer" && task._sourceId) {
-      await updateCustomerTask(task.id, { status: newStatus as any });
-    } else {
-      await updateTask(task.id, { status: newStatus as any });
-    }
-  };
+  const { employee, myName, sections, loading, totalAssigned } = useMyWork();
 
   if (loading) {
     return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   }
 
+  if (!myName) {
+    return (
+      <div className="p-6 page-enter">
+        <h1 className="text-2xl font-bold mb-2">My Work</h1>
+        <div className="bg-card border border-border/60 rounded-2xl p-8 text-center">
+          <ListTodo className="w-10 h-10 mx-auto text-muted-foreground mb-3 opacity-40" />
+          <p className="text-sm text-muted-foreground">
+            Your account email is not linked to an employee record. Ask an admin to add you to the team list.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const orderedKeys: (keyof typeof sections)[] = ["overdue", "today", "dueSoon", "waitingEvidence", "inProgress", "recentlyCompleted"];
+
   return (
     <div className="p-6 page-enter">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">My Work</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Tasks assigned to you</p>
-        </div>
-        <HideDoneToggle hideDone={!showDone} setHideDone={(val) => {
-          setShowDone(!val);
-          localStorage.setItem("hideDoneTasks", String(val));
-        }} />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">My Work</h1>
+        <p className="text-sm text-muted-foreground">
+          {employee?.name} · {totalAssigned} task{totalAssigned === 1 ? "" : "s"} assigned to you
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visibleTasks.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-muted-foreground">
-            No tasks found.
+      <div className="space-y-6">
+        {orderedKeys.map((key) => {
+          const list = sections[key];
+          if (list.length === 0) return null;
+          const meta = SECTION_META[key];
+          const Icon = meta.icon;
+          return (
+            <section key={key}>
+              <h2 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: meta.color }}>
+                <Icon className="w-4 h-4" />
+                {meta.label}
+                <span className="text-xs text-muted-foreground font-normal">({list.length})</span>
+              </h2>
+              <div className="space-y-1.5">
+                {list.map((t) => <TaskRow key={`${t._source}-${t.id}`} t={t} />)}
+              </div>
+            </section>
+          );
+        })}
+        {orderedKeys.every((k) => sections[k].length === 0) && (
+          <div className="bg-card border border-border/60 rounded-2xl p-8 text-center">
+            <CheckCircle2 className="w-10 h-10 mx-auto text-success mb-3" />
+            <p className="text-sm">All clear! No active tasks right now.</p>
           </div>
-        ) : (
-          visibleTasks.map(task => (
-            <div key={task.id} className="bg-card border border-border p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {task._source === "project" ? "🚀 Project" : task._source === "customer" ? "💼 Customer" : "📋 Standalone"}
-                  {task._sourceName && ` • ${task._sourceName}`}
-                </span>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${task.status === "Done" ? "bg-green-100 text-green-700" : task.status === "In Progress" ? "bg-cyan-100 text-cyan-700" : "bg-gray-100 text-gray-700"}`}>
-                  {task.status}
-                </span>
-              </div>
-              <h3 className="font-bold text-base mb-2">{task.name}</h3>
-              <p className="text-xs text-muted-foreground mb-4 line-clamp-2">{task.comments || "No description"}</p>
-              
-              <div className="flex justify-between items-center mt-auto border-t border-border pt-3">
-                <div className="flex gap-2 text-xs">
-                  {task.due_date && <span className="text-muted-foreground">Due: {new Date(task.due_date).toLocaleDateString()}</span>}
-                </div>
-                <button onClick={() => handleStatusToggle(task)} className="text-xs btn-primary py-1 px-3">
-                  Toggle Status
-                </button>
-              </div>
-            </div>
-          ))
         )}
       </div>
     </div>
