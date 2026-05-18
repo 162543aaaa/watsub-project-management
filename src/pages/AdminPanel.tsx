@@ -3,13 +3,14 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Check, X, ChevronDown, UserCog, RefreshCw } from "lucide-react";
+import { Shield, Check, X, ChevronDown, UserCog, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import type { Profile, UserRole } from "@/hooks/useAuth";
 import { useSyncData } from "@/hooks/useSyncData";
 import { PRESETS, detectPreset, presetLabel, type PermissionPreset } from "@/lib/permissionPresets";
 import { normalizeAllowedPages } from "@/lib/pageAccess";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 
 const ALL_PAGES = [
   { path: "/", label: "Dashboard" },
@@ -48,7 +49,27 @@ export default function AdminPanel() {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserInfo | null>(null);
   const { isSyncing, handleSyncAll } = useSyncData();
+
+  const handleDeleteUser = async (userId: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke("admin-users", {
+        body: { action: "delete-user", user_id: userId },
+      });
+      if (error) {
+        toast({ title: "เกิดข้อผิดพลาดในการลบผู้ใช้", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "ลบผู้ใช้สำเร็จ!" });
+        fetchUsers();
+      }
+    } catch (err) {
+      console.error("handleDeleteUser error:", err);
+      toast({ title: "เกิดข้อผิดพลาด", description: String(err), variant: "destructive" });
+    }
+    setLoading(false);
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -252,6 +273,15 @@ export default function AdminPanel() {
                   <Button size="sm" variant="outline" onClick={() => handleApprove(u.profile.user_id, false)} className="gap-1">
                     <X className="w-3.5 h-3.5" /> ปฏิเสธ
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmDeleteUser(u)}
+                    className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive gap-1"
+                    title="ลบสมาชิกออกโดยถาวร"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> ลบออก
+                  </Button>
                 </div>
               </div>
             ))}
@@ -315,9 +345,17 @@ export default function AdminPanel() {
                       size="sm"
                       variant="ghost"
                       onClick={() => handleApprove(u.profile.user_id, false)}
-                      className="text-xs text-destructive"
+                      className="text-xs text-destructive hover:bg-destructive/5"
                     >
                       ระงับ
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setConfirmDeleteUser(u)}
+                      className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> ลบออก
                     </Button>
                   </div>
                 </div>
@@ -376,6 +414,18 @@ export default function AdminPanel() {
           })}
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteUser}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteUser(null); }}
+        onConfirm={() => {
+          if (!confirmDeleteUser) return;
+          handleDeleteUser(confirmDeleteUser.profile.user_id);
+          setConfirmDeleteUser(null);
+        }}
+        title="ยืนยันการลบผู้ใช้"
+        description={`คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ "${confirmDeleteUser?.profile.display_name}" ออกจากระบบ? บัญชีและสิทธิ์ทั้งหมดของผู้ใช้นี้จะถูกลบอย่างถาวรและไม่สามารถย้อนกลับได้`}
+      />
     </div>
   );
 }

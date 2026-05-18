@@ -106,6 +106,24 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'delete-user') {
+      // Delete user roles
+      await supabase.from('user_roles').delete().eq('user_id', user_id);
+      // Delete profile
+      await supabase.from('profiles').delete().eq('user_id', user_id);
+      // Delete auth user via Admin API
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(user_id);
+      if (deleteError) {
+        return new Response(JSON.stringify({ error: deleteError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'list-users') {
       const { data: profiles } = await supabase.from('profiles').select('*').order('created_at');
       const { data: roles } = await supabase.from('user_roles').select('*');
