@@ -107,11 +107,19 @@ serve(async (req) => {
     }
 
     if (action === 'delete-user') {
-      // Delete user roles
+      // 1. Delete notifications for this user explicitly
+      await supabase.from('notifications').delete().eq('recipient_user_id', user_id);
+      
+      // 2. Delete user roles
       await supabase.from('user_roles').delete().eq('user_id', user_id);
-      // Delete profile
+      
+      // 3. Delete employee record (which cascades to other kpi and objective tables)
+      await supabase.from('employees').delete().eq('user_id', user_id);
+      
+      // 4. Delete profile
       await supabase.from('profiles').delete().eq('user_id', user_id);
-      // Delete auth user via Admin API
+      
+      // 5. Delete auth user via Admin API
       const { error: deleteError } = await supabase.auth.admin.deleteUser(user_id);
       if (deleteError) {
         return new Response(JSON.stringify({ error: deleteError.message }), {
