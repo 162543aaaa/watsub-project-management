@@ -67,7 +67,7 @@ export default function TopNav() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 mr-3">
           <img src="/logo_watsub.png" alt="WatSUB" className="w-8 h-8 object-contain" />
-          <span className="hidden sm:block text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FC5A03] to-[#FFC700] leading-tight">WatSUB-Project Management</span>
+          <span className="hidden sm:block text-sm font-bold text-[#FC5A03] leading-tight">WatSUB-Project Management</span>
         </Link>
 
         {/* Desktop primary nav */}
