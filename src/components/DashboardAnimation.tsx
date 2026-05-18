@@ -1,36 +1,5 @@
-import { useEffect, useState } from "react";
-import Lottie from "lottie-react";
-
+// Custom-crafted in the exact Watsub Brand Style (Neo-Yellow, Vibrant Orange, Deep Purple, and Glassmorphism)
 export default function DashboardAnimation() {
-  const [animationData, setAnimationData] = useState<any>(null);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    // Attempt to load the user's complete Lottie file from public/wfh-animation.json
-    fetch("/wfh-animation.json")
-      .then((res) => {
-        if (!res.ok) throw new Error("File not found");
-        return res.json();
-      })
-      .then((data) => {
-        setAnimationData(data);
-      })
-      .catch((err) => {
-        console.log("Using custom premium brand illustration fallback:", err.message);
-        setHasError(true);
-      });
-  }, []);
-
-  if (animationData && !hasError) {
-    return (
-      <div className="w-full max-w-[280px] sm:max-w-[340px] md:max-w-[400px] aspect-square mx-auto flex items-center justify-center filter drop-shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-        <Lottie animationData={animationData} loop={true} className="w-full h-full" />
-      </div>
-    );
-  }
-
-  // Fallback: A breathtaking, highly premium, interactive CSS/SVG animated Working From Home illustration
-  // Custom-crafted in the exact Watsub Brand Style (Neo-Yellow, Vibrant Orange, Deep Purple, and Glassmorphism)
   return (
     <div className="relative w-full max-w-[320px] sm:max-w-[380px] aspect-square mx-auto flex items-center justify-center select-none group">
       {/* Ambient Radial Neon Glows */}
