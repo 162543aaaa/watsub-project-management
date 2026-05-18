@@ -2,28 +2,30 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import { motion, useAnimation, useMotionValue, useSpring } from 'framer-motion';
 import './NeonCursor.css';
 
 const NeonCursor = () => {
-  const [position, setPosition] = useState({
-    x: 0,
-    y: 0,
-    scale: 1,
-    opacity: 1,
-  });
   const [isClicking, setIsClicking] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  
+  const mouseX = useMotionValue(-100);
+  const mouseY = useMotionValue(-100);
+
+  // Configure high-fidelity spring settings for buttery smooth trails
+  const trailX = useSpring(mouseX, { damping: 25, stiffness: 250, mass: 0.5 });
+  const trailY = useSpring(mouseY, { damping: 25, stiffness: 250, mass: 0.5 });
+
+  const glowX = useSpring(mouseX, { damping: 35, stiffness: 150, mass: 0.8 });
+  const glowY = useSpring(mouseY, { damping: 35, stiffness: 150, mass: 0.8 });
+
   const trailControls = useAnimation();
   const glowControls = useAnimation();
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    setPosition((prev) => ({
-      ...prev,
-      x: e.clientX,
-      y: e.clientY,
-    }));
-  }, []);
+    mouseX.set(e.clientX);
+    mouseY.set(e.clientY);
+  }, [mouseX, mouseY]);
 
   const handleMouseDown = () => setIsClicking(true);
   const handleMouseUp = () => setIsClicking(false);
@@ -90,52 +92,49 @@ const NeonCursor = () => {
 
   return (
     <div className='neon-cursor-container'>
-      {/* Main cursor dot */}
-      <motion.div
-        className='cursor-main'
-        animate={{
-          x: position.x - 4,
-          y: position.y - 4,
-          scale: isClicking ? 0.8 : isHovering ? 1.2 : 1,
-        }}
-        transition={{
-          type: 'spring',
-          damping: 20,
-          stiffness: 400,
-          mass: 0.5,
-        }}
-      />
-
-      {/* Trailing circle */}
-      <motion.div
-        className='cursor-trail'
-        animate={{
-          x: position.x - 12,
-          y: position.y - 12,
-        }}
-        transition={{
-          type: 'spring',
-          damping: 30,
-          stiffness: 200,
-          mass: 0.8,
-        }}
-        initial={false}
-      />
-
-      {/* Outer glow */}
+      {/* Outer glow (smooth lag trail) */}
       <motion.div
         className='cursor-glow'
+        style={{
+          x: glowX,
+          y: glowY,
+          translateX: '-50%',
+          translateY: '-50%',
+        }}
+        animate={glowControls}
+        initial={false}
+      />
+
+      {/* Trailing circle (smooth medium trail) */}
+      <motion.div
+        className='cursor-trail'
+        style={{
+          x: trailX,
+          y: trailY,
+          translateX: '-50%',
+          translateY: '-50%',
+        }}
+        animate={trailControls}
+        initial={false}
+      />
+
+      {/* Main cursor dot (perfectly matching mouse position instantly) */}
+      <motion.div
+        className='cursor-main'
+        style={{
+          x: mouseX,
+          y: mouseY,
+          translateX: '-50%',
+          translateY: '-50%',
+        }}
         animate={{
-          x: position.x - 24,
-          y: position.y - 24,
+          scale: isClicking ? 0.8 : isHovering ? 1.25 : 1,
         }}
         transition={{
           type: 'spring',
-          damping: 40,
-          stiffness: 150,
-          mass: 1,
+          damping: 15,
+          stiffness: 400,
         }}
-        initial={false}
       />
     </div>
   );
