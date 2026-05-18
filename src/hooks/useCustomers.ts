@@ -51,7 +51,11 @@ export function useCustomers(showArchived = false) {
       .order("sort_order", { ascending: true });
     if (taskError) { console.error(taskError); }
 
-    const custData = (allCustData || []).filter(c => (c.is_archived ?? false) === showArchived);
+    const localArchived = readLocalArchivedIds();
+    const custData = (allCustData || []).filter((c) => {
+      const archived = (c.is_archived ?? false) || localArchived.has(c.id);
+      return archived === showArchived;
+    });
     const customers = custData.map(c => ({
       ...c,
       tasks: (taskData || []).filter(t => t.customer_id === c.id) as Task[],
@@ -91,12 +95,6 @@ export function useCustomers(showArchived = false) {
     const { error } = await supabase.from("customers").update({ is_archived: true }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        toast({ title: "Archive ยังไม่พร้อมใช้งาน", description: "ฐานข้อมูลยังไม่มีคอลัมน์ is_archived" });
-      } else {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      }
-      return;
-    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "เก็บลูกค้าแล้ว!" });
   };
@@ -105,12 +103,6 @@ export function useCustomers(showArchived = false) {
     const { error } = await supabase.from("customers").update({ is_archived: false }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        toast({ title: "Archive ยังไม่พร้อมใช้งาน", description: "ฐานข้อมูลยังไม่มีคอลัมน์ is_archived" });
-      } else {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      }
-      return;
-    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "กู้คืนลูกค้าสำเร็จ!" });
   };

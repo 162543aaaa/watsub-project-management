@@ -62,7 +62,11 @@ export function useProjects(showArchived = false) {
       .order("sort_order", { ascending: true });
     if (taskError) { console.error(taskError); }
 
-    const projData = (allProjData || []).filter(p => (p.is_archived ?? false) === showArchived);
+    const localArchived = readLocalArchivedIds();
+    const projData = (allProjData || []).filter((p) => {
+      const archived = (p.is_archived ?? false) || localArchived.has(p.id);
+      return archived === showArchived;
+    });
     const projects = projData.map(p => ({
       ...p,
       pillar: p.pillar as Pillar,
@@ -103,7 +107,6 @@ export function useProjects(showArchived = false) {
     const { error } = await supabase.from("projects").update({ is_archived: true }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        toast({ title: "Archive ยังไม่พร้อมใช้งาน", description: "ฐานข้อมูลยังไม่มีคอลัมน์ is_archived" });
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
@@ -117,7 +120,6 @@ export function useProjects(showArchived = false) {
     const { error } = await supabase.from("projects").update({ is_archived: false }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        toast({ title: "Archive ยังไม่พร้อมใช้งาน", description: "ฐานข้อมูลยังไม่มีคอลัมน์ is_archived" });
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
