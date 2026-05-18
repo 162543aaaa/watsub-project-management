@@ -5,7 +5,6 @@ import { UserPlus, Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle2 } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import DelicateAsciiDots from "@/components/DelicateAsciiDots";
 
 export default function Signup() {
   const { user, isApproved, isAdmin, signUp, loading } = useAuthContext();
@@ -68,8 +67,7 @@ export default function Signup() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-        <DelicateAsciiDots />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/10 to-background p-4 relative overflow-hidden">
         {/* Glow Effects */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse duration-[8000ms]" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse duration-[6000ms]" />
@@ -96,10 +94,9 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-12 bg-background relative overflow-hidden font-sans">
-      <DelicateAsciiDots />
       {/* Background Animated Blurs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-3xl animate-pulse duration-[10000ms] -z-10" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/15 rounded-full blur-3xl animate-pulse duration-[8000ms] -z-10" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-3xl animate-pulse duration-[10000ms]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/15 rounded-full blur-3xl animate-pulse duration-[8000ms]" />
 
       {/* Left Column: Premium Branding Panel */}
       <div className="hidden lg:flex lg:col-span-5 relative bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-12 flex-col justify-between overflow-hidden border-r border-border/10">
