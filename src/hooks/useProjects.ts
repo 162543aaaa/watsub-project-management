@@ -8,6 +8,26 @@ function isMissingArchivedColumnError(error: { message?: string } | null): boole
   return error.message.includes("is_archived") && error.message.includes("schema cache");
 }
 
+const ARCHIVED_FALLBACK_KEY = "archived_item_ids";
+
+function readLocalArchivedIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(ARCHIVED_FALLBACK_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((item): item is string => typeof item === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeLocalArchivedIds(ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ARCHIVED_FALLBACK_KEY, JSON.stringify(Array.from(ids)));
+}
+
 export interface Task {
   id: string;
   name: string;
@@ -107,6 +127,9 @@ export function useProjects(showArchived = false) {
     const { error } = await supabase.from("projects").update({ is_archived: true }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
+        const archived = readLocalArchivedIds();
+        archived.add(id);
+        writeLocalArchivedIds(archived);
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
@@ -120,6 +143,9 @@ export function useProjects(showArchived = false) {
     const { error } = await supabase.from("projects").update({ is_archived: false }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
+        const archived = readLocalArchivedIds();
+        archived.delete(id);
+        writeLocalArchivedIds(archived);
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
