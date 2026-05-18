@@ -70,7 +70,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
 
 export default function Customers() {
   const [showArchived, setShowArchived] = useState(false);
-  const { customers, loading, addCustomer, deleteCustomer, archiveCustomer, unarchiveCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer, refetch } = useCustomers(showArchived);
+  const { customers, loading, addCustomer, deleteCustomer, archiveCustomer, unarchiveCustomer, addTask, updateTask, deleteTask, reorderCustomers, updateCustomer, refetch } = useCustomers(showArchived ? "archived" : "active");
   const { employees } = useEmployees();
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", detail: "", payment_fee: "", project_title: "", note: "", link: "", month: 1, year: new Date().getFullYear(), contact_name: "", contact_info: "", feedback_channel: "", job_description: "", responsible_person: [] as string[], start_date: "", deadline: "" });
