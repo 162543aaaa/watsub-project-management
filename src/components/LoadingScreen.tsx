@@ -8,6 +8,7 @@ export default function LoadingScreen() {
           muted 
           playsInline 
           className="w-full h-full object-contain"
+          style={{ imageRendering: "-webkit-optimize-contrast", transform: "translateZ(0)" }}
         >
           <source src="/loading.webm" type="video/webm" />
           Your browser does not support the video tag.
@@ -27,6 +28,7 @@ export function GlobalLoadingScreen() {
           muted 
           playsInline 
           className="w-full h-full object-contain"
+          style={{ imageRendering: "-webkit-optimize-contrast", transform: "translateZ(0)" }}
         >
           <source src="/loading.webm" type="video/webm" />
           Your browser does not support the video tag.

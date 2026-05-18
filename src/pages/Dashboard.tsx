@@ -195,6 +195,7 @@ export default function Dashboard() {
               muted 
               playsInline 
               className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+              style={{ imageRendering: "-webkit-optimize-contrast", transform: "translateZ(0)" }}
             >
               <source src="/Eye Animation.webm" type="video/webm" />
             </video>
