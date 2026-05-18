@@ -173,13 +173,22 @@ const FlowingRibbons = ({
       ctx.fillRect(0, 0, width, height);
     }
 
-    ctx.strokeStyle = lineColor;
+    const PALETTE = [
+      'rgba(252, 90, 3, 0.18)',   // Reddish Orange
+      'rgba(16, 69, 206, 0.18)',  // Deep Blue
+      'rgba(229, 26, 36, 0.18)',  // Bright Red
+      'rgba(255, 199, 0, 0.18)',  // Sunny Yellow
+      'rgba(255, 107, 0, 0.18)',  // Warm Orange
+      'rgba(0, 0, 0, 0.12)'       // Black
+    ];
+
     ctx.lineWidth = 0.5;
 
     // Draw vertical lines
     for (let i = 0; i < gridDensity; i++) {
       const x = ribbonOffset + (i / gridDensity) * ribbonWidth;
 
+      ctx.strokeStyle = PALETTE[i % PALETTE.length];
       ctx.beginPath();
       for (let j = 0; j <= gridDensity; j++) {
         const progress = (j / gridDensity) * 1.2 - 0.1;
@@ -204,6 +213,7 @@ const FlowingRibbons = ({
       const progress = (j / gridDensity) * 1.2 - 0.1;
       const y = progress * height;
 
+      ctx.strokeStyle = PALETTE[j % PALETTE.length];
       ctx.beginPath();
       for (let i = 0; i <= gridDensity; i++) {
         const x = ribbonOffset + (i / gridDensity) * ribbonWidth;
