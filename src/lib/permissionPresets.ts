@@ -67,7 +67,10 @@ export const PRESETS: PresetDefinition[] = [
     key: "intern",
     label: "Intern",
     description: "Limited access for interns",
-    pages: ["/my-work", "/tasks", "/calendar", "/notifications"],
+    pages: [
+      "/", "/my-work", "/tasks", "/projects", "/customers", "/calendar",
+      "/notifications"
+    ],
   },
 ];
 
