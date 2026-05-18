@@ -52,7 +52,7 @@ export interface Customer {
   tasks: Task[];
 }
 
-export function useCustomers(showArchived = false) {
+export function useCustomers(filterType: "active" | "archived" | "all" = "active") {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -74,7 +74,9 @@ export function useCustomers(showArchived = false) {
     const localArchived = readLocalArchivedIds();
     const custData = (allCustData || []).filter((c) => {
       const archived = (c.is_archived ?? false) || localArchived.has(c.id);
-      return archived === showArchived;
+      if (filterType === "all") return true;
+      if (filterType === "archived") return archived;
+      return !archived;
     });
     const customers = custData.map(c => ({
       ...c,
@@ -82,7 +84,7 @@ export function useCustomers(showArchived = false) {
     }));
     setCustomers(customers);
     setLoading(false);
-  }, [showArchived]);
+  }, [filterType]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 

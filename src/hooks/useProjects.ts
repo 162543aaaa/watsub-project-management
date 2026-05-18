@@ -63,7 +63,7 @@ export interface Project {
   tasks: Task[];
 }
 
-export function useProjects(showArchived = false) {
+export function useProjects(filterType: "active" | "archived" | "all" = "active") {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,7 +85,9 @@ export function useProjects(showArchived = false) {
     const localArchived = readLocalArchivedIds();
     const projData = (allProjData || []).filter((p) => {
       const archived = (p.is_archived ?? false) || localArchived.has(p.id);
-      return archived === showArchived;
+      if (filterType === "all") return true;
+      if (filterType === "archived") return archived;
+      return !archived;
     });
     const projects = projData.map(p => ({
       ...p,
@@ -94,7 +96,7 @@ export function useProjects(showArchived = false) {
     }));
     setProjects(projects);
     setLoading(false);
-  }, [showArchived]);
+  }, [filterType]);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
