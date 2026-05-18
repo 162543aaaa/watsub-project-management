@@ -26,7 +26,7 @@ interface GridCell {
 }
 
 const DelicateAsciiDots = ({
-  backgroundColor = '#0b0c10',
+  backgroundColor = 'transparent',
   textColor = '210, 250, 0', // Match the brand neon green/yellow color by default!
   gridSize = 75,
   removeWaveLine = true,
@@ -173,8 +173,12 @@ const DelicateAsciiDots = ({
     if (width === 0 || height === 0) return;
 
     // Clear canvas
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, width, height);
+    if (backgroundColor === 'transparent') {
+      ctx.clearRect(0, 0, width, height);
+    } else {
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, width, height);
+    }
 
     const newGrid: (GridCell | null)[][] = Array(gridSize)
       .fill(0)
