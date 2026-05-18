@@ -35,7 +35,7 @@ const NeonCursor = () => {
         setIsHovering(true);
         void trailControls.start({
           scale: 1.5,
-          borderColor: '#D2FA00',
+          borderColor: 'rgb(255, 150, 50)',
           borderWidth: '3px',
         });
         void glowControls.start({
@@ -51,8 +51,8 @@ const NeonCursor = () => {
     setIsHovering(false);
     void trailControls.start({
       scale: 1,
-      borderColor: '#D2FA00',
-      borderWidth: '1.5px',
+      borderColor: 'rgb(236, 101, 23)',
+      borderWidth: '2px',
     });
     void glowControls.start({
       scale: 1,

@@ -20,11 +20,11 @@
   position: fixed;
   width: 8px;
   height: 8px;
-  background-color: #D2FA00;
+  background-color: rgb(236, 101, 23);
   border-radius: 50%;
   pointer-events: none;
   z-index: 99999;
-  box-shadow: 0 0 10px #D2FA00, 0 0 20px rgba(210, 250, 0, 0.5);
+  box-shadow: 0 0 10px rgb(236, 101, 23), 0 0 20px rgba(236, 101, 23, 0.5);
 }
 
 /* Trailing circle */
@@ -32,11 +32,11 @@
   position: fixed;
   width: 24px;
   height: 24px;
-  border: 1.5px solid #D2FA00;
+  border: 2px solid rgb(236, 101, 23);
   border-radius: 50%;
   pointer-events: none;
   z-index: 99998;
-  box-shadow: 0 0 8px rgba(210, 250, 0, 0.3);
+  box-shadow: 0 0 8px rgba(236, 101, 23, 0.3);
 }
 
 /* Outer neon glow */
@@ -44,7 +44,7 @@
   position: fixed;
   width: 48px;
   height: 48px;
-  background-color: rgba(210, 250, 0, 0.08);
+  background-color: rgba(236, 101, 23, 0.08);
   border-radius: 50%;
   pointer-events: none;
   z-index: 99997;
