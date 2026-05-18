@@ -84,7 +84,7 @@ export default function Projects() {
     localStorage.setItem("hideDoneTasks", String(!showDone));
   }, [showDone]);
 
-  const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(showArchived);
+  const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(showArchived ? "archived" : "active");
   const { employees } = useEmployees();
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", month: 1, year: new Date().getFullYear(), note: "", link: "", pillar: "SOUL" as Pillar });
