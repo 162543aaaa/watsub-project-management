@@ -95,11 +95,11 @@ function UtilizationBar({
   const overflowPct = pct > 100 ? Math.min(pct - 100, 30) : 0; // visual overflow hint
 
   return (
-    <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+    <div className="progress-bar relative">
       {/* Base fill */}
       <div
-        className="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
-        style={{ width: `${clampedPct}%`, background: color }}
+        className="progress-fill absolute inset-y-0 left-0"
+        style={{ width: `${clampedPct}%` }}
       />
       {/* Overflow stripes (>100%) */}
       {overflowPct > 0 && (
@@ -109,8 +109,8 @@ function UtilizationBar({
             width: `${overflowPct}%`,
             background: `repeating-linear-gradient(
               45deg,
-              ${color},
-              ${color} 3px,
+              hsl(var(--secondary)),
+              hsl(var(--secondary)) 3px,
               transparent 3px,
               transparent 6px
             )`,
