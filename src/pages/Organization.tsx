@@ -19,15 +19,18 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { useCompanyInfo } from "@/hooks/useCompanyInfo";
 import { OrgAdminEditor } from "@/components/OrgAdminEditor";
 import { InteractiveOrgChart } from "@/components/InteractiveOrgChart";
+import { GlassCard } from "@/components/ui/GlassCard";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
-} from "@/components/ui/card";
+  GlassCardHeader,
+  GlassCardTitle,
+  GlassCardDescription,
+  GlassCardContent,
+} from "@/components/ui/GlassCardComponents";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// ─── Static fallback data ──────────────────────────────────────
 const FALLBACK = {
   name:     "WatSUB! Studio (วาตซับ สตูดิโอ)",
   tagline:  "A Space for Creative Connectivity",
@@ -250,54 +253,55 @@ export default function Organization() {
 
         {/* ── Vision + Mission ─────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <Card
+          <GlassCard
             className="lg:col-span-7 relative group border-l-4"
             style={{ borderLeftColor: brandColors.primary }}
           >
             {isAdmin && <EditHint onClick={() => openEditor("general")} />}
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+            <GlassCardHeader>
+              <GlassCardTitle className="flex items-center gap-2 text-base">
                 <Target className="w-4 h-4" style={{ color: brandColors.primary }} />
                 Vision 2026
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent>
               <p className="text-sm text-muted-foreground leading-relaxed">{vision}</p>
-            </CardContent>
-          </Card>
+            </GlassCardContent>
+          </GlassCard>
 
-          <Card
+          <GlassCard
             className="lg:col-span-5 relative group border-l-4"
             style={{ borderLeftColor: brandColors.info }}
           >
             {isAdmin && <EditHint onClick={() => openEditor("general")} />}
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+            <GlassCardHeader>
+              <GlassCardTitle className="flex items-center gap-2 text-base">
                 <Sparkles className="w-4 h-4" style={{ color: brandColors.info }} />
                 Mission
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent>
               <p className="text-sm text-muted-foreground leading-relaxed">{mission}</p>
-            </CardContent>
-          </Card>
+            </GlassCardContent>
+
+          </GlassCard>
         </div>
 
         {/* ── History + Milestones ──────────────────────────── */}
-        <Card
+        <GlassCard
           className="relative group"
           style={{
             background: `linear-gradient(135deg, ${brandColors.light} 0%, white 100%)`,
           }}
         >
           {isAdmin && <EditHint onClick={() => openEditor("general")} />}
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
+          <GlassCardHeader>
+            <GlassCardTitle className="flex items-center gap-2 text-base">
               <History className="w-4 h-4 text-primary" />
               ประวัติองค์กร
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </GlassCardTitle>
+          </GlassCardHeader>
+          <GlassCardContent className="space-y-4">
             <p className="text-sm leading-relaxed text-foreground/80">{history}</p>
             {/* Milestone timeline */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-3 border-t border-border/50">
@@ -314,16 +318,16 @@ export default function Organization() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </GlassCardContent>
+        </GlassCard>
 
         {/* ── Core Values + Brand Colors ────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <Card className="lg:col-span-5">
-            <CardHeader>
-              <CardTitle className="text-base">Core Values — 3 Pillars</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <GlassCard className="lg:col-span-5">
+            <GlassCardHeader>
+              <GlassCardTitle className="text-base">Core Values — 3 Pillars</GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent className="space-y-3">
               {CORE_VALUES.map((v, i) => {
                 const accent = [brandColors.primary, brandColors.info, brandColors.secondary][i];
                 return (
@@ -337,18 +341,18 @@ export default function Organization() {
                   </div>
                 );
               })}
-            </CardContent>
-          </Card>
+            </GlassCardContent>
+          </GlassCard>
 
-          <Card className="lg:col-span-7 relative group">
+          <GlassCard className="lg:col-span-7 relative group">
             {isAdmin && <EditHint onClick={() => openEditor("branding")} />}
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+            <GlassCardHeader>
+              <GlassCardTitle className="flex items-center gap-2 text-base">
                 <Palette className="w-4 h-4 text-primary" />
                 Brand Colors
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent>
               <div className="grid grid-cols-3 gap-3">
                 {Object.entries(brandColors).map(([key, hex]) => (
                   <div key={key} className="space-y-1.5">
@@ -361,21 +365,21 @@ export default function Organization() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </GlassCardContent>
+          </GlassCard>
         </div>
 
         {/* ── Benefits + Resources ──────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <Card className="lg:col-span-8 relative group">
+          <GlassCard className="lg:col-span-8 relative group">
             {isAdmin && <EditHint onClick={() => openEditor("content")} />}
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+            <GlassCardHeader>
+              <GlassCardTitle className="flex items-center gap-2 text-base">
                 <Gift className="w-4 h-4 text-primary" />
                 สวัสดิการพนักงาน
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent>
               <div className="flex flex-wrap gap-2">
                 {benefits.map((b) => (
                   <Badge
@@ -392,18 +396,18 @@ export default function Organization() {
                   </Badge>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </GlassCardContent>
+          </GlassCard>
 
-          <Card className="lg:col-span-4 relative group">
+          <GlassCard className="lg:col-span-4 relative group">
             {isAdmin && <EditHint onClick={() => openEditor("content")} />}
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+            <GlassCardHeader>
+              <GlassCardTitle className="flex items-center gap-2 text-base">
                 <Link2 className="w-4 h-4 text-primary" />
                 Resources & Location
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2.5 text-sm">
+              </GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent className="space-y-2.5 text-sm">
               {locationLabel && (
                 <a
                   href={locationUrl}
@@ -428,22 +432,22 @@ export default function Organization() {
                   <span className="hover:underline">{r.label}</span>
                 </a>
               ))}
-            </CardContent>
-          </Card>
+            </GlassCardContent>
+          </GlassCard>
         </div>
 
         {/* ── Interactive Org Chart ─────────────────────────── */}
-        <Card>
-          <CardHeader>
+        <GlassCard>
+          <GlassCardHeader>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <GlassCardTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" />
                   Interactive Org Chart
-                </CardTitle>
-                <CardDescription className="mt-1">
+                </GlassCardTitle>
+                <GlassCardDescription className="mt-1">
                   คลิกที่ node เพื่อย่อ / ขยายสาขาของทีม
-                </CardDescription>
+                </GlassCardDescription>
               </div>
               {isAdmin && (
                 <Button
@@ -457,11 +461,11 @@ export default function Organization() {
                 </Button>
               )}
             </div>
-          </CardHeader>
-          <CardContent>
+          </GlassCardHeader>
+          <GlassCardContent>
             <InteractiveOrgChart tree={orgTree} brandColors={brandColors} />
-          </CardContent>
-        </Card>
+          </GlassCardContent>
+        </GlassCard>
 
       </div>
 
