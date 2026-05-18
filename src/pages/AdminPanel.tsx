@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import type { Profile, UserRole } from "@/hooks/useAuth";
 import { useSyncData } from "@/hooks/useSyncData";
 import { PRESETS, detectPreset, presetLabel, type PermissionPreset } from "@/lib/permissionPresets";
+import { normalizeAllowedPages } from "@/lib/pageAccess";
 
 const ALL_PAGES = [
   { path: "/", label: "Dashboard" },
@@ -34,6 +35,7 @@ const ALL_PAGES = [
   { path: "/notifications", label: "Notifications" },
   { path: "/import", label: "Import" },
 ];
+
 
 interface UserInfo {
   profile: Profile;
@@ -88,9 +90,10 @@ export default function AdminPanel() {
 
   const handleApprove = async (userId: string, approve: boolean) => {
     const current = users.find((u) => u.profile.user_id === userId)?.profile;
+    const sanitizedPages = normalizeAllowedPages(current?.allowed_pages);
     const nextAllowedPages = approve
-      ? ((current?.allowed_pages?.length ?? 0) > 0 ? current?.allowed_pages : ["*"])
-      : (current?.allowed_pages ?? []);
+      ? (sanitizedPages.length > 0 ? sanitizedPages : ["*"])
+      : sanitizedPages;
 
     const { error } = await supabase
       .from("profiles")
@@ -274,7 +277,7 @@ export default function AdminPanel() {
           {approvedUsers.map(u => {
             const userIsAdmin = u.roles.some(r => r.role === "admin");
             const expanded = expandedUser === u.profile.user_id;
-            const pages = u.profile.allowed_pages || [];
+            const pages = normalizeAllowedPages(u.profile.allowed_pages);
             return (
               <div key={u.profile.user_id} className="bg-card rounded-xl border border-border/60 overflow-hidden">
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
