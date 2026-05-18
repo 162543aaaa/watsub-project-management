@@ -76,7 +76,7 @@ export default function Dashboard() {
   const { tasks: standaloneTasks, loading: loadingTasks, updateTask: updateStandaloneTask } = useTasks();
   const { projects, loading: loadingProjects, updateTask: updateProjectTask } = useProjects();
   const { customers, loading: loadingCustomers, updateTask: updateCustomerTask } = useCustomers();
-  const { employees, loading: loadingEmployees } = useEmployees();
+  const { employees, loading: loadingEmployees, currentEmployee } = useEmployees();
   const { unreadCount } = useNotifications();
   const { meetings, loading: loadingMeetings } = useMeetings();
   const { onsiteWork, loading: loadingOnsite } = useOnsiteWork();
@@ -153,8 +153,14 @@ export default function Dashboard() {
       const todo = myTasks.filter(t => t.status === "To Do").length;
       const progress = myTasks.length ? Math.round((done / myTasks.length) * 100) : 0;
       return { ...emp, total: myTasks.length, done, inProgress, todo, progress, tasks: myTasks };
-    }).sort((a, b) => b.progress - a.progress);
-  }, [employees, allTasks]);
+    }).sort((a, b) => {
+      const isACurrent = currentEmployee && a.email?.toLowerCase() === currentEmployee.email?.toLowerCase();
+      const isBCurrent = currentEmployee && b.email?.toLowerCase() === currentEmployee.email?.toLowerCase();
+      if (isACurrent) return -1;
+      if (isBCurrent) return 1;
+      return b.progress - a.progress;
+    });
+  }, [employees, allTasks, currentEmployee]);
 
   const donutData = [
     { name: "Done", value: stats.completed, color: "hsl(142 71% 45%)" },
