@@ -27,11 +27,11 @@ interface GridCell {
 
 const DelicateAsciiDots = ({
   backgroundColor = 'transparent',
-  textColor = '210, 250, 0', // Match the brand neon green/yellow color by default!
+  textColor = '15, 23, 42', // Beautiful subtle slate-900 for elegant light theme!
   gridSize = 75,
   removeWaveLine = true,
   animationSpeed = 0.75,
-  className = 'fixed inset-0 w-full h-full -z-10 overflow-hidden',
+  className = 'fixed inset-0 w-full h-full -z-10 overflow-hidden pointer-events-none',
 }: DelicateAsciiDotsProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -246,8 +246,8 @@ const DelicateAsciiDots = ({
             Math.max(0, Math.floor(normalizedWave * (CHARS.length - 1)))
           );
           const opacity = Math.min(
-            0.6, // Keep opacity slightly subtle for backgrounds
-            Math.max(0.15, 0.15 + normalizedWave * 0.4)
+            0.06, // Super subtle and clean for premium background texture!
+            Math.max(0.015, 0.015 + normalizedWave * 0.045)
           );
 
           newGrid[y][x] = {

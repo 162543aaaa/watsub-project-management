@@ -93,7 +93,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-12 bg-background relative overflow-hidden font-sans">
+    <div className="min-h-screen grid lg:grid-cols-12 bg-transparent relative overflow-hidden font-sans">
       {/* Background Animated Blurs */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-3xl animate-pulse duration-[10000ms]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/15 rounded-full blur-3xl animate-pulse duration-[8000ms]" />
