@@ -30,7 +30,7 @@ describe("bucketMyTasks", () => {
     expect(r.overdue.map(t => t.id)).toEqual(["a"]);
     expect(r.today.map(t => t.id)).toEqual(["b"]);
     expect(r.dueSoon.map(t => t.id)).toEqual(["c"]);
-    expect(r.inProgress.map(t => t.id)).toEqual(["d"]);
+    expect(r.inProgress.map(t => t.id)).toEqual(["d", "f"]);
     expect(r.recentlyCompleted.map(t => t.id)).toEqual(["e"]);
     expect(r.waitingEvidence.map(t => t.id)).toEqual(["f"]);
   });
