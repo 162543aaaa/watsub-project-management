@@ -1,10 +1,9 @@
-# Brainstorming: Update Signup System Task List
+# Premium Signup System Implementation Task List
 
 | Task | Status | Details |
 | :--- | :---: | :--- |
-| **1. Explore project context** | Completed | Explored `Signup.tsx`, `AuthContext.tsx`, and `useAuth.ts` |
-| **2. Ask clarifying questions** | Completed | User specified auto-approval, UI/UX overhaul, and removing email/OTP confirmation. |
-| **3. Propose 2-3 approaches** | Completed | Proposed two approaches (Database-backed Auto-Approve vs Frontend Bypass). User selected Approach 1. |
-| **4. Present design** | Completed | Presented detailed database and UI/UX design sections and received user approval. |
-| **5. Write design doc** | Completed | Documented approved changes in `/docs/plans/2026-05-18-signup-system-design.md` and committed. |
-| **6. Transition to implementation** | Completed | Created and committed implementation plan at `docs/plans/2026-05-18-signup-system-implementation-plan.md`. Transitioning to execute-plan. |
+| **Task 1: SQL Migration for Auto-Approval** | Not Started | Create SQL migration to update the `public.handle_new_user` trigger. |
+| **Task 2: Overhaul Frontend UI/UX Design (`Signup.tsx`)** | Not Started | Overhaul the Visual Design into a premium, animated, responsive split-screen view. |
+| **Task 3: Refactor Redirect & Toast Auth Flow** | Not Started | Implement Sonner toast notices, session auto-logins, fallback screens for email confirm. |
+| **Task 4: Add Unit Test for Redirect Behavior** | Not Started | Add `signupRedirect.test.tsx` verifying route redirects and spinner state. |
+| **Task 5: Local Application Verification** | Not Started | Run tests and perform local validation on `/signup` route. |
