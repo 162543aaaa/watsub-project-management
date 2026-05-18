@@ -5,6 +5,7 @@ import { GlobalLoadingScreen } from "@/components/LoadingScreen";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import DelicateAsciiDots from "@/components/DelicateAsciiDots";
 
 export default function Login() {
   const { user, isApproved, isAdmin, signIn, resendSignupConfirmation, loading } = useAuthContext();
@@ -45,8 +46,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/20 to-background p-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      <DelicateAsciiDots />
+      <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
           <img src="/logo_watsub.png" alt="WatSUB" className="w-20 h-20 object-contain mx-auto mb-2" />
           <h1 className="text-2xl font-bold text-foreground">WatSUB-Project Management</h1>
