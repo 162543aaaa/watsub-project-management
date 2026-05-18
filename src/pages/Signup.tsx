@@ -13,6 +13,7 @@ export default function Signup() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -23,8 +24,9 @@ export default function Signup() {
     setError("");
     if (password.length < 6) { setError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"); return; }
     setSubmitting(true);
-    const { error } = await signUp(email.trim(), password, displayName.trim());
+    const { data, error } = await signUp(email.trim(), password, displayName.trim());
     if (error) { setError(error.message); setSubmitting(false); return; }
+    setNeedsEmailConfirm(!data.session);
     setSuccess(true);
     setSubmitting(false);
   };
@@ -37,7 +39,11 @@ export default function Signup() {
             <UserPlus className="w-7 h-7 text-green-600" />
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">สมัครสำเร็จ!</h2>
-          <p className="text-sm text-muted-foreground mb-4">กรุณารอให้ Admin อนุมัติบัญชีของคุณก่อนเข้าสู่ระบบ</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            {needsEmailConfirm
+              ? "กรุณายืนยันอีเมลจากลิงก์ที่ส่งไปก่อน แล้วจึงเข้าสู่ระบบ"
+              : "กรุณารอให้ Admin อนุมัติบัญชีของคุณก่อนเข้าสู่ระบบ"}
+          </p>
           <Link to="/login"><Button variant="outline" className="w-full">กลับไปหน้าเข้าสู่ระบบ</Button></Link>
         </div>
       </div>
