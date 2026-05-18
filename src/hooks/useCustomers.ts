@@ -4,6 +4,30 @@ import { toast } from "@/hooks/use-toast";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import { Task } from "./useProjects";
 
+function isMissingArchivedColumnError(error: { message?: string } | null): boolean {
+  if (!error?.message) return false;
+  return error.message.includes("is_archived") && error.message.includes("schema cache");
+}
+
+
+const LOCAL_ARCHIVED_CUSTOMERS_KEY = "local_archived_customers";
+
+function readLocalArchivedIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(LOCAL_ARCHIVED_CUSTOMERS_KEY);
+    const ids = raw ? (JSON.parse(raw) as string[]) : [];
+    return new Set(Array.isArray(ids) ? ids : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeLocalArchivedIds(ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LOCAL_ARCHIVED_CUSTOMERS_KEY, JSON.stringify([...ids]));
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -46,7 +70,11 @@ export function useCustomers(showArchived = false) {
       .order("sort_order", { ascending: true });
     if (taskError) { console.error(taskError); }
 
-    const custData = (allCustData || []).filter(c => (c.is_archived ?? false) === showArchived);
+    const localArchived = readLocalArchivedIds();
+    const custData = (allCustData || []).filter((c) => {
+      const archived = (c.is_archived ?? false) || localArchived.has(c.id);
+      return archived === showArchived;
+    });
     const customers = custData.map(c => ({
       ...c,
       tasks: (taskData || []).filter(t => t.customer_id === c.id) as Task[],
@@ -84,14 +112,46 @@ export function useCustomers(showArchived = false) {
 
   const archiveCustomer = async (id: string) => {
     const { error } = await supabase.from("customers").update({ is_archived: true }).eq("id", id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      if (isMissingArchivedColumnError(error)) {
+        const localArchived = readLocalArchivedIds();
+        localArchived.add(id);
+        writeLocalArchivedIds(localArchived);
+        setCustomers((prev) => prev.filter((c) => c.id !== id));
+        toast({ title: "เก็บลูกค้าแล้ว", description: "บันทึกแบบ local ชั่วคราว (รอ DB migration)" });
+        return;
+      }
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    const localArchived = readLocalArchivedIds();
+    if (localArchived.has(id)) {
+      localArchived.delete(id);
+      writeLocalArchivedIds(localArchived);
+    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "เก็บลูกค้าแล้ว!" });
   };
 
   const unarchiveCustomer = async (id: string) => {
     const { error } = await supabase.from("customers").update({ is_archived: false }).eq("id", id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      if (isMissingArchivedColumnError(error)) {
+        const localArchived = readLocalArchivedIds();
+        localArchived.delete(id);
+        writeLocalArchivedIds(localArchived);
+        setCustomers((prev) => prev.filter((c) => c.id !== id));
+        toast({ title: "กู้คืนลูกค้าสำเร็จ", description: "คืนค่าจาก local archive" });
+        return;
+      }
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    const localArchived = readLocalArchivedIds();
+    if (localArchived.has(id)) {
+      localArchived.delete(id);
+      writeLocalArchivedIds(localArchived);
+    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "กู้คืนลูกค้าสำเร็จ!" });
   };

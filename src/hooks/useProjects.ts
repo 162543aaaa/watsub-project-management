@@ -3,6 +3,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 
+function isMissingArchivedColumnError(error: { message?: string } | null): boolean {
+  if (!error?.message) return false;
+  return error.message.includes("is_archived") && error.message.includes("schema cache");
+}
+
+const LOCAL_ARCHIVED_PROJECTS_KEY = "local_archived_projects";
+
+function readLocalArchivedIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(LOCAL_ARCHIVED_PROJECTS_KEY);
+    const ids = raw ? (JSON.parse(raw) as string[]) : [];
+    return new Set(Array.isArray(ids) ? ids : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeLocalArchivedIds(ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LOCAL_ARCHIVED_PROJECTS_KEY, JSON.stringify([...ids]));
+}
+
 export interface Task {
   id: string;
   name: string;
@@ -57,7 +80,11 @@ export function useProjects(showArchived = false) {
       .order("sort_order", { ascending: true });
     if (taskError) { console.error(taskError); }
 
-    const projData = (allProjData || []).filter(p => (p.is_archived ?? false) === showArchived);
+    const localArchived = readLocalArchivedIds();
+    const projData = (allProjData || []).filter((p) => {
+      const archived = (p.is_archived ?? false) || localArchived.has(p.id);
+      return archived === showArchived;
+    });
     const projects = projData.map(p => ({
       ...p,
       pillar: p.pillar as Pillar,
@@ -96,14 +123,48 @@ export function useProjects(showArchived = false) {
 
   const archiveProject = async (id: string) => {
     const { error } = await supabase.from("projects").update({ is_archived: true }).eq("id", id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      if (isMissingArchivedColumnError(error)) {
+        const localArchived = readLocalArchivedIds();
+        localArchived.add(id);
+        writeLocalArchivedIds(localArchived);
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+        toast({ title: "เก็บโปรเจกต์แล้ว", description: "บันทึกแบบ local ชั่วคราว (รอ DB migration)" });
+        return;
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
+    const localArchived = readLocalArchivedIds();
+    if (localArchived.has(id)) {
+      localArchived.delete(id);
+      writeLocalArchivedIds(localArchived);
+    }
     setProjects(prev => prev.filter(p => p.id !== id));
     toast({ title: "เก็บโปรเจกต์แล้ว!" });
   };
 
   const unarchiveProject = async (id: string) => {
     const { error } = await supabase.from("projects").update({ is_archived: false }).eq("id", id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      if (isMissingArchivedColumnError(error)) {
+        const localArchived = readLocalArchivedIds();
+        localArchived.delete(id);
+        writeLocalArchivedIds(localArchived);
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+        toast({ title: "กู้คืนโปรเจกต์สำเร็จ", description: "คืนค่าจาก local archive" });
+        return;
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
+    const localArchived = readLocalArchivedIds();
+    if (localArchived.has(id)) {
+      localArchived.delete(id);
+      writeLocalArchivedIds(localArchived);
+    }
     setProjects(prev => prev.filter(p => p.id !== id));
     toast({ title: "กู้คืนโปรเจกต์สำเร็จ!" });
   };
