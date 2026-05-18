@@ -4,6 +4,11 @@ import { toast } from "@/hooks/use-toast";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import { Task } from "./useProjects";
 
+function isMissingArchivedColumnError(error: { message?: string } | null): boolean {
+  if (!error?.message) return false;
+  return error.message.includes("is_archived") && error.message.includes("schema cache");
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -84,14 +89,28 @@ export function useCustomers(showArchived = false) {
 
   const archiveCustomer = async (id: string) => {
     const { error } = await supabase.from("customers").update({ is_archived: true }).eq("id", id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      if (isMissingArchivedColumnError(error)) {
+        toast({ title: "Archive ยังไม่พร้อมใช้งาน", description: "ฐานข้อมูลยังไม่มีคอลัมน์ is_archived" });
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "เก็บลูกค้าแล้ว!" });
   };
 
   const unarchiveCustomer = async (id: string) => {
     const { error } = await supabase.from("customers").update({ is_archived: false }).eq("id", id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      if (isMissingArchivedColumnError(error)) {
+        toast({ title: "Archive ยังไม่พร้อมใช้งาน", description: "ฐานข้อมูลยังไม่มีคอลัมน์ is_archived" });
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "กู้คืนลูกค้าสำเร็จ!" });
   };
