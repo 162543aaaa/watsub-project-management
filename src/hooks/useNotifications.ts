@@ -9,6 +9,7 @@ export interface Notification {
   type: "success" | "error" | "info";
   is_read: boolean;
   created_at: string;
+  recipient_user_id?: string | null;
 }
 
 export function useNotifications() {
@@ -19,6 +20,7 @@ export function useNotifications() {
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
+      .or(`recipient_user_id.is.null`)
       .order("created_at", { ascending: false });
     if (error) { console.error(error); setLoading(false); return; }
     setNotifications((data || []) as Notification[]);
