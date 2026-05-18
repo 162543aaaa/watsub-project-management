@@ -76,8 +76,8 @@ function StatCard({ label, value, sub, icon: Icon, gradient, trend, trendLabel }
 
 export default function Dashboard() {
   const { tasks: standaloneTasks, loading: loadingTasks, updateTask: updateStandaloneTask } = useTasks();
-  const { projects, loading: loadingProjects, updateTask: updateProjectTask } = useProjects(true);
-  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask } = useCustomers(true);
+  const { projects, loading: loadingProjects, updateTask: updateProjectTask } = useProjects("all");
+  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask } = useCustomers("all");
   const { employees, loading: loadingEmployees, currentEmployee } = useEmployees();
   const { unreadCount } = useNotifications();
   const { meetings, loading: loadingMeetings } = useMeetings();
