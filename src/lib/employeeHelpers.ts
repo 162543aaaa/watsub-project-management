@@ -18,7 +18,8 @@ export const isIntern = (emp: Employee | null) => emp?.role === 'intern';
 export const visibleEmployeeNames = (emp: Employee | null, employees: Employee[]) => {
   if (!emp) return [];
   if (emp.role === 'intern') {
-    return employees.filter(e => e.role === 'intern').map(e => e.name);
+    const internNames = employees.filter(e => e.role === 'intern').map(e => e.name);
+    return Array.from(new Set([emp.name, ...internNames]));
   }
   return employees.map(e => e.name);
 };

@@ -62,6 +62,7 @@ export function bucketMyTasks(
       (!t.comments || t.comments.trim().length < 20)
     ) {
       sections.waitingEvidence.push(t);
+      continue;
     }
 
     if (due !== null) {
