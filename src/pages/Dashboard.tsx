@@ -190,9 +190,22 @@ export default function Dashboard() {
     <div className="p-4 sm:p-6 page-enter">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-7 animate-stagger-1">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">{greeting}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{thaiDate}</p>
+        <div className="flex items-center gap-3.5">
+          <img 
+            src="/logo_watsub_stacked.png" 
+            alt="WatSUB!" 
+            className="h-12 w-auto object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transform hover:scale-105 transition-transform duration-300"
+          />
+          <div className="h-8 w-[2px] bg-border/80" />
+          <div>
+            <span className="text-[10px] font-semibold tracking-[0.25em] text-primary uppercase block mb-0.5 animate-pulse">
+              Workspace Dashboard
+            </span>
+            <h2 className="text-sm font-black tracking-[0.15em] text-foreground/80 uppercase">
+              CONNECT. CREATE. INSPIRE.
+            </h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{thaiDate}</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <div className="flex gap-1 mr-2">
