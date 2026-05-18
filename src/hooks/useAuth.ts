@@ -127,6 +127,14 @@ export function useAuth() {
     return { data, error };
   };
 
+  const resendSignupConfirmation = async (email: string) => {
+    const { data, error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+    });
+    return { data, error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -161,6 +169,7 @@ export function useAuth() {
     loading,
     signUp,
     signIn,
+    resendSignupConfirmation,
     signOut,
     isAdmin,
     isApproved,

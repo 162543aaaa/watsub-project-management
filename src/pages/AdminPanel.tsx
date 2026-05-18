@@ -87,9 +87,14 @@ export default function AdminPanel() {
   if (!isAdmin) return <Navigate to="/" replace />;
 
   const handleApprove = async (userId: string, approve: boolean) => {
+    const current = users.find((u) => u.profile.user_id === userId)?.profile;
+    const nextAllowedPages = approve
+      ? ((current?.allowed_pages?.length ?? 0) > 0 ? current?.allowed_pages : ["*"])
+      : (current?.allowed_pages ?? []);
+
     const { error } = await supabase
       .from("profiles")
-      .update({ is_approved: approve })
+      .update({ is_approved: approve, allowed_pages: nextAllowedPages })
       .eq("user_id", userId);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     toast({ title: approve ? "อนุมัติสำเร็จ!" : "ระงับสำเร็จ" });
