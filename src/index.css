@@ -134,13 +134,13 @@
   /* Top nav item */
   .top-nav-item {
     @apply flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer relative;
-    color: hsl(215 20% 62%);
+    color: #FFC700;
     border-bottom: 2px solid transparent;
   }
 
   .top-nav-item:hover {
-    background: hsl(215 20% 100% / 0.07);
-    color: hsl(215 20% 88%);
+    background: rgba(255, 199, 0, 0.1);
+    color: #FFC700;
   }
 
   /* Nav item in sidebar (legacy) */

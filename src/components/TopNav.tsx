@@ -59,15 +59,15 @@ export default function TopNav() {
       <header
         className="fixed top-0 left-0 right-0 z-40 flex items-center h-14 px-4 gap-2"
         style={{
-          background: "linear-gradient(90deg, hsl(222 47% 9%), hsl(222 50% 11%))",
-          borderBottom: "1px solid hsl(222 47% 15%)",
-          boxShadow: "0 2px 20px hsl(0 0% 0% / 0.25)",
+          background: "#000000",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+          boxShadow: "0 2px 20px rgba(0,0,0,0.5)",
         }}
       >
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 mr-3">
           <img src="/logo_watsub.png" alt="WatSUB" className="w-8 h-8 object-contain" />
-          <span className="hidden sm:block text-sm font-bold text-white leading-tight">WatSUB-Project Management</span>
+          <span className="hidden sm:block text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FC5A03] to-[#FFC700] leading-tight">WatSUB-Project Management</span>
         </Link>
 
         {/* Desktop primary nav */}
@@ -87,10 +87,10 @@ export default function TopNav() {
               onClick={() => setMoreOpen(v => !v)}
               className="top-nav-item flex items-center gap-1.5"
               style={isSecondaryActive || moreOpen ? {
-                background: "hsl(191 91% 37% / 0.18)",
-                color: "hsl(191 91% 65%)",
-                borderBottom: "2px solid hsl(191 91% 45%)",
-              } : {}}
+                background: "rgba(252, 90, 3, 0.15)",
+                color: "#FC5A03",
+                borderBottom: "2px solid #FC5A03",
+              } : { color: "#FFC700" }}
             >
               <Menu className="w-3.5 h-3.5" />
               <span className="text-[12px] font-medium">More</span>
@@ -108,9 +108,9 @@ export default function TopNav() {
               <div
                 className="absolute top-full left-0 mt-2 w-52 rounded-2xl border overflow-hidden z-50 animate-scale-in"
                 style={{
-                  background: "hsl(222 47% 10%)",
-                  borderColor: "hsl(222 47% 20%)",
-                  boxShadow: "0 16px 48px hsl(0 0% 0% / 0.5), 0 4px 16px hsl(0 0% 0% / 0.3)",
+                  background: "#000000",
+                  borderColor: "rgba(255,255,255,0.1)",
+                  boxShadow: "0 16px 48px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.3)",
                 }}
               >
                 <div className="p-1.5">
@@ -122,16 +122,16 @@ export default function TopNav() {
                         <div
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 cursor-pointer relative"
                           style={active ? {
-                            background: "hsl(191 91% 37% / 0.2)",
-                            color: "hsl(191 91% 70%)",
+                            background: "rgba(252, 90, 3, 0.15)",
+                            color: "#FC5A03",
                           } : {
-                            color: "hsl(215 20% 62%)",
+                            color: "#FFC700",
                           }}
-                          onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLDivElement).style.background = "hsl(215 20% 100% / 0.08)"; (e.currentTarget as HTMLDivElement).style.color = "hsl(215 20% 88%)"; }}}
-                          onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLDivElement).style.background = ""; (e.currentTarget as HTMLDivElement).style.color = "hsl(215 20% 62%)"; }}}
+                          onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 199, 0, 0.1)"; (e.currentTarget as HTMLDivElement).style.color = "#FFC700"; }}}
+                          onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLDivElement).style.background = ""; (e.currentTarget as HTMLDivElement).style.color = "#FFC700"; }}}
                         >
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{ background: active ? "hsl(191 91% 37% / 0.25)" : "hsl(215 20% 100% / 0.06)" }}>
+                            style={{ background: active ? "rgba(252, 90, 3, 0.25)" : "rgba(255, 199, 0, 0.1)" }}>
                             <item.icon className="w-3.5 h-3.5" />
                           </div>
                           <span>{item.label}</span>
@@ -162,10 +162,12 @@ export default function TopNav() {
                 <div
                   className="w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-150 cursor-pointer relative"
                   style={active ? {
-                    background: "hsl(191 91% 37% / 0.18)",
-                    color: "hsl(191 91% 65%)",
-                  } : { color: "hsl(215 20% 60%)" }}
+                    background: "rgba(252, 90, 3, 0.15)",
+                    color: "#FC5A03",
+                  } : { color: "#FFC700" }}
                   title={item.label}
+                  onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 199, 0, 0.1)"; }}}
+                  onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLDivElement).style.background = ""; }}}
                 >
                   <item.icon className="w-4 h-4" />
                   {isNotif && unreadCount > 0 && (
@@ -186,9 +188,12 @@ export default function TopNav() {
             <>
               <Link to="/admin">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
-                  style={location.pathname === "/admin" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}
+                  style={location.pathname === "/admin" ? { background: "rgba(252, 90, 3, 0.15)", color: "#FC5A03" } : { color: "#FFC700" }}
                   title="Admin Panel"
-                  aria-label="Admin Panel">
+                  aria-label="Admin Panel"
+                  onMouseEnter={e => { if (location.pathname !== "/admin") (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 199, 0, 0.1)"; }}
+                  onMouseLeave={e => { if (location.pathname !== "/admin") (e.currentTarget as HTMLDivElement).style.background = ""; }}
+                >
                   <Shield className="w-4 h-4" />
                 </div>
               </Link>
@@ -196,9 +201,12 @@ export default function TopNav() {
           )}
           <button onClick={signOut}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-            style={{ color: "hsl(215 20% 60%)" }}
+            style={{ color: "#FFC700" }}
             title="ออกจากระบบ"
-            aria-label="ออกจากระบบ">
+            aria-label="ออกจากระบบ"
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255, 199, 0, 0.1)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ""; }}
+          >
             <LogOut className="w-4 h-4" />
           </button>
         </div>
@@ -207,8 +215,10 @@ export default function TopNav() {
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="md:hidden ml-auto w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-          style={{ color: "hsl(215 20% 70%)" }}
+          style={{ color: "#FFC700" }}
           aria-label={mobileOpen ? "ปิดเมนู" : "เปิดเมนู"}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255, 199, 0, 0.1)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ""; }}
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -219,8 +229,8 @@ export default function TopNav() {
         <div
           className="fixed top-14 left-0 right-0 z-30 md:hidden border-b"
           style={{
-            background: "linear-gradient(180deg, hsl(222 47% 10%), hsl(222 50% 8%))",
-            borderColor: "hsl(222 47% 15%)",
+            background: "#000000",
+            borderColor: "rgba(255, 255, 255, 0.1)",
           }}
           onClick={() => setMobileOpen(false)}
         >
@@ -233,9 +243,9 @@ export default function TopNav() {
                   <div
                     className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all relative"
                     style={active ? {
-                      background: "hsl(191 91% 37% / 0.18)",
-                      color: "hsl(191 91% 65%)",
-                    } : { color: "hsl(215 20% 60%)" }}
+                      background: "rgba(252, 90, 3, 0.15)",
+                      color: "#FC5A03",
+                    } : { color: "#FFC700" }}
                   >
                     <item.icon className="w-4 h-4" />
                     <span className="text-[9px] font-medium">{item.label}</span>
@@ -253,7 +263,7 @@ export default function TopNav() {
               <>
                 <Link to="/admin">
                   <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all"
-                    style={location.pathname === "/admin" ? { background: "hsl(191 91% 37% / 0.18)", color: "hsl(191 91% 65%)" } : { color: "hsl(215 20% 60%)" }}>
+                    style={location.pathname === "/admin" ? { background: "rgba(252, 90, 3, 0.15)", color: "#FC5A03" } : { color: "#FFC700" }}>
                     <Shield className="w-4 h-4" />
                     <span className="text-[9px] font-medium">Admin</span>
                   </div>
@@ -261,7 +271,7 @@ export default function TopNav() {
               </>
             )}
             <button onClick={signOut}>
-              <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" style={{ color: "hsl(215 20% 60%)" }}>
+              <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" style={{ color: "#FFC700" }}>
                 <LogOut className="w-4 h-4" />
                 <span className="text-[9px] font-medium">Logout</span>
               </div>
