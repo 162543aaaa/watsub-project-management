@@ -115,9 +115,6 @@ export function useCustomers(showArchived = false) {
     const { error } = await supabase.from("customers").update({ is_archived: true }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        const archived = readLocalArchivedIds();
-        archived.add(id);
-        writeLocalArchivedIds(archived);
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
@@ -131,9 +128,6 @@ export function useCustomers(showArchived = false) {
     const { error } = await supabase.from("customers").update({ is_archived: false }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        const archived = readLocalArchivedIds();
-        archived.delete(id);
-        writeLocalArchivedIds(archived);
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
