@@ -37,6 +37,7 @@ import Workload from "./pages/Workload";
 import Organization from "./pages/Organization";
 import NotFound from "./pages/NotFound";
 import MyWork from "./pages/MyWork";
+import ManagerDashboard from "./pages/ManagerDashboard";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 // staleTime prevents refetchOnWindowFocus from hitting the network when the
@@ -97,6 +98,7 @@ const App = () => (
                 <Route path="/workload" element={<Workload />} />
                 <Route path="/organization" element={<Organization />} />
                 <Route path="/my-work" element={<MyWork />} />
+                <Route path="/manager" element={<ManagerDashboard />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
