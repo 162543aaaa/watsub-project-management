@@ -364,7 +364,7 @@ export default function Customers() {
                   await reorderCustomers(reordered);
                 }}>
                 <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     {orderedCusts.map(cust => (
                       <SortableCustCard key={cust.id} id={cust.id}>
                         <CustomerCardComponent
@@ -452,10 +452,9 @@ function CustomerCardComponent({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group h-full cursor-pointer"
-      onClick={() => setIsExpanded(prev => !prev)}
+    <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group cursor-pointer"
       onDoubleClick={() => openEditCustomer(cust)}>
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-start justify-between mb-3" onClick={() => setIsExpanded(prev => !prev)}>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-bold text-foreground">{cust.name}</h3>
@@ -476,7 +475,7 @@ function CustomerCardComponent({
           {cust.project_title && <p className="text-xs text-muted-foreground mt-0.5">{cust.project_title}</p>}
           {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
         </div>
-        <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
           <button onClick={(e) => { e.stopPropagation(); openEditCustomer(cust); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
             <Pencil className="w-3.5 h-3.5" />
@@ -504,7 +503,7 @@ function CustomerCardComponent({
           </button>
         </div>
       </div>
-      <div className="flex items-start gap-2 mb-3">
+      <div className="flex items-start gap-2 mb-3" onClick={() => setIsExpanded(prev => !prev)}>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{cust.tasks.length} tasks</span>
           {cust.tasks.length > 0 && cust.tasks.every((t: any) => t.status === "Done") && (
@@ -517,7 +516,8 @@ function CustomerCardComponent({
       </div>
       {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
       <div className="flex items-center gap-3 mt-3 flex-wrap">
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span onClick={() => setIsExpanded(prev => !prev)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground select-none hover:text-foreground transition-all cursor-pointer">
           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           {isExpanded ? "Hide" : "Show"} tasks
         </span>

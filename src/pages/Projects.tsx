@@ -496,10 +496,9 @@ function ProjectCardComponent({
   const donePct = proj.tasks.length ? Math.round(proj.tasks.filter((t: any) => t.status === "Done").length / proj.tasks.length * 100) : 0;
 
   return (
-    <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col h-full cursor-pointer"
-      onClick={() => setIsExpanded(prev => !prev)}
+    <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col cursor-pointer"
       onDoubleClick={() => openEditProject(proj)}>
-      <div className="flex items-start gap-2 mb-3">
+      <div className="flex items-start gap-2 mb-3" onClick={() => setIsExpanded(prev => !prev)}>
         <div className="w-1 rounded-full flex-shrink-0 mt-0.5 self-stretch min-h-[36px]"
           style={{ background: donePct === 100 ? "hsl(142 71% 45%)" : donePct > 0 ? "hsl(191 91% 37%)" : "hsl(215 14% 75%)" }} />
         <div className="flex-1 min-w-0">
@@ -520,7 +519,7 @@ function ProjectCardComponent({
             {PILLAR_CONFIG[proj.pillar]?.label || `#${proj.pillar}`}
           </span>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
+        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200" onClick={e => e.stopPropagation()}>
           <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
             <Pencil className="w-3.5 h-3.5" />
@@ -548,13 +547,14 @@ function ProjectCardComponent({
           </button>
         </div>
       </div>
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3" onClick={() => setIsExpanded(prev => !prev)}>
         <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{proj.tasks.length} tasks</span>
         {donePct === 100 && proj.tasks.length > 0 && <span className="badge-done text-xs">✓ Complete</span>}
       </div>
       {proj.tasks.length > 0 && <div className="mb-4"><ProgressBar tasks={proj.tasks} /></div>}
       <div className="flex items-center gap-3 mt-auto pt-1">
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span onClick={() => setIsExpanded(prev => !prev)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground select-none hover:text-foreground transition-all cursor-pointer">
           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           {isExpanded ? "Hide" : "Show"} tasks
         </span>
