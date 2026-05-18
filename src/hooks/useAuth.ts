@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { isPageAllowed, normalizeAllowedPages } from "@/lib/pageAccess";
 
 export interface Profile {
   id: string;
@@ -18,6 +19,7 @@ export interface UserRole {
   user_id: string;
   role: "admin" | "member";
 }
+
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -149,16 +151,7 @@ export function useAuth() {
   const canAccessPage = (path: string) => {
     if (isAdmin) return true;
     if (!isApproved) return false;
-    const pages = profile?.allowed_pages ?? [];
-    if (pages.includes('*')) return true;
-    if (pages.length === 0) return false;
-    return pages.some((p) => {
-      const normalizedPath = path.startsWith("/") ? path : "/" + path;
-      const normalizedP = p.startsWith("/") ? p : "/" + p;
-      if (normalizedPath === normalizedP) return true;
-      const topSection = "/" + normalizedP.split("/").filter(Boolean)[0];
-      return normalizedPath.startsWith(topSection + "/");
-    });
+    return isPageAllowed(path, normalizeAllowedPages(profile?.allowed_pages));
   };
 
   return {
