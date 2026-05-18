@@ -168,7 +168,7 @@
 
   .progress-fill {
     @apply h-full rounded-full transition-all duration-700 ease-out;
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, hsl(var(--secondary)), hsl(220 70% 55%));
   }
 
   /* Badge status */
