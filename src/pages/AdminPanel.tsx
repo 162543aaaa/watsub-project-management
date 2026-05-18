@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import type { Profile, UserRole } from "@/hooks/useAuth";
 import { useSyncData } from "@/hooks/useSyncData";
+import { PRESETS, detectPreset, presetLabel, type PermissionPreset } from "@/lib/permissionPresets";
 
 const ALL_PAGES = [
   { path: "/", label: "Dashboard" },
+  { path: "/my-work", label: "My Work" },
   { path: "/tasks", label: "Tasks" },
   { path: "/projects", label: "Projects" },
   { path: "/customers", label: "Customers" },
@@ -18,6 +20,7 @@ const ALL_PAGES = [
   { path: "/okrs", label: "OKRs" },
   { path: "/team", label: "Team" },
   { path: "/workload", label: "Team Workload" },
+  { path: "/manager", label: "Manager Dashboard" },
   { path: "/organization", label: "Organization Hub" },
   { path: "/wiki", label: "Wiki" },
   { path: "/meetings", label: "Meetings" },
@@ -168,6 +171,31 @@ export default function AdminPanel() {
     toast({ title: "เปิดทุกหน้าแล้ว" });
   };
 
+  const applyPreset = async (userId: string, key: PermissionPreset) => {
+    const def = PRESETS.find((p) => p.key === key);
+    if (!def) return;
+    const previous = users.find((u) => u.profile.user_id === userId)?.profile.allowed_pages || [];
+    setUsers((prev) => prev.map((u) =>
+      u.profile.user_id === userId
+        ? { ...u, profile: { ...u.profile, allowed_pages: def.pages } }
+        : u,
+    ));
+    const { error } = await supabase
+      .from("profiles")
+      .update({ allowed_pages: def.pages })
+      .eq("user_id", userId);
+    if (error) {
+      setUsers((prev) => prev.map((u) =>
+        u.profile.user_id === userId
+          ? { ...u, profile: { ...u.profile, allowed_pages: previous } }
+          : u,
+      ));
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `ตั้ง preset: ${def.label}` });
+  };
+
   const pendingUsers = users.filter(u => !u.profile.is_approved);
   const approvedUsers = users.filter(u => u.profile.is_approved);
 
@@ -288,18 +316,32 @@ export default function AdminPanel() {
 
                 {expanded && (
                   <div className="border-t border-border/40 p-4 bg-muted/30">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                       <p className="text-xs font-medium text-muted-foreground">
-                        หน้าที่เข้าถึงได้ (ว่าง = ทุกหน้า)
+                        หน้าที่เข้าถึงได้ · Preset:{" "}
+                        <span className="font-semibold text-foreground">
+                          {presetLabel(detectPreset(pages))}
+                        </span>
                       </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs"
-                        onClick={() => handleSetAllPages(u.profile.user_id)}
-                      >
-                        เปิดทุกหน้า
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <select
+                          className="text-xs rounded-lg border border-border bg-background px-2 py-1"
+                          value={detectPreset(pages)}
+                          onChange={(e) => {
+                            const v = e.target.value as PermissionPreset;
+                            if (v !== "custom") applyPreset(u.profile.user_id, v);
+                          }}
+                        >
+                          <option value="custom">— Custom —</option>
+                          {PRESETS.map((p) => (
+                            <option key={p.key} value={p.key}>{p.label}</option>
+                          ))}
+                        </select>
+                        <Button size="sm" variant="ghost" className="text-xs"
+                          onClick={() => handleSetAllPages(u.profile.user_id)}>
+                          เปิดทุกหน้า
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {ALL_PAGES.map(page => {
