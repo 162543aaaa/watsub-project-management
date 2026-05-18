@@ -1,3 +1,68 @@
+# Premium Auto-Approve Signup System Implementation Plan
+
+> **For Antigravity:** REQUIRED WORKFLOW: Use `.agent/workflows/execute-plan.md` to execute this plan in single-flow mode.
+
+**Goal:** Create a premium, responsive, auto-approved, and email-verification-bypassed signup system.
+
+**Architecture:** Database trigger updates automatically approve new profiles. Frontend overhaul introduces modern glassmorphism, responsive split-screen layouts, transitions, and direct dashboard redirect on session detection.
+
+**Tech Stack:** React, Tailwind CSS, Lucide icons, Supabase Auth & Database migrations, Vite.
+
+---
+
+### Task 1: SQL Migration for Auto-Approval
+
+**Files:**
+- Create: `supabase/migrations/20260604050000_auto_approve_new_users.sql`
+
+**Step 1: Create the SQL migration file**
+Create the migration file to update the `public.handle_new_user()` database trigger. This ensures all new registered accounts are automatically approved (`is_approved = true`) and have wildcard module access (`allowed_pages = ARRAY['*']`).
+
+Write the following SQL to the new migration:
+```sql
+-- Migration to automatically approve all new signups and grant full page access.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (user_id, display_name, is_approved, allowed_pages)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.email, ''),
+    true,                   -- Auto-approve immediately!
+    ARRAY['*']::text[]      -- Grant access to all modules/pages!
+  )
+  ON CONFLICT (user_id) DO UPDATE
+  SET display_name = COALESCE(EXCLUDED.display_name, public.profiles.display_name);
+
+  RETURN NEW;
+END;
+$$;
+```
+
+**Step 2: Commit the migration**
+```bash
+git add supabase/migrations/20260604050000_auto_approve_new_users.sql
+git commit -m "migration: auto-approve new signups and grant full access by default"
+```
+
+---
+
+### Task 2: Overhaul the Frontend UI/UX Design (`Signup.tsx`)
+
+**Files:**
+- Modify: `src/pages/Signup.tsx`
+
+**Step 1: Modify `src/pages/Signup.tsx` with premium UI structure**
+Replace the visual layout of `src/pages/Signup.tsx` with a high-fidelity modern split-screen design.
+
+On large screens (`lg:grid`), it will show a stunning branding and interactive visual panel on the left (Glassmorphism card, slow pulsating background glow, logo, and elegant typography), and the registration card on the right (with glassmorphism container, floating text focus effects, and smooth keyframe entry animations).
+
+Code to replace/use:
+```typescript
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
@@ -115,7 +180,7 @@ export default function Signup() {
             ยกระดับการจัดการโปรเจกต์ของคุณให้ <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-400 to-primary">ทรงพลัง และพรีเมียม</span>
           </h2>
-          <p className="text-slate-300 text-base max-w-md leading-relaxed">
+          <p className="text-slate-350 text-base max-w-md leading-relaxed">
             ระบบบริหารจัดการงาน โครงการ และทรัพยากรบุคคลแบบครบวงจร ที่มาพร้อมอินเทอร์เฟซระดับสูง ดีไซน์ล้ำสมัย และระบบอัตโนมัติอัจฉริยะ
           </p>
 
@@ -135,7 +200,7 @@ export default function Signup() {
           </div>
         </div>
 
-        <div className="relative z-10 text-xs text-slate-550">
+        <div className="relative z-10 text-xs text-slate-500">
           © {new Date().getFullYear()} WatSUB Project Management. All rights reserved.
         </div>
       </div>
@@ -254,3 +319,111 @@ export default function Signup() {
     </div>
   );
 }
+```
+
+**Step 2: Commit the changes**
+```bash
+git add src/pages/Signup.tsx
+git commit -m "feat: redesign signup page to premium split-screen layout with animations"
+```
+
+---
+
+### Task 3: Add Routing Redirect Tests
+
+**Files:**
+- Create: `src/test/signupRedirect.test.tsx`
+
+**Step 1: Write the routing redirect unit test**
+Create a new test file to verify that a logged in and approved user is blocked from viewing `/signup` and redirected, whereas non-logged-in users can view it properly.
+
+Create file `src/test/signupRedirect.test.tsx` with:
+```typescript
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import Signup from "../pages/Signup";
+import { useAuthContext } from "../contexts/AuthContext";
+
+// Mock the Auth Context
+vi.mock("../contexts/AuthContext", () => ({
+  useAuthContext: vi.fn(),
+}));
+
+describe("Signup Redirect Flow", () => {
+  it("renders the signup form when there is no user", () => {
+    vi.mocked(useAuthContext).mockReturnValue({
+      user: null,
+      isApproved: false,
+      isAdmin: false,
+      signUp: vi.fn(),
+      signIn: vi.fn(),
+      resendSignupConfirmation: vi.fn(),
+      signOut: vi.fn(),
+      loading: false,
+      session: null,
+      profile: null,
+      roles: [],
+      canAccessPage: vi.fn(),
+      refetchProfile: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Signup />
+      </MemoryRouter>
+    );
+
+    // Verify form renders
+    expect(screen.getAllByText("สมัครสมาชิก").length).toBeGreaterThan(0);
+    expect(screen.getByPlaceholderText("สมชาย ใจดี")).toBeInTheDocument();
+  });
+
+  it("shows spinner when loading and no user is present", () => {
+    vi.mocked(useAuthContext).mockReturnValue({
+      user: null,
+      isApproved: false,
+      isAdmin: false,
+      signUp: vi.fn(),
+      signIn: vi.fn(),
+      resendSignupConfirmation: vi.fn(),
+      signOut: vi.fn(),
+      loading: true,
+      session: null,
+      profile: null,
+      roles: [],
+      canAccessPage: vi.fn(),
+      refetchProfile: vi.fn(),
+    });
+
+    const { container } = render(
+      <MemoryRouter>
+        <Signup />
+      </MemoryRouter>
+    );
+
+    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
+  });
+});
+```
+
+**Step 2: Run tests to verify they pass**
+Run: `npm run test`
+Expected: ALL tests pass, including the new `signupRedirect.test.tsx`.
+
+**Step 3: Commit**
+```bash
+git add src/test/signupRedirect.test.tsx
+git commit -m "test: add unit tests for signup routing and loading spinner states"
+```
+
+---
+
+### Task 4: Local Application Verification
+
+**Step 1: Run the dev server**
+Run: `npm run dev`
+Expected: Server starts successfully without any compilation errors.
+
+**Step 2: Preview the Signup page visually**
+Open the browser, navigate to the `/signup` route, and ensure the split-screen design, Glassmorphism gradients, responsive collapsing on mobile viewports, eye password toggles, and form submission transitions perform flawlessly and beautifully.
