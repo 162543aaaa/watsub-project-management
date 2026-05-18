@@ -76,8 +76,8 @@ function StatCard({ label, value, sub, icon: Icon, gradient, trend, trendLabel }
 
 export default function Dashboard() {
   const { tasks: standaloneTasks, loading: loadingTasks, updateTask: updateStandaloneTask } = useTasks();
-  const { projects, loading: loadingProjects, updateTask: updateProjectTask } = useProjects();
-  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask } = useCustomers();
+  const { projects, loading: loadingProjects, updateTask: updateProjectTask } = useProjects(true);
+  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask } = useCustomers(true);
   const { employees, loading: loadingEmployees, currentEmployee } = useEmployees();
   const { unreadCount } = useNotifications();
   const { meetings, loading: loadingMeetings } = useMeetings();
@@ -135,8 +135,8 @@ export default function Dashboard() {
     return [...filteredStandalone, ...projectTasks, ...customerTasks];
   }, [standaloneTasks, projects, customers, filterYear]);
 
-  const filteredProjects = useMemo(() => projects.filter(p => p.year === filterYear), [projects, filterYear]);
-  const filteredCustomers = useMemo(() => customers.filter(c => c.year === filterYear), [customers, filterYear]);
+  const filteredProjects = useMemo(() => projects.filter(p => p.year === filterYear && !p.is_archived), [projects, filterYear]);
+  const filteredCustomers = useMemo(() => customers.filter(c => c.year === filterYear && !c.is_archived), [customers, filterYear]);
 
   const stats = useMemo(() => {
     const completed = allTasks.filter(t => t.status === "Done").length;
