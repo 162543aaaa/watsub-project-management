@@ -246,8 +246,8 @@ const DelicateAsciiDots = ({
             Math.max(0, Math.floor(normalizedWave * (CHARS.length - 1)))
           );
           const opacity = Math.min(
-            0.06, // Super subtle and clean for premium background texture!
-            Math.max(0.015, 0.015 + normalizedWave * 0.045)
+            0.22, // Darker and more distinct as requested by the user!
+            Math.max(0.08, 0.08 + normalizedWave * 0.14)
           );
 
           newGrid[y][x] = {
