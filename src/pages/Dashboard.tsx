@@ -336,17 +336,30 @@ export default function Dashboard() {
                           } else {
                             deadlineBadge = <span className="text-[10px] text-muted-foreground flex-shrink-0 hidden sm:block">{dueDateObj.toLocaleDateString("th-TH", { day: "numeric", month: "short" })}</span>;
                           }
+                        } // Restore missing brace
+                        
+                        let contextName = "";
+                        if (task.task_type === 'project') {
+                          contextName = projects.find(p => p.id === task.project_id)?.name || "Project";
+                        } else if (task.task_type === 'customer') {
+                          contextName = customers.find(c => c.id === task.customer_id)?.name || "Customer";
                         }
+
                         return (
                           <div
                             key={task.id}
                             className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/60 cursor-pointer group transition-colors"
                             onClick={() => setSelectedTask(task)}
                           >
-                            <span className="text-[11px] flex-shrink-0" style={{ color: cfg.color }}>{cfg.icon}</span>
-                            <span className="text-xs text-foreground flex-1 truncate group-hover:text-primary transition-colors">{task.name}</span>
-                            <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"} style={{ fontSize: "9px", padding: "1px 6px" }}>{task.status}</span>
-                            {deadlineBadge}
+                            <span className="text-[11px] flex-shrink-0 mt-0.5 self-start" style={{ color: cfg.color }}>{cfg.icon}</span>
+                            <div className="flex-1 min-w-0 flex flex-col">
+                              <span className="text-xs text-foreground truncate group-hover:text-primary transition-colors">{task.name}</span>
+                              {contextName && <span className="text-[9px] text-muted-foreground truncate">{contextName}</span>}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"} style={{ fontSize: "9px", padding: "1px 6px" }}>{task.status}</span>
+                              {deadlineBadge}
+                            </div>
                           </div>
                         );
                       })
