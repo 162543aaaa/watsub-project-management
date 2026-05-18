@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function Login() {
-  const { user, isApproved, isAdmin, signIn, loading } = useAuthContext();
+  const { user, isApproved, isAdmin, signIn, resendSignupConfirmation, loading } = useAuthContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
+  const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -20,10 +21,26 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setNeedsEmailConfirm(false);
     setSubmitting(true);
     const { error } = await signIn(email.trim(), password);
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        setNeedsEmailConfirm(true);
+      }
+    }
     setSubmitting(false);
+  };
+
+  const handleResend = async () => {
+    if (!email.trim()) return;
+    const { error } = await resendSignupConfirmation(email.trim());
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setError("ส่งอีเมลยืนยันอีกครั้งแล้ว กรุณาตรวจสอบ Inbox/Spam");
   };
 
   return (
@@ -37,6 +54,15 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border/60 p-6 space-y-4" style={{ boxShadow: "0 10px 30px -10px hsl(var(--primary) / 0.15)" }}>
           {error && <div className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</div>}
+          {needsEmailConfirm && (
+            <button
+              type="button"
+              onClick={handleResend}
+              className="w-full text-sm rounded-lg border border-border px-3 py-2 hover:bg-muted transition-colors"
+            >
+              ส่งอีเมลยืนยันอีกครั้ง
+            </button>
+          )}
 
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>

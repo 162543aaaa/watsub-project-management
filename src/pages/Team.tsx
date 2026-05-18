@@ -409,6 +409,18 @@ export default function Team() {
                 </div>
               ))}
 
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Role</label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                >
+                  <option value="employee">employee</option>
+                  <option value="intern">intern</option>
+                </select>
+              </div>
+
               {/* PromptPay QR Upload */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">PromptPay QR Code</label>
