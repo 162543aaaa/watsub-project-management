@@ -39,7 +39,7 @@ type StatusFilter = "All" | "Done" | "In Progress" | "To Do";
 
 const STATUS_CONFIG = {
   Done: { color: "hsl(142 71% 45%)", icon: "✓", bg: "hsl(142 71% 45% / 0.12)" },
-  "In Progress": { color: "hsl(191 91% 37%)", icon: "▶", bg: "hsl(191 91% 37% / 0.12)" },
+  "In Progress": { color: "hsl(225 86% 44%)", icon: "▶", bg: "hsl(225 86% 44% / 0.12)" },
   "To Do": { color: "hsl(215 14% 60%)", icon: "○", bg: "hsl(215 14% 60% / 0.12)" },
 } as const;
 
@@ -165,7 +165,7 @@ export default function Dashboard() {
 
   const donutData = [
     { name: "Done", value: stats.completed, color: "hsl(142 71% 45%)" },
-    { name: "In Progress", value: stats.inProgress, color: "hsl(191 91% 37%)" },
+    { name: "In Progress", value: stats.inProgress, color: "hsl(225 86% 44%)" },
     { name: "To Do", value: stats.todo, color: "hsl(215 14% 65%)" },
   ].filter(d => d.value > 0);
 
@@ -281,7 +281,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <span className="text-sm font-bold flex-shrink-0"
-                      style={{ color: emp.progress >= 70 ? "hsl(142 71% 40%)" : emp.progress >= 40 ? "hsl(191 91% 37%)" : "hsl(38 92% 45%)" }}>
+                      style={{ color: emp.progress >= 70 ? "hsl(142 71% 40%)" : emp.progress >= 40 ? "hsl(225 86% 44%)" : "hsl(38 92% 45%)" }}>
                       {emp.progress}%
                     </span>
                   </div>
@@ -480,7 +480,7 @@ export default function Dashboard() {
                   const barColor = isHeavy
                     ? "hsl(0 84% 60%)"
                     : w.active_tasks_count > 0
-                    ? "hsl(191 91% 37%)"
+                    ? "hsl(225 86% 44%)"
                     : "hsl(215 14% 60%)";
                   return (
                     <div key={w.employee_id} className="flex items-center gap-3">
