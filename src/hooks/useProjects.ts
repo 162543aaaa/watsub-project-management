@@ -8,24 +8,6 @@ function isMissingArchivedColumnError(error: { message?: string } | null): boole
   return error.message.includes("is_archived") && error.message.includes("schema cache");
 }
 
-const LOCAL_ARCHIVED_PROJECTS_KEY = "local_archived_projects";
-
-function readLocalArchivedIds(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = window.localStorage.getItem(LOCAL_ARCHIVED_PROJECTS_KEY);
-    const ids = raw ? (JSON.parse(raw) as string[]) : [];
-    return new Set(Array.isArray(ids) ? ids : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function writeLocalArchivedIds(ids: Set<string>) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(LOCAL_ARCHIVED_PROJECTS_KEY, JSON.stringify([...ids]));
-}
-
 export interface Task {
   id: string;
   name: string;
@@ -125,21 +107,10 @@ export function useProjects(showArchived = false) {
     const { error } = await supabase.from("projects").update({ is_archived: true }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        const localArchived = readLocalArchivedIds();
-        localArchived.add(id);
-        writeLocalArchivedIds(localArchived);
-        setProjects((prev) => prev.filter((p) => p.id !== id));
-        toast({ title: "เก็บโปรเจกต์แล้ว", description: "บันทึกแบบ local ชั่วคราว (รอ DB migration)" });
-        return;
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
       return;
-    }
-    const localArchived = readLocalArchivedIds();
-    if (localArchived.has(id)) {
-      localArchived.delete(id);
-      writeLocalArchivedIds(localArchived);
     }
     setProjects(prev => prev.filter(p => p.id !== id));
     toast({ title: "เก็บโปรเจกต์แล้ว!" });
@@ -149,21 +120,10 @@ export function useProjects(showArchived = false) {
     const { error } = await supabase.from("projects").update({ is_archived: false }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        const localArchived = readLocalArchivedIds();
-        localArchived.delete(id);
-        writeLocalArchivedIds(localArchived);
-        setProjects((prev) => prev.filter((p) => p.id !== id));
-        toast({ title: "กู้คืนโปรเจกต์สำเร็จ", description: "คืนค่าจาก local archive" });
-        return;
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
       return;
-    }
-    const localArchived = readLocalArchivedIds();
-    if (localArchived.has(id)) {
-      localArchived.delete(id);
-      writeLocalArchivedIds(localArchived);
     }
     setProjects(prev => prev.filter(p => p.id !== id));
     toast({ title: "กู้คืนโปรเจกต์สำเร็จ!" });

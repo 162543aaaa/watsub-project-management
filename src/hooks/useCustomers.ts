@@ -9,25 +9,6 @@ function isMissingArchivedColumnError(error: { message?: string } | null): boole
   return error.message.includes("is_archived") && error.message.includes("schema cache");
 }
 
-
-const LOCAL_ARCHIVED_CUSTOMERS_KEY = "local_archived_customers";
-
-function readLocalArchivedIds(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = window.localStorage.getItem(LOCAL_ARCHIVED_CUSTOMERS_KEY);
-    const ids = raw ? (JSON.parse(raw) as string[]) : [];
-    return new Set(Array.isArray(ids) ? ids : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function writeLocalArchivedIds(ids: Set<string>) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(LOCAL_ARCHIVED_CUSTOMERS_KEY, JSON.stringify([...ids]));
-}
-
 export interface Customer {
   id: string;
   name: string;
@@ -114,21 +95,6 @@ export function useCustomers(showArchived = false) {
     const { error } = await supabase.from("customers").update({ is_archived: true }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        const localArchived = readLocalArchivedIds();
-        localArchived.add(id);
-        writeLocalArchivedIds(localArchived);
-        setCustomers((prev) => prev.filter((c) => c.id !== id));
-        toast({ title: "เก็บลูกค้าแล้ว", description: "บันทึกแบบ local ชั่วคราว (รอ DB migration)" });
-        return;
-      }
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-    const localArchived = readLocalArchivedIds();
-    if (localArchived.has(id)) {
-      localArchived.delete(id);
-      writeLocalArchivedIds(localArchived);
-    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "เก็บลูกค้าแล้ว!" });
   };
@@ -137,21 +103,6 @@ export function useCustomers(showArchived = false) {
     const { error } = await supabase.from("customers").update({ is_archived: false }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
-        const localArchived = readLocalArchivedIds();
-        localArchived.delete(id);
-        writeLocalArchivedIds(localArchived);
-        setCustomers((prev) => prev.filter((c) => c.id !== id));
-        toast({ title: "กู้คืนลูกค้าสำเร็จ", description: "คืนค่าจาก local archive" });
-        return;
-      }
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-    const localArchived = readLocalArchivedIds();
-    if (localArchived.has(id)) {
-      localArchived.delete(id);
-      writeLocalArchivedIds(localArchived);
-    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "กู้คืนลูกค้าสำเร็จ!" });
   };
