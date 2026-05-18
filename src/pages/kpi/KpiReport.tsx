@@ -274,9 +274,9 @@ export default function KpiReport() {
                         <span className="font-medium">{cat.labelTh}</span>
                         <span className="font-bold" style={{ color: cat.color }}>{score > 0 ? score.toFixed(2) : "ไม่มีข้อมูล"}</span>
                       </div>
-                      <div className="h-2 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${(score / 5) * 100}%`, background: cat.color }} />
+                      <div className="progress-bar">
+                        <div className="progress-fill"
+                          style={{ width: `${(score / 5) * 100}%` }} />
                       </div>
                     </div>
                   );

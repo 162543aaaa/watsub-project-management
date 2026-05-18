@@ -1,5 +1,6 @@
 import { useNotifications } from "@/hooks/useNotifications";
 import { Bell, CheckCheck, Info, CheckCircle2, XCircle } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
 import { useState } from "react";
 
 export default function Notifications() {
@@ -15,7 +16,7 @@ export default function Notifications() {
     info: "text-blue-600 bg-blue-100",
   };
 
-  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="p-6 page-enter">

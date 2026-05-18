@@ -1,6 +1,7 @@
 import { useMyWork } from "@/hooks/useMyWork";
 import { Link } from "react-router-dom";
 import { AlertCircle, Clock, CalendarDays, Loader2, CheckCircle2, AlertTriangle, ListTodo } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
 import type { MyWorkTask } from "@/hooks/useMyWork";
 
 const SECTION_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
@@ -46,7 +47,7 @@ export default function MyWork() {
   const { employee, myName, sections, loading, totalAssigned } = useMyWork();
 
   if (loading) {
-    return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+    return <LoadingScreen />;
   }
 
   if (!myName) {

@@ -251,13 +251,10 @@ function ProgressBar({ percent }: { percent: number }) {
           {percent}%
         </span>
       </div>
-      <div className="h-2 rounded-full bg-muted overflow-hidden">
+      <div className="progress-bar">
         <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${percent}%`,
-            background: percent === 100 ? "hsl(142 71% 45%)" : "hsl(191 91% 37%)",
-          }}
+          className="progress-fill"
+          style={{ width: `${percent}%` }}
         />
       </div>
     </div>

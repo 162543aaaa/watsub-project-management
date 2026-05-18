@@ -16,6 +16,7 @@ import TaskDetailModal from "@/components/TaskDetailModal";
 import { WikiEditor, WikiViewer } from "@/components/WikiEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const today = new Date();
 const YEARS = [2025, 2026, 2027];
@@ -38,7 +39,7 @@ type StatusFilter = "All" | "Done" | "In Progress" | "To Do";
 
 const STATUS_CONFIG = {
   Done: { color: "hsl(142 71% 45%)", icon: "✓", bg: "hsl(142 71% 45% / 0.12)" },
-  "In Progress": { color: "hsl(191 91% 37%)", icon: "▶", bg: "hsl(191 91% 37% / 0.12)" },
+  "In Progress": { color: "hsl(225 86% 44%)", icon: "▶", bg: "hsl(225 86% 44% / 0.12)" },
   "To Do": { color: "hsl(215 14% 60%)", icon: "○", bg: "hsl(215 14% 60% / 0.12)" },
 } as const;
 
@@ -164,7 +165,7 @@ export default function Dashboard() {
 
   const donutData = [
     { name: "Done", value: stats.completed, color: "hsl(142 71% 45%)" },
-    { name: "In Progress", value: stats.inProgress, color: "hsl(191 91% 37%)" },
+    { name: "In Progress", value: stats.inProgress, color: "hsl(225 86% 44%)" },
     { name: "To Do", value: stats.todo, color: "hsl(215 14% 65%)" },
   ].filter(d => d.value > 0);
 
@@ -179,11 +180,7 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -191,20 +188,27 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-7 animate-stagger-1">
         <div className="flex items-center gap-3.5">
-          <img 
-            src="/logo_watsub_stacked.png" 
-            alt="WatSUB!" 
-            className="h-12 w-auto object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transform hover:scale-105 transition-transform duration-300"
-          />
+          <div className="flex-shrink-0">
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+              style={{ imageRendering: "-webkit-optimize-contrast", transform: "translateZ(0)" }}
+            >
+              <source src="/Eye Animation.webm" type="video/webm" />
+            </video>
+          </div>
           <div className="h-8 w-[2px] bg-border/80" />
           <div>
             <span className="text-[10px] font-semibold tracking-[0.25em] text-primary uppercase block mb-0.5 animate-pulse">
               Workspace Dashboard
             </span>
-            <h2 className="text-sm font-black tracking-[0.15em] text-foreground/80 uppercase">
+            <h1 className="text-sm sm:text-base font-black tracking-[0.15em] text-foreground/85 uppercase leading-none">
               CONNECT. CREATE. INSPIRE.
-            </h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{thaiDate}</p>
+            </h1>
+            <p className="text-[11px] text-muted-foreground mt-1.5">{thaiDate}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -277,7 +281,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <span className="text-sm font-bold flex-shrink-0"
-                      style={{ color: emp.progress >= 70 ? "hsl(142 71% 40%)" : emp.progress >= 40 ? "hsl(191 91% 37%)" : "hsl(38 92% 45%)" }}>
+                      style={{ color: emp.progress >= 70 ? "hsl(142 71% 40%)" : emp.progress >= 40 ? "hsl(225 86% 44%)" : "hsl(38 92% 45%)" }}>
                       {emp.progress}%
                     </span>
                   </div>
@@ -476,7 +480,7 @@ export default function Dashboard() {
                   const barColor = isHeavy
                     ? "hsl(0 84% 60%)"
                     : w.active_tasks_count > 0
-                    ? "hsl(191 91% 37%)"
+                    ? "hsl(225 86% 44%)"
                     : "hsl(215 14% 60%)";
                   return (
                     <div key={w.employee_id} className="flex items-center gap-3">

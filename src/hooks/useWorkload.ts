@@ -83,8 +83,6 @@ export function useWorkload(startDate?: string, endDate?: string) {
       const { data: employees, error: empError } = await supabase
         .from("employees")
         .select("id, name, avatar, position")
-        .eq("active", true)
-        .eq("type", "fulltime")
         .order("name", { ascending: true });
 
       if (empError) throw empError;

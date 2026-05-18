@@ -1,6 +1,7 @@
 import { useState, useMemo, forwardRef, useCallback, useRef, useEffect } from "react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
+import LoadingScreen from "@/components/LoadingScreen";
 import { Plus, Pencil, Trash2, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle, Layers } from "lucide-react";
 import EditTaskModal from "@/components/EditTaskModal";
 import { useNavigate } from "react-router-dom";
@@ -470,7 +471,7 @@ export default function Tasks() {
     return groups;
   }, [getColTasks, groupByProject]);
 
-  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="p-6 page-enter">
