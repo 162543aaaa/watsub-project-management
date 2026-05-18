@@ -1,133 +1,25 @@
-import { useState } from "react";
-import {
-  Building2,
-  CircleAlert,
-  ExternalLink,
-  Gift,
-  History,
-  Link2,
-  Mail,
-  MapPin,
-  Palette,
-  Pencil,
-  Sparkles,
-  Target,
-  Users,
-} from "lucide-react";
+# High-Fidelity Organization Profile Brand Redesign Implementation Plan
 
-import { useAuthContext } from "@/contexts/AuthContext";
-import { useCompanyInfo } from "@/hooks/useCompanyInfo";
-import { OrgAdminEditor } from "@/components/OrgAdminEditor";
-import { InteractiveOrgChart } from "@/components/InteractiveOrgChart";
-import { GlassCard } from "@/components/ui/GlassCard";
-import {
-  GlassCardHeader,
-  GlassCardTitle,
-  GlassCardDescription,
-  GlassCardContent,
-} from "@/components/ui/GlassCardComponents";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+> **For Antigravity:** REQUIRED WORKFLOW: Use `.agent/workflows/execute-plan.md` to execute this plan in single-flow mode.
 
-const FALLBACK = {
-  name:     "WatSUB! Studio (วาตซับ สตูดิโอ)",
-  tagline:  "A Space for Creative Connectivity",
-  vision:   '"Connect. Create. Inspire." เปลี่ยนจากคนเล่าเรื่องสู่ Infrastructure จุดนัดพบระหว่างคนเก่ง ไอเดียดี และโอกาสธุรกิจ',
-  mission:  "ทำหน้าที่เป็น Connector เชื่อมผู้คนเข้ากับเมือง ไอเดีย และโอกาส เพื่อสร้างระบบนิเวศสร้างสรรค์ที่จับต้องได้จริงในปัตตานี",
-  history:  "WatSUB! Studio ก่อตั้งเมื่อปี 2023 ด้วยความเชื่อที่ว่าปัตตานีมีศักยภาพสร้างงาน creative ระดับสากล เราไม่ได้แค่ผลิตคอนเทนต์ — เราสร้างพื้นที่ที่คนสร้างสรรค์เติบโตได้ จาก studio เล็กๆ สู่ creative production studio ที่ครบวงจร เราคือพื้นที่ที่เชื่อมโยงผู้คน ไอเดีย และโอกาส เข้าด้วยกันผ่านงานสร้างสรรค์ที่มีความหมายและทรงพลัง",
-  milestones: [
-    "2023: ก่อตั้ง WatSUB! Studio",
-    "2024: ขยายทีม production และ network ผู้เชี่ยวชาญ",
-    "2025: วางระบบ partnership และสร้าง ecosystem คนสร้างสรรค์",
-  ],
-  location_label: "จังหวัดปัตตานี",
-  location_map_url: "https://maps.app.goo.gl/pLauvKsc9JCAYAFv9",
-  resources: [
-    { label: "Employee Handbook", url: "https://drive.google.com/drive/folders/16740VA6PHLUjm6y6KnO_Un495OXHASXT?usp=drive_link" },
-    { label: "Brand Assets",      url: "https://drive.google.com/drive/folders/1yNe-qPAMA6eppoJAIXfdOLJYlDo_phb5?usp=drive_link" },
-  ],
-  benefits: [
-    "ค่าประกันสุขภาพกลุ่ม", "วันหยุดพักผ่อน 10 วันต่อปี",
-    "โบนัสตามผลงาน", "ค่าอบรมพัฒนาตนเอง", "อุปกรณ์การทำงาน",
-  ],
-  brand_colors: {
-    primary: "#D2FA00", secondary: "#F4622A", accent: "#6B3FA0",
-    info: "#3EADD4",   light: "#F5F0E8",      dark: "#0D0D0D",
-  },
-};
+**Goal:** Create a high-fidelity, brand-aligned Organization Profile page using custom Stamp, Polaroid, and Bracket frames, and a pitch-dark glowing canvas.
 
-const COLOR_LABELS: Record<string, string> = {
-  primary: "Primary", secondary: "Secondary", accent: "Accent",
-  info: "Info", light: "Light", dark: "Dark",
-};
+**Architecture:** We will set a full-dark background (`#0c0d12`) with multiple blurred gradient neon glows in `src/pages/Organization.tsx`. The 3 Content Pillars will be rendered with custom-styled framing using the uploaded assets `/frame_stamp.png`, `/frame_polaroid.png`, and `/frame_bracket.png`.
 
-const CORE_VALUES = [
-  { title: "#VIBES: CITY & LIFESTYLE",    detail: "สะท้อนความเป็นไปของพื้นที่ ผ่านมุมมองที่ร่วมสมัยและมีชีวิตชีวา" },
-  { title: "#SOUL: HUMAN & IDEA",         detail: "ถ่ายทอดเรื่องราวลึกซึ้งของงานสร้างสรรค์ที่เต็มไปด้วยความรู้สึกและไอเดีย" },
-  { title: "#JOINT: WORK & OPPORTUNITY",  detail: "ผสานพรมแดนความคิดสร้างสรรค์เพื่อเปิดพื้นที่ให้โอกาสทางธุรกิจใหม่ ๆ" },
-];
+**Tech Stack:** React, Tailwind CSS, Lucide icons, Vite.
 
-// ─── Hover-pencil helper for admin sections ────────────────────
-function EditHint({ onClick, className }: { onClick: () => void; className?: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "absolute top-3 right-3 z-10",
-        "opacity-0 group-hover:opacity-100 transition-opacity",
-        "p-1.5 rounded-lg bg-background/80 hover:bg-muted border border-border shadow-sm",
-        className,
-      )}
-      title="แก้ไข"
-    >
-      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-    </button>
-  );
-}
+---
 
-// ─── Page ─────────────────────────────────────────────────────
-export default function Organization() {
-  const { isAdmin } = useAuthContext();
-  const {
-    companyInfo, orgTree, orgMembers, stats, isLoading, error,
-    updateCompanyInfo, addOrgMember, updateOrgMember, deleteOrgMember, refetch,
-  } = useCompanyInfo();
+### Task 1: Overhaul Frontend Page Styling & Layout
 
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editorTab,  setEditorTab]  = useState("general");
+**Files:**
+- Modify: `src/pages/Organization.tsx`
 
-  const openEditor = (tab: string) => { setEditorTab(tab); setEditorOpen(true); };
+**Step 1: Replace layout and add custom brand styling**
+Overhaul `src/pages/Organization.tsx` to use the premium dark theme with colorful glowing ambient backdrops, the new custom stacked `WatSUB!` logo, and the Stamp, Polaroid, and Bracket frame containers for `#VIBES`, `#SOUL`, and `#JOINT` pillars.
 
-  // Resolve: DB first, fallback second
-  const name          = companyInfo?.name           ?? FALLBACK.name;
-  const tagline       = companyInfo?.tagline         ?? FALLBACK.tagline;
-  const vision        = companyInfo?.vision          ?? FALLBACK.vision;
-  const mission       = companyInfo?.mission         ?? FALLBACK.mission;
-  const history       = companyInfo?.history         ?? FALLBACK.history;
-  const milestones    = companyInfo?.milestones?.length  ? companyInfo.milestones  : FALLBACK.milestones;
-  const locationLabel = companyInfo?.location_links?.label   ?? FALLBACK.location_label;
-  const locationUrl   = companyInfo?.location_links?.map_url ?? FALLBACK.location_map_url;
-  const resources     = companyInfo?.resources?.length ? companyInfo.resources : FALLBACK.resources;
-  const benefits      = companyInfo?.benefits?.length  ? companyInfo.benefits  : FALLBACK.benefits;
-  const brandColors   = companyInfo?.brand_colors ?? FALLBACK.brand_colors;
-
-  // ── Loading ──────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div className="min-h-full">
-        <div className="h-64 bg-muted animate-pulse" />
-        <div className="p-6 space-y-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-36 rounded-2xl bg-muted animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
+Replace the `return (...)` block and surrounding styling in `src/pages/Organization.tsx` with:
+```tsx
   return (
     <div className="min-h-full bg-[#0c0d12] text-white font-sans relative overflow-hidden pb-12">
       {/* Ambient Neon Glows */}
@@ -205,7 +97,7 @@ export default function Organization() {
           {isAdmin && (
             <Button
               onClick={() => openEditor("general")}
-              className="flex-shrink-0 font-bold text-black px-6 py-5 rounded-xl hover:scale-105 transition-all shadow-lg shadow-[#D2FA00]/20 border-none"
+              className="flex-shrink-0 font-bold text-black px-6 py-5 rounded-xl hover:scale-105 transition-all shadow-lg shadow-[#D2FA00]/20"
               style={{ backgroundColor: brandColors.primary }}
             >
               <Pencil className="w-4 h-4 mr-2" />
@@ -470,13 +362,13 @@ export default function Organization() {
               )}
               {resources.map((r) => (
                 <a
-                  key={r.url}
+                  key={r.label}
                   href={r.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
+                  className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
                 >
-                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                  <ExternalLink className="w-4 h-4 text-[#3EADD4]" />
                   <span className="hover:underline">{r.label}</span>
                 </a>
               ))}
@@ -485,27 +377,25 @@ export default function Organization() {
         </div>
 
         {/* ── Interactive Org Chart ─────────────────────────── */}
-        <GlassCard>
+        <GlassCard className="bg-slate-950/60 border border-white/10">
           <GlassCardHeader>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <GlassCardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
+                <GlassCardTitle className="flex items-center gap-2 text-white">
+                  <Users className="w-5 h-5 text-[#D2FA00]" />
                   Interactive Org Chart
                 </GlassCardTitle>
-                <GlassCardDescription className="mt-1">
+                <GlassCardDescription className="mt-1 text-white/50 font-medium">
                   คลิกที่ node เพื่อย่อ / ขยายสาขาของทีม
                 </GlassCardDescription>
               </div>
               {isAdmin && (
                 <Button
+                  onClick={() => openEditor("org")}
                   variant="outline"
-                  size="sm"
-                  onClick={() => openEditor("orgchart")}
-                  className="flex-shrink-0"
+                  className="rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/10"
                 >
-                  <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                  จัดการสมาชิก
+                  จัดการทีม
                 </Button>
               )}
             </div>
@@ -517,21 +407,49 @@ export default function Organization() {
 
       </div>
 
-      {/* ── Editor sheet (admin only) ──────────────────────── */}
-      {isAdmin && (
-        <OrgAdminEditor
-          open={editorOpen}
-          onOpenChange={setEditorOpen}
-          defaultTab={editorTab}
-          companyInfo={companyInfo}
-          orgMembers={orgMembers}
-          onUpdateCompanyInfo={updateCompanyInfo}
-          onAddOrgMember={addOrgMember}
-          onUpdateOrgMember={updateOrgMember}
-          onDeleteOrgMember={deleteOrgMember}
-          onRefetch={refetch}
-        />
-      )}
+      {/* Admin sheet editor */}
+      <OrgAdminEditor
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        defaultTab={editorTab}
+        companyInfo={companyInfo}
+        orgMembers={orgMembers}
+        onUpdateInfo={updateCompanyInfo}
+        onAddMember={addOrgMember}
+        onUpdateMember={updateOrgMember}
+        onDeleteMember={deleteOrgMember}
+      />
     </div>
   );
-}
+```
+
+**Step 2: Commit**
+```bash
+git add src/pages/Organization.tsx
+git commit -m "feat: overhaul Organization Profile UI to 100% brand-aligned custom dark theme with frames"
+```
+
+---
+
+### Task 2: Validate Compilation & Production Build
+
+**Step 1: Check TypeScript Compilation**
+Verify there are no TypeScript build or compile errors.
+Run: `npx tsc --noEmit`
+Expected: PASS (No errors)
+
+**Step 2: Run Production Build**
+Verify Vite builds the entire bundle into production-ready output successfully.
+Run: `npm run build`
+Expected: PASS (Success)
+
+**Step 3: Run Vitest Unit Tests**
+Verify all unit tests continue to pass perfectly.
+Run: `npm run test`
+Expected: PASS (39 tests passed)
+
+**Step 4: Commit**
+```bash
+git add src/pages/Organization.tsx
+git commit -m "test: verify build and tests pass for organization profile redesign"
+```
