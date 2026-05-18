@@ -202,9 +202,15 @@ export default function Dashboard() {
               <source src="/Happy Character Throwing Ball.webm" type="video/webm" />
             </video>
           </div>
+          <div className="h-8 w-[2px] bg-border/80" />
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">{greeting}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{thaiDate}</p>
+            <span className="text-[10px] font-semibold tracking-[0.25em] text-primary uppercase block mb-0.5 animate-pulse">
+              Workspace Dashboard
+            </span>
+            <h1 className="text-sm sm:text-base font-black tracking-[0.15em] text-foreground/85 uppercase leading-none">
+              CONNECT. CREATE. INSPIRE.
+            </h1>
+            <p className="text-[11px] text-muted-foreground mt-1.5">{thaiDate}</p>
           </div>
         </div>
         <div className="flex gap-2">
