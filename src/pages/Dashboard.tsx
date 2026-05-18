@@ -188,15 +188,15 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-7 animate-stagger-1">
         <div className="flex items-center gap-3.5">
-          <div className="relative w-14 h-14 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-black/20 flex-shrink-0 shadow-md">
+          <div className="flex-shrink-0">
             <video 
               autoPlay 
               loop 
               muted 
               playsInline 
-              className="w-[125%] h-[125%] object-cover transform scale-110"
+              className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
             >
-              <source src="/Happy Character Throwing Ball.webm" type="video/webm" />
+              <source src="/Eye Animation.webm" type="video/webm" />
             </video>
           </div>
           <div className="h-8 w-[2px] bg-border/80" />
