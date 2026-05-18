@@ -287,9 +287,10 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  {/* Unified progress bar */}
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${emp.progress}%` }} />
+                  {/* Stacked progress bar */}
+                  <div className="h-2 rounded-full bg-muted overflow-hidden flex">
+                    <div className="h-full transition-all duration-700 ease-out" style={{ width: `${emp.total ? (emp.done / emp.total) * 100 : 0}%`, background: STATUS_CONFIG.Done.color }} />
+                    <div className="h-full transition-all duration-700 ease-out" style={{ width: `${emp.total ? (emp.inProgress / emp.total) * 100 : 0}%`, background: STATUS_CONFIG["In Progress"].color }} />
                   </div>
 
                   {/* Filter tabs */}
