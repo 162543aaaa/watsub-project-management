@@ -95,6 +95,11 @@ export function useCustomers(showArchived = false) {
     const { error } = await supabase.from("customers").update({ is_archived: true }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "เก็บลูกค้าแล้ว!" });
   };
@@ -103,6 +108,11 @@ export function useCustomers(showArchived = false) {
     const { error } = await supabase.from("customers").update({ is_archived: false }).eq("id", id);
     if (error) {
       if (isMissingArchivedColumnError(error)) {
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
     setCustomers(prev => prev.filter(c => c.id !== id));
     toast({ title: "กู้คืนลูกค้าสำเร็จ!" });
   };
