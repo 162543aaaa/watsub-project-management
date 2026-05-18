@@ -29,7 +29,6 @@ SET search_path = public
 AS $$
 BEGIN
   NEW.email_confirmed_at = NOW();
-  NEW.confirmed_at = NOW();
   RETURN NEW;
 END;
 $$;
