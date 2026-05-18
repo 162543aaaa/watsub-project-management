@@ -3,6 +3,7 @@ import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, Gr
 import { Switch } from "@/components/ui/switch";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
+import LoadingScreen from "@/components/LoadingScreen";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -188,7 +189,7 @@ export default function Projects() {
     exportPDF(`Projects – ${periodLabel}`, html);
   };
 
-  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="p-6 page-enter">

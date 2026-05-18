@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
+import { GlobalLoadingScreen } from "@/components/LoadingScreen";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ export default function Login() {
   const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (loading) return <GlobalLoadingScreen />;
   if (user && (isApproved || isAdmin)) return <Navigate to="/" replace />;
   if (user && !isApproved && !isAdmin) return <Navigate to="/waiting-approval" replace />;
 

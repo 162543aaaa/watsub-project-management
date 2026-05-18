@@ -1,5 +1,6 @@
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { GlobalLoadingScreen } from "@/components/LoadingScreen";
 
 export default function ProtectedRoute() {
   const { user, isApproved, isAdmin, loading, canAccessPage } = useAuthContext();
@@ -8,7 +9,7 @@ export default function ProtectedRoute() {
   // Show spinner only on initial load (no user yet).
   // If user is already set, render content immediately — background auth events
   // (e.g. sign-in from another tab) update in place without blanking the page.
-  if (loading && !user) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (loading && !user) return <GlobalLoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   if (!isApproved && !isAdmin) return <Navigate to="/waiting-approval" replace />;
 

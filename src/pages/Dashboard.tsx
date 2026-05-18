@@ -16,6 +16,7 @@ import TaskDetailModal from "@/components/TaskDetailModal";
 import { WikiEditor, WikiViewer } from "@/components/WikiEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const today = new Date();
 const YEARS = [2025, 2026, 2027];
@@ -179,11 +180,7 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (

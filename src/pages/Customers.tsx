@@ -3,6 +3,7 @@ import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2
 import { Switch } from "@/components/ui/switch";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
+import LoadingScreen from "@/components/LoadingScreen";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useCustomers, Customer } from "@/hooks/useCustomers";
@@ -229,7 +230,7 @@ export default function Customers() {
     exportPDF(`Customers – ${periodLabel}`, html);
   };
 
-  if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="p-6 page-enter">
