@@ -76,8 +76,8 @@ function StatCard({ label, value, sub, icon: Icon, gradient, trend, trendLabel }
 
 export default function Dashboard() {
   const { tasks: standaloneTasks, loading: loadingTasks, updateTask: updateStandaloneTask } = useTasks();
-  const { projects, loading: loadingProjects, updateTask: updateProjectTask } = useProjects();
-  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask } = useCustomers();
+  const { projects, loading: loadingProjects, updateTask: updateProjectTask } = useProjects(true);
+  const { customers, loading: loadingCustomers, updateTask: updateCustomerTask } = useCustomers(true);
   const { employees, loading: loadingEmployees, currentEmployee } = useEmployees();
   const { unreadCount } = useNotifications();
   const { meetings, loading: loadingMeetings } = useMeetings();
@@ -135,8 +135,8 @@ export default function Dashboard() {
     return [...filteredStandalone, ...projectTasks, ...customerTasks];
   }, [standaloneTasks, projects, customers, filterYear]);
 
-  const filteredProjects = useMemo(() => projects.filter(p => p.year === filterYear), [projects, filterYear]);
-  const filteredCustomers = useMemo(() => customers.filter(c => c.year === filterYear), [customers, filterYear]);
+  const filteredProjects = useMemo(() => projects.filter(p => p.year === filterYear && !p.is_archived), [projects, filterYear]);
+  const filteredCustomers = useMemo(() => customers.filter(c => c.year === filterYear && !c.is_archived), [customers, filterYear]);
 
   const stats = useMemo(() => {
     const completed = allTasks.filter(t => t.status === "Done").length;
@@ -287,9 +287,10 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  {/* Unified progress bar */}
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${emp.progress}%` }} />
+                  {/* Stacked progress bar */}
+                  <div className="h-2 rounded-full bg-muted overflow-hidden flex">
+                    <div className="h-full transition-all duration-700 ease-out" style={{ width: `${emp.total ? (emp.done / emp.total) * 100 : 0}%`, background: STATUS_CONFIG.Done.color }} />
+                    <div className="h-full transition-all duration-700 ease-out" style={{ width: `${emp.total ? (emp.inProgress / emp.total) * 100 : 0}%`, background: STATUS_CONFIG["In Progress"].color }} />
                   </div>
 
                   {/* Filter tabs */}
@@ -335,17 +336,30 @@ export default function Dashboard() {
                           } else {
                             deadlineBadge = <span className="text-[10px] text-muted-foreground flex-shrink-0 hidden sm:block">{dueDateObj.toLocaleDateString("th-TH", { day: "numeric", month: "short" })}</span>;
                           }
+                        } // Restore missing brace
+                        
+                        let contextName = "";
+                        if (task.task_type === 'project') {
+                          contextName = projects.find(p => p.id === task.project_id)?.name || "Project";
+                        } else if (task.task_type === 'customer') {
+                          contextName = customers.find(c => c.id === task.customer_id)?.name || "Customer";
                         }
+
                         return (
                           <div
                             key={task.id}
                             className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/60 cursor-pointer group transition-colors"
                             onClick={() => setSelectedTask(task)}
                           >
-                            <span className="text-[11px] flex-shrink-0" style={{ color: cfg.color }}>{cfg.icon}</span>
-                            <span className="text-xs text-foreground flex-1 truncate group-hover:text-primary transition-colors">{task.name}</span>
-                            <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"} style={{ fontSize: "9px", padding: "1px 6px" }}>{task.status}</span>
-                            {deadlineBadge}
+                            <span className="text-[11px] flex-shrink-0 mt-0.5 self-start" style={{ color: cfg.color }}>{cfg.icon}</span>
+                            <div className="flex-1 min-w-0 flex flex-col">
+                              <span className="text-xs text-foreground truncate group-hover:text-primary transition-colors">{task.name}</span>
+                              {contextName && <span className="text-[9px] text-muted-foreground truncate">{contextName}</span>}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"} style={{ fontSize: "9px", padding: "1px 6px" }}>{task.status}</span>
+                              {deadlineBadge}
+                            </div>
                           </div>
                         );
                       })
