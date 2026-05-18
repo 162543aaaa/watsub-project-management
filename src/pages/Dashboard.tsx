@@ -286,10 +286,9 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  {/* Stacked progress bar */}
-                  <div className="h-2 rounded-full bg-muted overflow-hidden flex">
-                    <div className="h-full transition-all duration-700 ease-out" style={{ width: `${emp.total ? (emp.done / emp.total) * 100 : 0}%`, background: STATUS_CONFIG.Done.color }} />
-                    <div className="h-full transition-all duration-700 ease-out" style={{ width: `${emp.total ? (emp.inProgress / emp.total) * 100 : 0}%`, background: STATUS_CONFIG["In Progress"].color }} />
+                  {/* Unified progress bar */}
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${emp.progress}%` }} />
                   </div>
 
                   {/* Filter tabs */}
@@ -412,7 +411,7 @@ export default function Dashboard() {
                         <span className="text-[11px]" style={{ color: d.color }}>{d.icon}</span>
                         <span className="text-xs text-muted-foreground">{d.name}</span>
                       </div>
-                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div className="progress-bar flex-1">
                         <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${pct}%`, background: d.color }} />
                       </div>
                       <div className="flex items-center gap-1.5 w-14 flex-shrink-0 text-right justify-end">
@@ -487,7 +486,7 @@ export default function Dashboard() {
                       <div className="w-28 sm:w-36 text-xs text-foreground truncate flex-shrink-0 font-medium">
                         {w.employee_name}
                       </div>
-                      <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+                      <div className="progress-bar flex-1">
                         <div
                           className="h-full rounded-full transition-all duration-700 ease-out"
                           style={{ width: `${pct}%`, background: barColor }}
