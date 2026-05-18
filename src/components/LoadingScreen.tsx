@@ -1,3 +1,5 @@
+import loadingWebm from "@/assets/loading.webm";
+
 export default function LoadingScreen() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -10,7 +12,7 @@ export default function LoadingScreen() {
           className="w-full h-full object-contain"
           style={{ imageRendering: "-webkit-optimize-contrast", transform: "translateZ(0)" }}
         >
-          <source src="/loading.webm" type="video/webm" />
+          <source src={loadingWebm} type="video/webm" />
           Your browser does not support the video tag.
         </video>
       </div>
@@ -30,7 +32,7 @@ export function GlobalLoadingScreen() {
           className="w-full h-full object-contain"
           style={{ imageRendering: "-webkit-optimize-contrast", transform: "translateZ(0)" }}
         >
-          <source src="/loading.webm" type="video/webm" />
+          <source src={loadingWebm} type="video/webm" />
           Your browser does not support the video tag.
         </video>
       </div>

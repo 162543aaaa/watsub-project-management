@@ -17,6 +17,7 @@ import { WikiEditor, WikiViewer } from "@/components/WikiEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import LoadingScreen from "@/components/LoadingScreen";
+import eyeAnimationWebm from "@/assets/eye-animation.webm";
 
 const today = new Date();
 const YEARS = [2025, 2026, 2027];
@@ -197,7 +198,7 @@ export default function Dashboard() {
               className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
               style={{ imageRendering: "-webkit-optimize-contrast", transform: "translateZ(0)" }}
             >
-              <source src="/Eye Animation.webm" type="video/webm" />
+              <source src={eyeAnimationWebm} type="video/webm" />
             </video>
           </div>
           <div className="h-8 w-[2px] bg-border/80" />
