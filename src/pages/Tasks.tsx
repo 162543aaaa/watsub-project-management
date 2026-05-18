@@ -157,6 +157,8 @@ export default function Tasks() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const [localTasks, setLocalTasks] = useState<AllTask[]>([]);
+
   // Build allTasks from all sources
   const allTasks = useMemo<AllTask[]>(() => {
     const standalone = tasks.map(t => ({ ...t, _source: "standalone" as const, _sourceName: undefined, _sourceId: undefined, _month: undefined }));
@@ -166,13 +168,18 @@ export default function Tasks() {
     const customerTasks: AllTask[] = customers.flatMap(c =>
       c.tasks.map(t => ({ ...t, _source: "customer" as const, _sourceName: c.name, _sourceId: c.id, _month: c.month }))
     );
-    return [...standalone, ...projectTasks, ...customerTasks];
+    return [...standalone, ...projectTasks, ...customerTasks].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }, [tasks, projects, customers]);
+
+  // Keep localTasks in sync when allTasks changes
+  useEffect(() => {
+    setLocalTasks(allTasks);
+  }, [allTasks]);
 
   // Unique source names for filter
   const sourceOptions = useMemo(() => {
     const names = new Map<string, string>();
-    allTasks.forEach(t => {
+    localTasks.forEach(t => {
       if (t._sourceName && t._source) {
         const key = `${t._source}:${t._sourceName}`;
         if (!names.has(key)) {
@@ -181,10 +188,10 @@ export default function Tasks() {
       }
     });
     return [...names.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [allTasks]);
+  }, [localTasks]);
 
   const filtered = useMemo(() => {
-    let result = allTasks;
+    let result = localTasks;
     // Year filter using start_date, due_date, or created_at; fallback to 2026
     result = result.filter(t => {
       const dateStr = t.start_date || t.due_date || t.created_at;
@@ -208,7 +215,7 @@ export default function Tasks() {
       );
     }
     return result;
-  }, [allTasks, search, priorityFilter, filterMonth, filterSource, filterYear]);
+  }, [localTasks, search, priorityFilter, filterMonth, filterSource, filterYear]);
 
   // Hide Done tasks when the toggle is off (display-only).
   const visibleTasks = useMemo(() => filterDoneTasks(filtered, showDone), [filtered, showDone]);
@@ -315,21 +322,37 @@ export default function Tasks() {
         const overIdx = targetColTasks.findIndex(t => getCardId(t) === overId);
         if (overIdx !== -1) insertIdx = overIdx;
       }
+      
       const movedTask: AllTask = { ...activeTask, status: targetCol };
-      const newCol = [...targetColTasks];
-      newCol.splice(insertIdx, 0, movedTask);
+
+      // Optimistic update
+      setLocalTasks(prev => {
+        const filteredList = prev.filter(t => getCardId(t) !== activeCardId);
+        const colTasks = filteredList.filter(t => t.status === targetCol);
+        const otherTasks = filteredList.filter(t => t.status !== targetCol);
+        const updatedCol = [...colTasks];
+        updatedCol.splice(insertIdx, 0, movedTask);
+        return [...otherTasks, ...updatedCol];
+      });
 
       const updates = { status: targetCol };
-      if (activeTask._source === "project") {
-        await updateProjectTask(activeTask.id, updates);
-      } else if (activeTask._source === "customer") {
-        await updateCustomerTask(activeTask.id, updates);
-      } else {
-        await updateTask(activeTask.id, updates);
+      try {
+        if (activeTask._source === "project") {
+          await updateProjectTask(activeTask.id, updates);
+        } else if (activeTask._source === "customer") {
+          await updateCustomerTask(activeTask.id, updates);
+        } else {
+          await updateTask(activeTask.id, updates);
+        }
+        const colTasksOptimistic = getColTasks(targetCol).filter(t => getCardId(t) !== activeCardId);
+        const newCol = [...colTasksOptimistic];
+        newCol.splice(insertIdx, 0, movedTask);
+        const colIndex = COLUMNS.indexOf(targetCol);
+        await persistOrder(newCol, colIndex);
+        refetchAll();
+      } catch (err) {
+        console.error("Error persisting order:", err);
       }
-      const colIndex = COLUMNS.indexOf(targetCol);
-      await persistOrder(newCol, colIndex);
-      await refetchAll();
       toast({ title: `ย้ายงานไป ${targetCol} สำเร็จ!` });
       return;
     }
@@ -342,15 +365,33 @@ export default function Tasks() {
     let newIdx = ids.indexOf(overId);
     if (oldIdx === -1) return;
     if (newIdx === -1) newIdx = colT.length - 1; // dropped on column area
+    
     const reordered = arrayMove(colT, oldIdx, newIdx);
+
+    // Optimistic update
+    setLocalTasks(prev => {
+      const otherTasks = prev.filter(t => t.status !== targetCol);
+      return [...otherTasks, ...reordered];
+    });
+
     const colIndex = COLUMNS.indexOf(targetCol);
-    await persistOrder(reordered, colIndex);
-    await refetchAll();
+    try {
+      await persistOrder(reordered, colIndex);
+      refetchAll();
+    } catch (err) {
+      console.error("Error persisting same-column order:", err);
+    }
   };
 
   const handleSave = async (form: Partial<AllTask>) => {
     try {
       const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments, link: form.link, category: form.category || "none" };
+      
+      // Optimistic update
+      if (form.id) {
+        setLocalTasks(prev => prev.map(t => getCardId(t) === `${form._source}-${form.id}` ? { ...t, ...updates } : t));
+      }
+
       if (form.id && form._source === "project" && form.project_id) {
         await updateProjectTask(form.id, updates);
       } else if (form.id && form._source === "customer" && form.customer_id) {
@@ -360,18 +401,27 @@ export default function Tasks() {
       } else {
         await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", link: form.link || "", task_type: "standalone", category: form.category || "none" });
       }
+      refetchAll();
     } catch (err) {
       console.error("Error saving data:", err);
     }
   };
 
   const handleDeleteTask = async (task: AllTask) => {
-    if (task._source === "project" && task.project_id) {
-      await deleteProjectTask(task.id, task.project_id);
-    } else if (task._source === "customer" && task.customer_id) {
-      await deleteCustomerTask(task.id, task.customer_id);
-    } else {
-      await deleteTask(task.id);
+    // Optimistic update
+    setLocalTasks(prev => prev.filter(t => getCardId(t) !== getCardId(task)));
+
+    try {
+      if (task._source === "project" && task.project_id) {
+        await deleteProjectTask(task.id, task.project_id);
+      } else if (task._source === "customer" && task.customer_id) {
+        await deleteCustomerTask(task.id, task.customer_id);
+      } else {
+        await deleteTask(task.id);
+      }
+      refetchAll();
+    } catch (err) {
+      console.error("Error deleting task:", err);
     }
   };
 
@@ -386,9 +436,18 @@ export default function Tasks() {
       });
       return;
     }
-    if (task._source === "project") await updateProjectTask(task.id, { status: newStatus });
-    else if (task._source === "customer") await updateCustomerTask(task.id, { status: newStatus });
-    else await updateTask(task.id, { status: newStatus });
+
+    // Optimistic update
+    setLocalTasks(prev => prev.map(t => getCardId(t) === getCardId(task) ? { ...t, status: newStatus } : t));
+
+    try {
+      if (task._source === "project") await updateProjectTask(task.id, { status: newStatus });
+      else if (task._source === "customer") await updateCustomerTask(task.id, { status: newStatus });
+      else await updateTask(task.id, { status: newStatus });
+      refetchAll();
+    } catch (err) {
+      console.error("Error toggling status:", err);
+    }
   };
 
   const navigateToSource = (task: AllTask) => {
