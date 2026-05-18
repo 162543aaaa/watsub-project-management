@@ -231,6 +231,63 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Welcome Hero Banner with WebM Animation */}
+      <div className="bg-card/45 backdrop-blur-md border border-border/40 rounded-3xl p-5 sm:p-6 mb-6 relative overflow-hidden flex flex-col md:flex-row items-center gap-6 animate-stagger-1.5" style={{ boxShadow: "var(--shadow-sm)" }}>
+        {/* Glow ambient background inside the card */}
+        <div className="absolute top-0 right-0 w-[35%] h-[60%] bg-[#D2FA00]/8 rounded-full blur-[50px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[25%] h-[40%] bg-[#F4622A]/5 rounded-full blur-[40px] pointer-events-none" />
+
+        {/* Welcome Text Section */}
+        <div className="flex-1 space-y-3.5 text-center md:text-left z-10">
+          <div className="space-y-1.5">
+            <span className="text-xs font-semibold tracking-wider text-[#F4622A] uppercase block">
+              ยินดีต้อนรับสู่ WatSUB! 🚀
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight leading-tight">
+              โหมดการทำงานมีประสิทธิภาพ!
+            </h1>
+            <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
+              ขับเคลื่อนความสำเร็จขององค์กรด้วยการทำงานร่วมกันอย่างมืออาชีพ วันนี้มีผู้ใช้งานทั้งหมด <span className="font-semibold text-primary">{employees.length} คน</span> และโครงการที่กำลังขับเคลื่อนอย่างแข็งแกร่ง!
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 pt-0.5">
+            <Link to="/my-work" className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold bg-[#D2FA00] text-black hover:scale-105 transition-transform duration-200 shadow-md shadow-[#D2FA00]/10">
+              <Clock className="w-3.5 h-3.5 mr-1.5" /> งานของฉัน
+            </Link>
+            <Link to="/meetings" className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-foreground hover:scale-105 transition-transform duration-200 border border-white/5">
+              <Video className="w-3.5 h-3.5 mr-1.5" /> การประชุมประจำวัน
+            </Link>
+          </div>
+        </div>
+
+        {/* Premium WebM Video Container */}
+        <div className="w-full md:w-auto flex-shrink-0 flex items-center justify-center z-10 relative">
+          <div className="relative w-44 h-44 sm:w-48 sm:h-48 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-black/20 shadow-2xl">
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              className="w-[125%] h-[125%] object-cover transform scale-110"
+            >
+              <source src="/Happy Character Throwing Ball.webm" type="video/webm" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          {/* Active status pill */}
+          <div className="absolute -bottom-2 right-4 bg-white/5 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg select-none">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D2FA00] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D2FA00]"></span>
+            </span>
+            <span className="text-[9px] font-semibold text-white/80 tracking-wider uppercase">
+              ACTIVE
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-5 sm:mb-7 animate-stagger-2">
         <StatCard label="Completion Rate" value={`${stats.rate}%`} sub={`${stats.completed}/${stats.total} tasks`} icon={TrendingUp} gradient="bg-gradient-primary" trend={stats.rate >= 50 ? "up" : "down"} />
