@@ -1,7 +1,7 @@
+import { ArrowRightIcon, CheckCircleIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, LockClosedIcon, UserIcon, UserPlusIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
-import { UserPlus, Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -74,7 +74,7 @@ export default function Signup() {
 
         <div className="w-full max-w-md bg-card/60 backdrop-blur-xl rounded-2xl border border-border/80 p-8 text-center shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-500">
           <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <CheckCircle2 className="w-8 h-8 text-green-500" />
+            <CheckCircleIcon className="w-8 h-8 text-green-500" />
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-3">สมัครสมาชิกสำเร็จ!</h2>
           <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
@@ -84,7 +84,7 @@ export default function Signup() {
           </p>
           <Link to="/login" className="block w-full">
             <Button className="w-full group">
-              เข้าสู่ระบบ <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              เข้าสู่ระบบ <ArrowRightIcon className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
         </div>
@@ -166,7 +166,7 @@ export default function Signup() {
                 <label className="text-sm font-medium text-foreground block">ชื่อที่แสดง</label>
                 <div className="relative group">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                    <User className="w-4 h-4" />
+                    <UserIcon className="w-4 h-4" />
                   </span>
                   <Input 
                     value={displayName} 
@@ -184,7 +184,7 @@ export default function Signup() {
                 <label className="text-sm font-medium text-foreground block">อีเมล</label>
                 <div className="relative group">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                    <Mail className="w-4 h-4" />
+                    <EnvelopeIcon className="w-4 h-4" />
                   </span>
                   <Input 
                     type="email" 
@@ -203,7 +203,7 @@ export default function Signup() {
                 <label className="text-sm font-medium text-foreground block">รหัสผ่าน</label>
                 <div className="relative group">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                    <Lock className="w-4 h-4" />
+                    <LockClosedIcon className="w-4 h-4" />
                   </span>
                   <Input 
                     type={showPw ? "text" : "password"} 
@@ -220,7 +220,7 @@ export default function Signup() {
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" 
                     aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                   >
-                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPw ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -233,7 +233,7 @@ export default function Signup() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
-                    <UserPlus className="w-4 h-4" />
+                    <UserPlusIcon className="w-4 h-4" />
                     <span>สมัครสมาชิก</span>
                   </div>
                 )}

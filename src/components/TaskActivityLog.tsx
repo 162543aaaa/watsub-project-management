@@ -1,6 +1,6 @@
+import { ArrowRightIcon, ClockIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Clock, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface AuditLog {
@@ -152,7 +152,7 @@ export default function TaskActivityLog({ taskId }: TaskActivityLogProps) {
               className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
               style={{ background: "hsl(191 91% 37% / 0.15)", border: "1.5px solid hsl(191 91% 37% / 0.4)" }}
             >
-              <Clock className="w-3.5 h-3.5" style={{ color: "hsl(191 91% 55%)" }} />
+              <ClockIcon className="w-3.5 h-3.5" style={{ color: "hsl(191 91% 55%)" }} />
             </div>
             {idx < logs.length - 1 && (
               <div className="w-px flex-1 my-1 min-h-[16px]" style={{ background: "hsl(222 47% 20%)" }} />

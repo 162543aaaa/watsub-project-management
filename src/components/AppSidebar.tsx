@@ -1,35 +1,31 @@
+import { ArrowDownTrayIcon, ArrowTrendingUpIcon, ArrowUpTrayIcon, BellIcon, BoltIcon, BookOpenIcon, BuildingOffice2Icon, CalendarIcon, ChartBarIcon, CheckBadgeIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardDocumentCheckIcon, FlagIcon, FolderOpenIcon, MapPinIcon, PaperAirplaneIcon, Squares2X2Icon, UsersIcon, VideoCameraIcon, WalletIcon } from '@heroicons/react/24/solid';
 import { useLocation, Link } from "react-router-dom";
-import {
-  LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Download, ChevronLeft, ChevronRight, Zap, Video, MapPin, TrendingUp,
-  BookOpen, LayoutGrid, Building2, ListChecks, LineChart
-} from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useState } from "react";
 
 const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "My Work", icon: ListChecks, path: "/my-work" },
-  { label: "Tasks", icon: CheckSquare, path: "/tasks" },
-  { label: "Projects", icon: FolderOpen, path: "/projects" },
-  { label: "Customers", icon: Users2, path: "/customers" },
-  { label: "Calendar", icon: Calendar, path: "/calendar" },
-  { label: "OKRs", icon: Target, path: "/okrs" },
-  { label: "Team", icon: Users, path: "/team" },
-  { label: "Team Workload", icon: LayoutGrid, path: "/workload" },
-  { label: "Manager Dashboard", icon: LineChart, path: "/manager" },
-  { label: "Organization Hub", icon: Building2, path: "/organization" },
-  { label: "Wiki", icon: BookOpen, path: "/wiki" },
-  { label: "Meetings", icon: Video, path: "/meetings" },
-  { label: "On-site Work", icon: MapPin, path: "/onsite-work" },
-  { label: "Leave", icon: Plane, path: "/leave" },
-  { label: "Budget", icon: Wallet, path: "/budget" },
-  { label: "KPI", icon: TrendingUp, path: "/kpi/overview" },
-  { label: "Reports", icon: BarChart3, path: "/reports" },
-  { label: "Notifications", icon: Bell, path: "/notifications" },
-  { label: "Import", icon: Upload, path: "/import" },
-  { label: "Export", icon: Download, path: "/export" },
+  { label: "Dashboard", icon: Squares2X2Icon, path: "/" },
+  { label: "My Work", icon: ClipboardDocumentCheckIcon, path: "/my-work" },
+  { label: "Tasks", icon: CheckBadgeIcon, path: "/tasks" },
+  { label: "Projects", icon: FolderOpenIcon, path: "/projects" },
+  { label: "Customers", icon: UsersIcon, path: "/customers" },
+  { label: "CalendarIcon", icon: CalendarIcon, path: "/calendar" },
+  { label: "OKRs", icon: FlagIcon, path: "/okrs" },
+  { label: "Team", icon: UsersIcon, path: "/team" },
+  { label: "Team Workload", icon: Squares2X2Icon, path: "/workload" },
+  { label: "Manager Dashboard", icon: ChartBarIcon, path: "/manager" },
+  { label: "Organization Hub", icon: BuildingOffice2Icon, path: "/organization" },
+  { label: "Wiki", icon: BookOpenIcon, path: "/wiki" },
+  { label: "Meetings", icon: VideoCameraIcon, path: "/meetings" },
+  { label: "On-site Work", icon: MapPinIcon, path: "/onsite-work" },
+  { label: "Leave", icon: PaperAirplaneIcon, path: "/leave" },
+  { label: "Budget", icon: WalletIcon, path: "/budget" },
+  { label: "KPI", icon: ArrowTrendingUpIcon, path: "/kpi/overview" },
+  { label: "Reports", icon: ChartBarIcon, path: "/reports" },
+  { label: "Notifications", icon: BellIcon, path: "/notifications" },
+  { label: "Import", icon: ArrowUpTrayIcon, path: "/import" },
+  { label: "Export", icon: ArrowDownTrayIcon, path: "/export" },
 ];
 
 export default function AppSidebar() {
@@ -111,7 +107,7 @@ export default function AppSidebar() {
           color: "hsl(215 20% 70%)"
         }}
       >
-        {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+        {collapsed ? <ChevronRightIcon className="w-3 h-3" /> : <ChevronLeftIcon className="w-3 h-3" />}
       </button>
     </aside>
   );

@@ -1,6 +1,6 @@
+import { ArrowPathIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, LinkIcon, MapPinIcon, PencilIcon, PlusIcon, TrashIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, CalendarDays, X, ExternalLink, Clock, MapPin, Users, RotateCcw, Plus, Trash2, Pencil, Save, Link2 } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { useEmployees } from "@/hooks/useEmployees";
 import {
@@ -156,7 +156,7 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
             )}
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors" aria-label="Close">
-            <X className="w-4 h-4" />
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
         <h3 className="text-lg font-bold mb-1">{item.name}</h3>
@@ -167,7 +167,7 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
         )}
         <div className="space-y-2.5 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <CalendarDays className="w-4 h-4 flex-shrink-0" />
+            <CalendarDaysIcon className="w-4 h-4 flex-shrink-0" />
             <span>
               {isHoliday && item.holidayStartDate && item.holidayEndDate && item.holidayStartDate !== item.holidayEndDate
                 ? `${new Date(item.holidayStartDate).toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })} — ${new Date(item.holidayEndDate).toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}`
@@ -177,25 +177,25 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
           </div>
           {item.startTime && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="w-4 h-4 flex-shrink-0" />
+              <ClockIcon className="w-4 h-4 flex-shrink-0" />
               <span>{item.startTime}{item.endTime ? ` - ${item.endTime}` : ""}</span>
             </div>
           )}
           {item.location && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="w-4 h-4 flex-shrink-0" />
+              <MapPinIcon className="w-4 h-4 flex-shrink-0" />
               <span>{item.location}</span>
             </div>
           )}
           {((item.assigned_to && item.assigned_to.length > 0) || (item.participants && item.participants.length > 0)) && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="w-4 h-4 flex-shrink-0" />
+              <UsersIcon className="w-4 h-4 flex-shrink-0" />
               <span>{(item.assigned_to || item.participants || []).join(", ")}</span>
             </div>
           )}
           {item.link && (
             <a href={item.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline" onClick={e => e.stopPropagation()}>
-              <ExternalLink className="w-4 h-4 flex-shrink-0" />
+              <ArrowTopRightOnSquareIcon className="w-4 h-4 flex-shrink-0" />
               <span className="truncate">{item.link.replace(/^https?:\/\//, "")}</span>
             </a>
           )}
@@ -211,13 +211,13 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
               onClick={() => onEditHoliday?.(item.holidayOriginalId!)}
               className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
             >
-              <Pencil className="w-4 h-4" /> แก้ไข
+              <PencilIcon className="w-4 h-4" /> แก้ไข
             </button>
             <button
               onClick={() => onDeleteHoliday?.(item.holidayOriginalId!, item.name)}
               className="flex-1 px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
             >
-              <Trash2 className="w-4 h-4" /> ลบ
+              <TrashIcon className="w-4 h-4" /> ลบ
             </button>
           </div>
         )}
@@ -239,7 +239,7 @@ function DayDetailModal({ dateStr, items, onClose, onSelectItem, onDoubleClickIt
             {new Date(dateStr).toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long" })}
           </h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors" aria-label="Close">
-            <X className="w-4 h-4" />
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
         <div className="space-y-2">
@@ -283,7 +283,7 @@ function HolidayFormModal({ onClose, onSubmit, initial }: {
       <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold">{initial ? "แก้ไขวันหยุด" : "เพิ่มวันหยุด"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
         </div>
         <div className="space-y-3">
           <div>
@@ -379,7 +379,7 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
           <h3 className="text-lg font-bold">{isEdit ? "Edit Meeting" : "เพิ่ม Meeting"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
         </div>
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 p-6 overscroll-contain">
@@ -428,7 +428,7 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
             {/* Link to Project/Customer */}
             <div className="border-t border-border pt-4 space-y-3">
               <div className="flex items-center gap-2 mb-2">
-                <Link2 className="w-4 h-4 text-primary" />
+                <LinkIcon className="w-4 h-4 text-primary" />
                 <label className="text-xs font-semibold text-foreground uppercase tracking-wide">เชื่อมโยงกับ Project / Customer</label>
               </div>
               <div className="bg-muted/40 rounded-xl p-3 space-y-3">
@@ -466,7 +466,7 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
         <div className="flex gap-3 p-6 border-t border-border shrink-0">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
-            <Save className="w-4 h-4" /> {isEdit ? "Save Meeting" : "เพิ่ม Meeting"}
+            <CheckIcon className="w-4 h-4" /> {isEdit ? "CheckIcon Meeting" : "เพิ่ม Meeting"}
           </button>
         </div>
       </div>
@@ -532,7 +532,7 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
           <h3 className="text-lg font-bold">{isEdit ? "Edit On-site Work" : "เพิ่ม On-site Work"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
         </div>
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 p-6 overscroll-contain">
@@ -569,7 +569,7 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
             {/* Link to Project/Customer */}
             <div className="border-t border-border pt-4 space-y-3">
               <div className="flex items-center gap-2 mb-2">
-                <Link2 className="w-4 h-4 text-primary" />
+                <LinkIcon className="w-4 h-4 text-primary" />
                 <label className="text-xs font-semibold text-foreground uppercase tracking-wide">เชื่อมโยงกับ Project / Customer</label>
               </div>
               <div className="bg-muted/40 rounded-xl p-3 space-y-3">
@@ -607,7 +607,7 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
         <div className="flex gap-3 p-6 border-t border-border shrink-0">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
-            <Save className="w-4 h-4" /> {isEdit ? "Save On-site" : "เพิ่ม On-site"}
+            <CheckIcon className="w-4 h-4" /> {isEdit ? "CheckIcon On-site" : "เพิ่ม On-site"}
           </button>
         </div>
       </div>
@@ -656,7 +656,7 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
           <h3 className="text-lg font-bold">Edit Task</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
         </div>
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 p-6 overscroll-contain">
@@ -727,7 +727,7 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
         <div className="flex gap-3 p-6 border-t border-border shrink-0">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
           <button onClick={save} className="flex-1 btn-primary flex items-center justify-center gap-2">
-            <Save className="w-4 h-4" /> Save Task
+            <CheckIcon className="w-4 h-4" /> CheckIcon Task
           </button>
         </div>
       </div>
@@ -993,23 +993,23 @@ export default function CalendarPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowAddMeeting(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> 🗓 Meeting
+            <PlusIcon className="w-4 h-4" /> 🗓 Meeting
           </button>
           <button onClick={() => setShowAddOnsite(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> 📍 On-site
+            <PlusIcon className="w-4 h-4" /> 📍 On-site
           </button>
           <button onClick={() => setShowAddHoliday(true)} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> วันหยุด
+            <PlusIcon className="w-4 h-4" /> วันหยุด
           </button>
           <button onClick={goToday} className="px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
-            <CalendarDays className="w-4 h-4" /> Today
+            <CalendarDaysIcon className="w-4 h-4" /> Today
           </button>
           <button onClick={prev} aria-label="Previous month" className="w-9 h-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors">
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeftIcon className="w-4 h-4" />
           </button>
           <span className="text-base font-bold text-foreground min-w-[140px] text-center">{monthName} {current.year}</span>
           <button onClick={next} aria-label="Next month" className="w-9 h-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors">
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRightIcon className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -1023,7 +1023,7 @@ export default function CalendarPage() {
         ))}
         {hasActiveFilters && (
           <button onClick={resetFilters} className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
-            <RotateCcw className="w-3.5 h-3.5" /> Reset
+            <ArrowPathIcon className="w-3.5 h-3.5" /> Reset
           </button>
         )}
       </div>

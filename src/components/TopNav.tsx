@@ -1,31 +1,28 @@
+import { ArrowRightOnRectangleIcon, ArrowTrendingUpIcon, ArrowUpTrayIcon, Bars3Icon, BellIcon, BuildingOffice2Icon, CalendarIcon, ChartBarIcon, CheckBadgeIcon, ChevronDownIcon, FlagIcon, FolderOpenIcon, PaperAirplaneIcon, ShieldCheckIcon, Squares2X2Icon, UsersIcon, WalletIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useLocation, Link } from "react-router-dom";
-import {
-  LayoutDashboard, CheckSquare, FolderOpen, Users2, Calendar, Target,
-  Users, Plane, Wallet, BarChart3, Bell, Upload, Menu, X, ChevronDown, Shield, LogOut, TrendingUp, Building2
-} from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useState, useRef, useEffect } from "react";
 
 const primaryNav = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "My Work", icon: CheckSquare, path: "/my-work" },
-  { label: "Tasks", icon: CheckSquare, path: "/tasks" },
-  { label: "Projects", icon: FolderOpen, path: "/projects" },
-  { label: "Customers", icon: Users2, path: "/customers" },
-  { label: "Calendar", icon: Calendar, path: "/calendar" },
+  { label: "Dashboard", icon: Squares2X2Icon, path: "/" },
+  { label: "My Work", icon: CheckBadgeIcon, path: "/my-work" },
+  { label: "Tasks", icon: CheckBadgeIcon, path: "/tasks" },
+  { label: "Projects", icon: FolderOpenIcon, path: "/projects" },
+  { label: "Customers", icon: UsersIcon, path: "/customers" },
+  { label: "CalendarIcon", icon: CalendarIcon, path: "/calendar" },
 ];
 
 const secondaryNav = [
-  { label: "OKRs", icon: Target, path: "/okrs" },
-  { label: "Team", icon: Users, path: "/team" },
-  { label: "Organization", icon: Building2, path: "/organization" },
-  { label: "Leave", icon: Plane, path: "/leave" },
-  { label: "Budget", icon: Wallet, path: "/budget" },
-  { label: "KPI", icon: TrendingUp, path: "/kpi/overview" },
-  { label: "Reports", icon: BarChart3, path: "/reports" },
-  { label: "Notifications", icon: Bell, path: "/notifications" },
-  { label: "Import", icon: Upload, path: "/import" },
+  { label: "OKRs", icon: FlagIcon, path: "/okrs" },
+  { label: "Team", icon: UsersIcon, path: "/team" },
+  { label: "Organization", icon: BuildingOffice2Icon, path: "/organization" },
+  { label: "Leave", icon: PaperAirplaneIcon, path: "/leave" },
+  { label: "Budget", icon: WalletIcon, path: "/budget" },
+  { label: "KPI", icon: ArrowTrendingUpIcon, path: "/kpi/overview" },
+  { label: "Reports", icon: ChartBarIcon, path: "/reports" },
+  { label: "Notifications", icon: BellIcon, path: "/notifications" },
+  { label: "Import", icon: ArrowUpTrayIcon, path: "/import" },
 ];
 
 const allNav = [...primaryNav, ...secondaryNav];
@@ -92,9 +89,9 @@ export default function TopNav() {
                 borderBottom: "2px solid #FC5A03",
               } : { color: "#FFC700" }}
             >
-              <Menu className="w-3.5 h-3.5" />
+              <Bars3Icon className="w-3.5 h-3.5" />
               <span className="text-[12px] font-medium">More</span>
-              <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${moreOpen ? "rotate-180" : ""}`} />
+              <ChevronDownIcon className={`w-3 h-3 transition-transform duration-300 ${moreOpen ? "rotate-180" : ""}`} />
               {/* Badge for notifications in more menu */}
               {unreadCount > 0 && !secondaryNav.find(n => n.path === "/notifications" && location.pathname === n.path) && (
                 <span className="absolute -top-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
@@ -194,7 +191,7 @@ export default function TopNav() {
                   onMouseEnter={e => { if (location.pathname !== "/admin") (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 199, 0, 0.1)"; }}
                   onMouseLeave={e => { if (location.pathname !== "/admin") (e.currentTarget as HTMLDivElement).style.background = ""; }}
                 >
-                  <Shield className="w-4 h-4" />
+                  <ShieldCheckIcon className="w-4 h-4" />
                 </div>
               </Link>
             </>
@@ -207,7 +204,7 @@ export default function TopNav() {
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255, 199, 0, 0.1)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ""; }}
           >
-            <LogOut className="w-4 h-4" />
+            <ArrowRightOnRectangleIcon className="w-4 h-4" />
           </button>
         </div>
 
@@ -220,7 +217,7 @@ export default function TopNav() {
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255, 199, 0, 0.1)"; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ""; }}
         >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {mobileOpen ? <XMarkIcon className="w-5 h-5" /> : <Bars3Icon className="w-5 h-5" />}
         </button>
       </header>
 
@@ -264,7 +261,7 @@ export default function TopNav() {
                 <Link to="/admin">
                   <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all"
                     style={location.pathname === "/admin" ? { background: "rgba(252, 90, 3, 0.15)", color: "#FC5A03" } : { color: "#FFC700" }}>
-                    <Shield className="w-4 h-4" />
+                    <ShieldCheckIcon className="w-4 h-4" />
                     <span className="text-[9px] font-medium">Admin</span>
                   </div>
                 </Link>
@@ -272,7 +269,7 @@ export default function TopNav() {
             )}
             <button onClick={signOut}>
               <div className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" style={{ color: "#FFC700" }}>
-                <LogOut className="w-4 h-4" />
+                <ArrowRightOnRectangleIcon className="w-4 h-4" />
                 <span className="text-[9px] font-medium">Logout</span>
               </div>
             </button>

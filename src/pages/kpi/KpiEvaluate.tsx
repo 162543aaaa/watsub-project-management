@@ -1,6 +1,6 @@
+import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, ClipboardDocumentCheckIcon, InformationCircleIcon, StarIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronDown, ChevronRight, ClipboardCheck, Info, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   useKpiPeriods, useKpiEvaluations,
@@ -142,7 +142,7 @@ function StarRating({ value, onChange, disabled }: { value: number; onChange: (v
           className={`transition-transform ${disabled ? "cursor-default opacity-70" : "hover:scale-110 active:scale-95"}`}
           disabled={disabled}
         >
-          <Star
+          <StarIcon
             className="w-6 h-6"
             fill={n <= active ? "hsl(38 92% 50%)" : "none"}
             stroke={n <= active ? "hsl(38 92% 50%)" : "hsl(215 14% 70%)"}
@@ -187,7 +187,7 @@ function SectionCard({
         style={{ background: `${section.color}12` }}
       >
         <div className="flex items-center gap-2">
-          {collapsed ? <ChevronRight className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          {collapsed ? <ChevronRightIcon className="w-4 h-4 text-muted-foreground" /> : <ChevronDownIcon className="w-4 h-4 text-muted-foreground" />}
           <h3 className="font-semibold text-sm">{section.title}</h3>
         </div>
         <span className="text-[11px] font-medium text-muted-foreground">{section.weight}</span>
@@ -200,7 +200,7 @@ function SectionCard({
                 return (
                   <div key={q.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      <InformationCircleIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                       <p className="text-sm text-muted-foreground truncate">{q.question}</p>
                     </div>
                     <span className="text-sm font-bold flex-shrink-0" style={{ color: section.color }}>
@@ -462,7 +462,7 @@ export default function KpiEvaluate() {
         onClick={() => navigate("/kpi/overview")}
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" /> กลับ
+        <ArrowLeftIcon className="w-4 h-4" /> กลับ
       </button>
 
       {/* Read-only banner */}
@@ -481,7 +481,7 @@ export default function KpiEvaluate() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <ClipboardCheck className="w-4 h-4 text-primary" />
+              <ClipboardDocumentCheckIcon className="w-4 h-4 text-primary" />
               <h1 className="text-lg font-bold">{evaluatee.name}</h1>
             </div>
             <p className="text-sm text-muted-foreground">{evaluatee.position}</p>

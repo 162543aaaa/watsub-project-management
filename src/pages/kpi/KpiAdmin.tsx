@@ -1,7 +1,6 @@
+import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, CheckCircleIcon, ClipboardDocumentListIcon, ClockIcon, LockClosedIcon, LockOpenIcon, PlusIcon, ShieldCheckIcon, TrashIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
-import { CheckCircle2, Clock, ClipboardList, ExternalLink, FileDown, Lock, Plus, Shield, Trash2, Unlock } from "lucide-react";
-
 import { useKpiPeriods, useKpiEvaluations } from "@/hooks/useKpi";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -19,7 +18,7 @@ const getReviewType = (e: { reviewer_type?: string | null; type?: string | null 
 function StatusPill({ done, label }: { done: boolean; label: string }) {
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${done ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-      {done ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+      {done ? <CheckCircleIcon className="w-3 h-3" /> : <ClockIcon className="w-3 h-3" />}
       {label}
     </span>
   );
@@ -138,7 +137,7 @@ export default function KpiAdmin() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-primary" />
+            <ShieldCheckIcon className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold">KPI Admin</h1>
@@ -147,7 +146,7 @@ export default function KpiAdmin() {
         </div>
         <button onClick={() => setShowForm(v => !v)}
           className="btn-primary flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg">
-          <Plus className="w-4 h-4" /> รอบใหม่
+          <PlusIcon className="w-4 h-4" /> รอบใหม่
         </button>
       </div>
 
@@ -224,28 +223,28 @@ export default function KpiAdmin() {
               <div className="flex items-center gap-2">
                 <Link to={`/kpi/admin/summary/${period.id}`}>
                   <button className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
-                    <ClipboardList className="w-3.5 h-3.5" /> ดูคำตอบ
+                    <ClipboardDocumentListIcon className="w-3.5 h-3.5" /> ดูคำตอบ
                   </button>
                 </Link>
                 {allCompleted && (
                   <button
                     onClick={() => handleExportPeriodPdf(period.label, rows)}
                     className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
-                    <FileDown className="w-3.5 h-3.5" /> Export PDF
+                    <ArrowDownTrayIcon className="w-3.5 h-3.5" /> Export PDF
                   </button>
                 )}
                 <button
                   onClick={() => handleToggleStatus(period.id, period.status as "open" | "closed")}
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
                   {period.status === "open"
-                    ? <><Lock className="w-3.5 h-3.5" /> ปิดรอบ</>
-                    : <><Unlock className="w-3.5 h-3.5" /> เปิดรอบ</>}
+                    ? <><LockClosedIcon className="w-3.5 h-3.5" /> ปิดรอบ</>
+                    : <><LockOpenIcon className="w-3.5 h-3.5" /> เปิดรอบ</>}
                 </button>
 
                 <button
                   onClick={() => handleDeletePeriod(period.id, period.label)}
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors flex-shrink-0">
-                  <Trash2 className="w-3.5 h-3.5" /> ลบไตรมาส
+                  <TrashIcon className="w-3.5 h-3.5" /> ลบไตรมาส
                 </button>
 
               </div>
@@ -272,7 +271,7 @@ export default function KpiAdmin() {
                   </div>
                   <Link to={`/kpi/report/${emp.id}`}>
                     <button className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors flex-shrink-0">
-                      <ExternalLink className="w-3 h-3" /> รายงาน
+                      <ArrowTopRightOnSquareIcon className="w-3 h-3" /> รายงาน
                     </button>
                   </Link>
                 </div>

@@ -1,15 +1,6 @@
+import { ArrowPathIcon, BoltIcon, CalendarDaysIcon, ChartBarIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, UsersIcon } from '@heroicons/react/24/solid';
 import { useState, useMemo } from "react";
 import { format, addDays, parseISO, startOfWeek, endOfWeek } from "date-fns";
-import {
-  Users,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  BarChart2,
-  CalendarDays,
-  Zap,
-} from "lucide-react";
 import { useWorkload, DEFAULT_WEEKLY_CAPACITY, WorkloadData } from "@/hooks/useWorkload";
 import { supabase } from "@/integrations/supabase/client";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -185,7 +176,7 @@ function EmployeeCard({
         {/* Stats row */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5" style={{ color: cfg.color }} />
+            <BoltIcon className="w-3.5 h-3.5" style={{ color: cfg.color }} />
             <span className="text-xs text-muted-foreground">
               <span className="font-semibold text-foreground">
                 {item.active_tasks_count}
@@ -321,7 +312,7 @@ function HeatmapView() {
   if (rows.length === 0) {
     return (
       <div className="text-center py-20">
-        <Users className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+        <UsersIcon className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
         <p className="text-muted-foreground text-sm">No heatmap data for this period.</p>
       </div>
     );
@@ -427,7 +418,7 @@ export default function Workload() {
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: "hsl(280 65% 60% / 0.15)" }}
           >
-            <Users className="w-5 h-5" style={{ color: "hsl(280 65% 70%)" }} />
+            <UsersIcon className="w-5 h-5" style={{ color: "hsl(280 65% 70%)" }} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground">Team Workload</h1>
@@ -440,7 +431,7 @@ export default function Workload() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Date range picker */}
           <div className="flex items-center gap-1.5 bg-muted/60 border border-border rounded-xl px-3 py-1.5">
-            <CalendarDays className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            <CalendarDaysIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
             <input
               type="date"
               value={startDate}
@@ -466,7 +457,7 @@ export default function Workload() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <BarChart2 className="w-3 h-3" />
+              <ChartBarIcon className="w-3 h-3" />
               Utilization
             </button>
             <button
@@ -477,7 +468,7 @@ export default function Workload() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <CalendarDays className="w-3 h-3" />
+              <CalendarDaysIcon className="w-3 h-3" />
               Heatmap
             </button>
           </div>
@@ -488,7 +479,7 @@ export default function Workload() {
             disabled={isLoading}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs hover:bg-muted transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+            <ArrowPathIcon className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </button>
         </div>
@@ -501,25 +492,25 @@ export default function Workload() {
             label="Total Employees"
             value={stats.total}
             color="hsl(215 20% 65%)"
-            icon={Users}
+            icon={UsersIcon}
           />
           <StatPill
             label="Overloaded (>100%)"
             value={stats.overloaded}
             color="hsl(0 84% 60%)"
-            icon={AlertTriangle}
+            icon={ExclamationTriangleIcon}
           />
           <StatPill
             label="Nearing Limit (75–100%)"
             value={stats.nearing}
             color="hsl(38 92% 50%)"
-            icon={Clock}
+            icon={ClockIcon}
           />
           <StatPill
             label="Available (<75%)"
             value={stats.normal}
             color="hsl(142 76% 36%)"
-            icon={CheckCircle2}
+            icon={CheckCircleIcon}
           />
         </div>
       )}
@@ -553,7 +544,7 @@ export default function Workload() {
             className="rounded-xl border border-border p-8 text-center text-sm"
             style={{ background: "hsl(0 84% 60% / 0.06)" }}
           >
-            <AlertTriangle className="w-6 h-6 mx-auto text-destructive mb-2" />
+            <ExclamationTriangleIcon className="w-6 h-6 mx-auto text-destructive mb-2" />
             <p className="font-semibold text-destructive mb-1">
               Could not load workload data
             </p>
@@ -570,7 +561,7 @@ export default function Workload() {
           </div>
         ) : data.length === 0 ? (
           <div className="text-center py-20">
-            <Users className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+            <UsersIcon className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
             <p className="text-muted-foreground text-sm">
               No employees found.
             </p>

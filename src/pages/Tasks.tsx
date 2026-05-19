@@ -1,8 +1,10 @@
 import { useState, useMemo, forwardRef, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Plus, Pencil, Trash2, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle, Layers } from "lucide-react";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { ArrowTopRightOnSquareIcon, ArrowUpRightIcon, ClockIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, PencilIcon, PlusIcon, QueueListIcon, TrashIcon } from '@heroicons/react/24/solid';
 import EditTaskModal from "@/components/EditTaskModal";
 import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
@@ -15,7 +17,7 @@ import { HideDoneToggle } from "@/components/HideDoneToggle";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, useDroppable,
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, useDroppable, MeasuringStrategy, defaultDropAnimationSideEffects,
 } from "@dnd-kit/core";
 import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
@@ -37,15 +39,18 @@ interface AllTask extends Task {
 }
 
 function getColStyle(col: TaskStatus) {
-  if (col === "Done") return { bg: "hsl(142 71% 45% / 0.06)", border: "hsl(142 71% 45% / 0.2)" };
-  if (col === "In Progress") return { bg: "hsl(191 91% 37% / 0.06)", border: "hsl(191 91% 37% / 0.2)" };
-  return { bg: "hsl(220 14% 96%)", border: "hsl(220 13% 88%)" };
+  if (col === "Done") return { bg: "hsl(var(--card))", border: "hsl(140 60% 50% / 0.35)" };
+  if (col === "In Progress") return { bg: "hsl(var(--card))", border: "hsl(200 80% 55% / 0.35)" };
+  return { bg: "hsl(var(--card))", border: "hsl(var(--border))" };
 }
 
 const PriorityBadge = forwardRef<HTMLSpanElement, { priority?: string }>(({ priority }, ref) => {
   if (!priority) return null;
+  const colors = priority === "High" ? "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+    : priority === "Medium" ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800"
+    : "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800";
   return (
-    <span ref={ref} className={priority === "High" ? "badge-high" : priority === "Medium" ? "badge-medium" : "badge-low"}>
+    <span ref={ref} className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border ${colors}`}>
       {priority}
     </span>
   );
@@ -69,7 +74,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
     const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff >= 0) badges.push(<span key="s" className="inline-flex items-center gap-0.5 text-[9px] font-medium" style={{ color: "hsl(191 91% 30%)" }}><Clock className="w-2.5 h-2.5" />{diff}d</span>);
+    if (diff >= 0) badges.push(<span key="s" className="inline-flex items-center gap-0.5 text-[9px] font-medium" style={{ color: "hsl(191 91% 30%)" }}><ClockIcon className="w-2.5 h-2.5" />{diff}d</span>);
   }
   if (dueDate && status !== "Done") {
     const due = new Date(dueDate);
@@ -77,7 +82,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
     const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
     if (diff > 0) badges.push(
       <span key="o" className="inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-md" style={{ color: "hsl(0 84% 45%)", background: "hsl(0 84% 50% / 0.12)" }}>
-        <AlertTriangle className="w-3 h-3" />เลย {diff}d
+        <ExclamationTriangleIcon className="w-3 h-3" />เลย {diff}d
       </span>
     );
   }
@@ -93,7 +98,12 @@ function SortableCard({ id, children }: { id: string; children: React.ReactNode 
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, touchAction: "none" }}
+      style={{ 
+        transform: CSS.Translate.toString(transform), 
+        transition, 
+        opacity: isDragging ? 0.5 : 1, 
+        touchAction: "none"
+      }}
       className={`relative cursor-grab ${isDragging ? "cursor-grabbing" : ""}`}
     >
       {children}
@@ -107,7 +117,7 @@ function DroppableColumn({ id, children, style }: { id: string; children: React.
   return (
     <div
       ref={setNodeRef}
-      className="kanban-col transition-all duration-200"
+      className="kanban-col transition-all duration-200 rounded-xl border"
       style={{
         background: style.bg,
         borderColor: isOver ? "hsl(var(--primary))" : style.border,
@@ -476,75 +486,75 @@ export default function Tasks() {
   return (
     <div className="p-6 page-enter">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5 animate-stagger-1">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border pb-5 mb-5 animate-stagger-1">
         <div>
-          <h1 className="text-2xl font-bold">Tasks</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{allTasks.length} total · {filtered.length} shown</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Tasks Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">ติดตาม ตรวจสอบ และจัดการงานทั้งหมดภายในองค์กรของคุณ</p>
         </div>
-        <button onClick={() => setModal({ open: true, task: null })} className="btn-primary flex items-center gap-2" title="เพิ่ม Task (กด N)">
-          <Plus className="w-4 h-4" /> New Task
+        <button onClick={() => setModal({ open: true, task: null })} className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200 h-10 shadow-sm" title="เพิ่ม Task (กด N)">
+          <PlusIcon className="w-4 h-4" /> New Task
         </button>
       </div>
 
       {/* Filters */}
-      <div className="space-y-3 mb-5 animate-stagger-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
-          </div>
-          <div className="flex gap-1.5">
-            {(["all", "High", "Medium", "Low"] as const).map(p => (
-              <button key={p} onClick={() => setPriorityFilter(p)}
-                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {p === "all" ? "All" : p}
-              </button>
-            ))}
-          </div>
-          {/* Fix #3: Project/Customer filter */}
-          <select
-            value={filterSource}
-            onChange={e => setFilterSource(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-border bg-background text-xs font-semibold focus:ring-2 focus:ring-primary/30 outline-none min-w-[160px]"
-          >
-            <option value="all">โครงการ / Customer ทั้งหมด</option>
-            {sourceOptions.map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setGroupByProject(g => !g)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupByProject ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
-            title="จัดกลุ่มตามโครงการ"
-          >
-            <Layers className="w-3.5 h-3.5" />
-            Group by Project
-          </button>
-          <HideDoneToggle hideDone={!showDone} setHideDone={(val) => setShowDone(!val)} />
-        </div>
-        {/* Fix #10: Show all 12 months with horizontal scroll */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1">
-            {YEARS.map(y => (
-              <button key={y} onClick={() => setFilterYear(y)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterYear === y ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {y}
-              </button>
-            ))}
-          </div>
-          <div className="w-px h-4 bg-border" />
-          <div ref={monthScrollRef} className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            <button onClick={() => setFilterMonth("all")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-              All months
+      <div className="p-4 bg-card border border-border rounded-xl mb-5 animate-stagger-2 shadow-sm">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
+                className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border bg-background text-foreground text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
+            </div>
+            <div className="flex gap-1.5">
+              {(["all", "High", "Medium", "Low"] as const).map(p => (
+                <button key={p} onClick={() => setPriorityFilter(p)}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"}`}>
+                  {p === "all" ? "All" : p}
+                </button>
+              ))}
+            </div>
+            <select
+              value={filterSource}
+              onChange={e => setFilterSource(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-xs font-semibold focus:ring-2 focus:ring-primary/30 outline-none min-w-[160px]"
+            >
+              <option value="all">โครงการ / Customer ทั้งหมด</option>
+              {sourceOptions.map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setGroupByProject(g => !g)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${groupByProject ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"}`}
+              title="จัดกลุ่มตามโครงการ"
+            >
+              <QueueListIcon className="w-3.5 h-3.5" />
+              Group by Project
             </button>
-            {ALL_MONTHS.map(m => (
-              <button key={m} onClick={() => setFilterMonth(m)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {monthNames[m]?.slice(0, 3)}
+            <HideDoneToggle hideDone={!showDone} setHideDone={(val) => setShowDone(!val)} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+            <div className="flex gap-1">
+              {YEARS.map(y => (
+                <button key={y} onClick={() => setFilterYear(y)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filterYear === y ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"}`}>
+                  {y}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-4 bg-border" />
+            <div ref={monthScrollRef} className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+              <button onClick={() => setFilterMonth("all")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"}`}>
+                All months
               </button>
-            ))}
+              {ALL_MONTHS.map(m => (
+                <button key={m} onClick={() => setFilterMonth(m)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"}`}>
+                  {monthNames[m]?.slice(0, 3)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -557,46 +567,55 @@ export default function Tasks() {
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        measuring={{
+          droppable: {
+            strategy: MeasuringStrategy.Always,
+          },
+        }}
+        layoutMeasuring={{
+          strategy: MeasuringStrategy.Always,
+          frequency: 'optimized',
+        }}
       >
-        <div className={`grid grid-cols-1 ${showDone ? "md:grid-cols-3" : "md:grid-cols-2"} gap-5 items-start animate-stagger-3`}>
+        <div className="flex gap-5 items-start overflow-x-auto snap-x pb-4 md:grid md:overflow-visible md:snap-none animate-stagger-3" style={{ gridTemplateColumns: showDone ? "repeat(3, minmax(280px, 1fr))" : "repeat(2, minmax(280px, 1fr))" }}>
           {visibleColumns.map((col) => {
             const style = getColStyle(col);
             const colT = getColTasks(col);
             const ids = colT.map(t => getCardId(t));
             const grouped = getGroupedColTasks(col);
             return (
-              <DroppableColumn key={col} id={col} style={style}>
+              <div key={col} className="min-w-[300px] md:min-w-0 snap-center flex-shrink-0 md:flex-shrink w-full">
+              <DroppableColumn id={col} style={style}>
                 {/* Sticky column header */}
-                <div className="flex items-center justify-between mb-4 sticky top-0 z-10 py-1" style={{ background: style.bg }}>
+                <div className="flex items-center justify-between mb-4 sticky top-0 z-10 py-3 px-3 bg-card border-b border-border rounded-t-xl">
                   <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-green-500" : col === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
+                    <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-emerald-500" : col === "In Progress" ? "bg-sky-500" : "bg-slate-400"}`} />
                     <span className="text-sm font-semibold text-foreground">{col}</span>
-                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{colT.length}</span>
+                    <span className="text-xs text-muted-foreground bg-secondary border border-border px-1.5 py-0.5 rounded-full">{colT.length}</span>
                   </div>
-                  {/* Fix #4: Bigger + button with tooltip and hover effect */}
                   {col === "To Do" && (
                     <button onClick={() => setModal({ open: true, task: { status: col } })}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground hover:scale-110"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                       title="เพิ่ม Task">
-                      <Plus className="w-4.5 h-4.5" />
+                      <PlusIcon className="w-4 h-4" />
                     </button>
                   )}
                 </div>
                 <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-3 min-h-[60px]">
+                  <div className="flex flex-col gap-3 min-h-[100px] p-3">
                     {/* Fix #7: Group by Project rendering */}
                     {groupByProject && grouped ? (
                       [...grouped.entries()].map(([groupName, groupTasks]) => (
-                        <div key={groupName}>
-                          <div className="flex items-center gap-1.5 mb-2 mt-1">
+                        <div key={groupName} className="flex flex-col gap-2">
+                          <div className="flex items-center gap-1.5 mb-1 mt-1">
                             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{groupName}</span>
                             <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{groupTasks.length}</span>
                           </div>
-                          {groupTasks.map(task => {
-                            const cardId = getCardId(task);
-                            return (
-                              <div key={cardId} className="mb-3">
-                                <SortableCard id={cardId}>
+                          <div className="flex flex-col gap-3">
+                            {groupTasks.map(task => {
+                              const cardId = getCardId(task);
+                              return (
+                                <SortableCard key={cardId} id={cardId}>
                                   <TaskCard
                                     task={task}
                                     col={col}
@@ -607,9 +626,9 @@ export default function Tasks() {
                                     employees={employees}
                                   />
                                 </SortableCard>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -631,31 +650,44 @@ export default function Tasks() {
                       })
                     )}
                     {colT.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-8">No tasks</p>
+                      <div className="flex flex-col items-center justify-center py-10 gap-3">
+                        <p className="text-xs text-muted-foreground">No tasks here yet</p>
+                        <button
+                          onClick={() => setModal({ open: true, task: { status: col } })}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary transition-colors"
+                        >
+                          <PlusIcon className="w-3.5 h-3.5" />
+                          Click here to add a new task
+                        </button>
+                      </div>
                     )}
                   </div>
                 </SortableContext>
               </DroppableColumn>
+              </div>
             );
           })}
         </div>
 
         {/* Drag Overlay */}
-        <DragOverlay>
-          {activeTask ? (
-            <div className="opacity-95 shadow-card-hover">
-              <TaskCard
-                task={activeTask}
-                col={activeTask.status as TaskStatus}
-                onEdit={() => {}}
-                onDelete={() => {}}
-                onStatusToggle={() => {}}
-                onNavigate={() => {}}
-                employees={employees}
-              />
-            </div>
-          ) : null}
-        </DragOverlay>
+        {createPortal(
+          <DragOverlay dropAnimation={null}>
+            {activeTask ? (
+              <div className="opacity-95 shadow-2xl cursor-grabbing w-full" style={{ transform: "none", width: "100%" }}>
+                <TaskCard
+                  task={activeTask}
+                  col={activeTask.status as TaskStatus}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                  onStatusToggle={() => {}}
+                  onNavigate={() => {}}
+                  employees={employees}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>,
+          document.body
+        )}
       </DndContext>
 
       <EditTaskModal
@@ -689,8 +721,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
   const overdue = isOverdue(task.due_date, task.status);
   return (
     <div
-      className={`bg-card rounded-xl px-3.5 py-3.5 border group card-hover ${overdue ? "border-l-[3px] border-l-red-400 border-t-border/60 border-r-border/60 border-b-border/60" : "border-border/60"}`}
-      style={overdue ? { background: "hsl(0 84% 60% / 0.03)" } : undefined}
+      className={`bg-card rounded-xl px-3.5 py-3.5 border group transition-all duration-200 shadow-sm hover:shadow-md ${overdue ? "border-destructive/40 shadow-[0_0_10px_rgba(239,68,68,0.05)]" : "border-border"}`}
       onDoubleClick={onEdit}
     >
       {/* Source label + navigate */}
@@ -705,7 +736,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
             className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[10px] text-primary font-medium hover:underline"
             title={`Go to ${task._source === "project" ? "Projects" : "Customers"}`}
           >
-            View <ArrowUpRight className="w-2.5 h-2.5" />
+            View <ArrowUpRightIcon className="w-2.5 h-2.5" />
           </button>
         </div>
       )}
@@ -715,16 +746,16 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
           {task.link && (
             <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
               className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-              <ExternalLink className="w-3 h-3 text-primary" />
+              <ArrowTopRightOnSquareIcon className="w-3 h-3 text-primary" />
             </a>
           )}
           <button onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-            <Pencil className="w-3 h-3 text-muted-foreground" />
+            <PencilIcon className="w-3 h-3 text-muted-foreground" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-destructive/10 transition-colors">
-            <Trash2 className="w-3 h-3 text-destructive" />
+            <TrashIcon className="w-3 h-3 text-destructive" />
           </button>
         </div>
       </div>
@@ -732,13 +763,13 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
       {task.link && (
         <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
           className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary mb-1.5 truncate max-w-full transition-colors">
-          <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+          <ArrowTopRightOnSquareIcon className="w-2.5 h-2.5 flex-shrink-0" />
           <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
         </a>
       )}
       <div className="flex items-center gap-1.5 flex-wrap">
         <button onClick={(e) => { e.stopPropagation(); onStatusToggle(); }}
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
+          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${col === "Done" ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800" : col === "In Progress" ? "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800" : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"}`}>
           {task.status}
         </button>
         <PriorityBadge priority={task.priority} />
@@ -755,26 +786,22 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
       </div>
       <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
       {task.assigned_to && task.assigned_to.length > 0 && (
-        <div className="flex items-center mt-2">
+        <div className="flex items-center mt-2 -space-x-2">
           {task.assigned_to.slice(0, 3).map((a, i) => {
             const emp = employees?.find(e => e.name === a);
             return (
-              <div key={i} className="-ml-1 first:ml-0">
-                <EmployeeAvatar name={a} avatar={emp?.avatar} size="xs" index={i} className="border-2 border-card" />
+              <div key={i} className="">
+                <EmployeeAvatar name={a} avatar={emp?.avatar} size="xs" index={i} className="border-2 border-black/50" />
               </div>
             );
           })}
-          {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
+          {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-3">+{task.assigned_to.length - 3}</span>}
         </div>
       )}
-      {/* Fix #5: Consistent notes area — always show min height, truncate at 2 lines */}
-      <div className="mt-2 min-h-[2rem]">
-        {task.comments ? (
-          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{task.comments}</p>
-        ) : (
-          <p className="text-xs text-muted-foreground/40 leading-relaxed italic">—</p>
-        )}
-      </div>
+      {/* Description: single line clamp */}
+      {task.comments && (
+        <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-1">{task.comments}</p>
+      )}
     </div>
   );
 }

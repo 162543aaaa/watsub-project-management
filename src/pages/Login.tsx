@@ -1,8 +1,8 @@
+import { ArrowLeftOnRectangleIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import { GlobalLoadingScreen } from "@/components/LoadingScreen";
-import { LogIn, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -75,13 +75,13 @@ export default function Login() {
             <div className="relative">
               <Input type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" className="pr-10" />
               <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
-                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPw ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
           <Button type="submit" disabled={submitting} className="w-full">
-            <LogIn className="w-4 h-4 mr-2" /> {submitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+            <ArrowLeftOnRectangleIcon className="w-4 h-4 mr-2" /> {submitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </Button>
 
           <p className="text-sm text-center text-muted-foreground">

@@ -1,5 +1,5 @@
+import { ArrowUpTrayIcon, CheckIcon, DocumentTextIcon, ExclamationCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useRef } from "react";
-import { Upload, FileSpreadsheet, Check, AlertCircle, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const importTypes = ["Tasks", "Projects", "Customers", "Employees", "Goals", "Leave", "Budget"];
@@ -57,7 +57,7 @@ export default function Import() {
             <div className="space-y-1.5">
               {[".csv", ".xlsx", ".xls"].map(f => (
                 <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Check className="w-3.5 h-3.5 text-green-500" /> {f} files
+                  <CheckIcon className="w-3.5 h-3.5 text-green-500" /> {f} files
                 </div>
               ))}
             </div>
@@ -76,7 +76,7 @@ export default function Import() {
             <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              {file ? <FileSpreadsheet className="w-7 h-7 text-primary" /> : <Upload className="w-7 h-7 text-primary" />}
+              {file ? <DocumentTextIcon className="w-7 h-7 text-primary" /> : <ArrowUpTrayIcon className="w-7 h-7 text-primary" />}
             </div>
             {file ? (
               <div>
@@ -97,7 +97,7 @@ export default function Import() {
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <h3 className="font-semibold text-foreground text-sm">Preview (first 5 rows)</h3>
                 <button onClick={() => { setFile(null); setPreview([]); }} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted">
-                  <X className="w-4 h-4 text-muted-foreground" />
+                  <XMarkIcon className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
               <div className="overflow-x-auto">
@@ -123,10 +123,10 @@ export default function Import() {
           <div className="flex gap-3">
             <button className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2"
               onClick={() => file ? toast({ title: "Validation passed!", description: `${file.name} is ready to import.` }) : toast({ title: "กรุณาเลือกไฟล์", variant: "destructive" })}>
-              <AlertCircle className="w-4 h-4" /> Validate
+              <ExclamationCircleIcon className="w-4 h-4" /> Validate
             </button>
             <button onClick={handleImport} className="flex-1 btn-primary flex items-center justify-center gap-2">
-              <Upload className="w-4 h-4" /> Import {selected}
+              <ArrowUpTrayIcon className="w-4 h-4" /> Import {selected}
             </button>
           </div>
         </div>

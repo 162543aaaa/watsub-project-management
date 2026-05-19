@@ -1,5 +1,5 @@
+import { ChevronDownIcon, ChevronUpIcon, UsersIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BrandColors, OrgTreeNode } from "@/hooks/useCompanyInfo";
 
@@ -96,7 +96,7 @@ function OrgChartNode({
 
         {hasChildren && (
           <div className="mt-1 flex justify-center text-muted-foreground">
-            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {expanded ? <ChevronUpIcon className="w-3 h-3" /> : <ChevronDownIcon className="w-3 h-3" />}
           </div>
         )}
       </button>
@@ -143,7 +143,7 @@ export function InteractiveOrgChart({
           className="w-14 h-14 rounded-2xl flex items-center justify-center"
           style={{ backgroundColor: `${brandColors.primary}20` }}
         >
-          <Users className="w-7 h-7" style={{ color: brandColors.primary }} />
+          <UsersIcon className="w-7 h-7" style={{ color: brandColors.primary }} />
         </div>
         <p className="text-sm font-medium">ยังไม่มีข้อมูลโครงสร้างทีม</p>
         <p className="text-xs text-center max-w-xs">

@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { TrashIcon } from '@heroicons/react/24/solid';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -30,7 +30,7 @@ export default function ConfirmDeleteDialog({
             onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            <Trash2 className="w-4 h-4 mr-1.5" /> ลบ
+            <TrashIcon className="w-4 h-4 mr-1.5" /> ลบ
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

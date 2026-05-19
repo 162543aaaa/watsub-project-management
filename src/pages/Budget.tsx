@@ -1,5 +1,4 @@
-import { ExternalLink } from "lucide-react";
-
+import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/solid';
 const BUDGET_URL = "https://watsub-cashflow2026.lovable.app/";
 
 export default function Budget() {
@@ -19,7 +18,7 @@ export default function Budget() {
             </div>
             <a href={BUDGET_URL} target="_blank" rel="noopener noreferrer"
               className="btn-primary flex items-center gap-2">
-              <ExternalLink className="w-4 h-4" /> Open Full View
+              <ArrowTopRightOnSquareIcon className="w-4 h-4" /> Open Full View
             </a>
           </div>
         </div>

@@ -1,10 +1,7 @@
+import { ArrowPathIcon, BookOpenIcon, CheckIcon, ChevronRightIcon, ClockIcon, ExclamationTriangleIcon, EyeIcon, MagnifyingGlassIcon, PencilIcon, PlusIcon, TagIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import {
-  BookOpen, Search, Clock, Eye, Tag, ChevronRight,
-  Plus, X, Save, RefreshCw, AlertTriangle, Pencil, Trash2
-} from "lucide-react";
 import { useWiki, WikiPage } from "@/hooks/useWiki";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
@@ -73,14 +70,14 @@ function ArticleCard({
             className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
             title="Edit"
           >
-            <Pencil className="w-3 h-3 text-muted-foreground" />
+            <PencilIcon className="w-3 h-3 text-muted-foreground" />
           </button>
           <button
             onClick={e => { e.preventDefault(); onDelete(page); }}
             className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors"
             title="Delete"
           >
-            <Trash2 className="w-3 h-3 text-destructive" />
+            <TrashIcon className="w-3 h-3 text-destructive" />
           </button>
         </div>
       )}
@@ -89,7 +86,7 @@ function ArticleCard({
           <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors leading-snug">
             {page.title}
           </h3>
-          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 group-hover:text-primary transition-colors mt-0.5" />
+          <ChevronRightIcon className="w-4 h-4 text-muted-foreground flex-shrink-0 group-hover:text-primary transition-colors mt-0.5" />
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">
           {snippet}
@@ -102,10 +99,10 @@ function ArticleCard({
             <span className="text-[11px] text-muted-foreground">by {page.author_name}</span>
           )}
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground ml-auto">
-            <Eye className="w-3 h-3" /> {page.view_count}
+            <EyeIcon className="w-3 h-3" /> {page.view_count}
           </span>
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Clock className="w-3 h-3" />
+            <ClockIcon className="w-3 h-3" />
             {formatDistanceToNow(new Date(page.updated_at), { addSuffix: true })}
           </span>
         </div>
@@ -165,7 +162,7 @@ function ArticleModal({
         <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
           <h3 className="text-base font-bold">{initial ? "Edit Article" : "New Article"}</h3>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
-            <X className="w-4 h-4" />
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
 
@@ -250,7 +247,7 @@ function ArticleModal({
             disabled={saving || !form.title.trim() || !form.slug.trim()}
             className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Save className="w-4 h-4" /> {saving ? "Saving…" : initial ? "Save Changes" : "Create Article"}
+            <CheckIcon className="w-4 h-4" /> {saving ? "Saving…" : initial ? "CheckIcon Changes" : "Create Article"}
           </button>
         </div>
       </div>
@@ -351,7 +348,7 @@ export default function Wiki() {
       <div className="min-h-full p-6 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "hsl(0 84% 60% / 0.15)" }}>
-            <AlertTriangle className="w-5 h-5 text-destructive" />
+            <ExclamationTriangleIcon className="w-5 h-5 text-destructive" />
           </div>
           <div>
             <h1 className="text-xl font-bold">Company Wiki</h1>
@@ -380,7 +377,7 @@ export default function Wiki() {
             onClick={fetchPages}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm hover:bg-muted transition-colors mt-2"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> ลองใหม่อีกครั้ง
+            <ArrowPathIcon className="w-3.5 h-3.5" /> ลองใหม่อีกครั้ง
           </button>
         </div>
       </div>
@@ -395,7 +392,7 @@ export default function Wiki() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: "hsl(191 91% 37% / 0.15)" }}>
-            <BookOpen className="w-5 h-5" style={{ color: "hsl(191 91% 55%)" }} />
+            <BookOpenIcon className="w-5 h-5" style={{ color: "hsl(191 91% 55%)" }} />
           </div>
           <div>
             <h1 className="text-xl font-bold">Company Wiki</h1>
@@ -411,24 +408,24 @@ export default function Wiki() {
             className="w-8 h-8 rounded-lg flex items-center justify-center border border-border hover:bg-muted transition-colors"
             title="Refresh"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <ArrowPathIcon className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           </button>
           <button
             onClick={openCreate}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium btn-primary"
           >
-            <Plus className="w-4 h-4" /> New Article
+            <PlusIcon className="w-4 h-4" /> New Article
           </button>
         </div>
       </div>
 
-      {/* Search + Category Filter */}
+      {/* MagnifyingGlassIcon + Category Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-card text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-            placeholder="Search articles..."
+            placeholder="MagnifyingGlassIcon articles..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -452,7 +449,7 @@ export default function Wiki() {
                 ? { ...catStyle(cat), borderColor: "transparent" }
                 : { borderColor: "hsl(222 47% 20%)", color: "hsl(215 20% 55%)" }}
             >
-              <Tag className="w-3 h-3" /> {cat}
+              <TagIcon className="w-3 h-3" /> {cat}
             </button>
           ))}
         </div>
@@ -467,7 +464,7 @@ export default function Wiki() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 space-y-4">
-          <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/20" />
+          <BookOpenIcon className="w-12 h-12 mx-auto text-muted-foreground/20" />
           <div>
             <p className="text-muted-foreground text-sm font-medium">
               {search || selectedCategory ? "ไม่พบบทความที่ตรงกับเงื่อนไข" : "ยังไม่มีบทความ"}
@@ -480,7 +477,7 @@ export default function Wiki() {
           </div>
           {!search && !selectedCategory && (
             <button onClick={openCreate} className="btn-primary inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium">
-              <Plus className="w-4 h-4" /> สร้างบทความแรก
+              <PlusIcon className="w-4 h-4" /> สร้างบทความแรก
             </button>
           )}
         </div>

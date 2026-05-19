@@ -1,5 +1,5 @@
+import { ArrowPathIcon, ArrowRightIcon, ArrowTrendingDownIcon, ArrowTrendingUpIcon, BookOpenIcon, ClockIcon, ExclamationCircleIcon, MapPinIcon, MinusIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, VideoCameraIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useMemo, useState } from "react";
-import { Plus, TrendingUp, AlertCircle, Users, ArrowRight, Clock, TrendingDown, Minus, Video, MapPin, BookOpen, RefreshCw, X, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects, Task } from "@/hooks/useProjects";
@@ -60,9 +60,9 @@ function StatCard({ label, value, sub, icon: Icon, gradient, trend, trendLabel }
           <Icon className="w-5 h-5 text-white" />
         </div>
         <div className="flex items-center gap-1">
-          {trend === "up" && <TrendingUp className="w-3 h-3 text-green-500" />}
-          {trend === "down" && <TrendingDown className="w-3 h-3 text-red-400" />}
-          {trend === "neutral" && <Minus className="w-3 h-3 text-muted-foreground" />}
+          {trend === "up" && <ArrowTrendingUpIcon className="w-3 h-3 text-green-500" />}
+          {trend === "down" && <ArrowTrendingDownIcon className="w-3 h-3 text-red-400" />}
+          {trend === "neutral" && <MinusIcon className="w-3 h-3 text-muted-foreground" />}
         </div>
       </div>
       <div className="text-2xl font-bold text-foreground">{value}</div>
@@ -224,13 +224,13 @@ export default function Dashboard() {
           {unreadCount > 0 && (
             <Link to="/notifications" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all hover:scale-105"
               style={{ borderColor: "hsl(0 84% 60% / 0.3)", background: "hsl(0 84% 60% / 0.06)", color: "hsl(0 84% 55%)" }}>
-              <AlertCircle className="w-4 h-4" />
+              <ExclamationCircleIcon className="w-4 h-4" />
               {unreadCount} unread
             </Link>
           )}
           <Link to="/tasks">
             <button className="btn-primary flex items-center gap-2">
-              <Plus className="w-4 h-4" /> New Task
+              <PlusIcon className="w-4 h-4" /> New Task
             </button>
           </Link>
         </div>
@@ -238,12 +238,12 @@ export default function Dashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-5 sm:mb-7 animate-stagger-2">
-        <StatCard label="Completion Rate" value={`${stats.rate}%`} sub={`${stats.completed}/${stats.total} tasks`} icon={TrendingUp} gradient="bg-gradient-primary" trend={stats.rate >= 50 ? "up" : "down"} />
-        <StatCard label="Active Tasks" value={stats.inProgress} sub="In Progress" icon={Clock} gradient="bg-gradient-success" trend="neutral" />
-        <StatCard label="Overdue Tasks" value={stats.overdue} sub="Past due date" icon={AlertCircle} gradient="bg-gradient-danger" trend={stats.overdue > 0 ? "down" : "up"} trendLabel={stats.overdue > 0 ? "Needs attention" : "All on track"} />
-        <StatCard label="Team Size" value={employees.length} sub={`${filteredProjects.length} active projects`} icon={Users} gradient="bg-gradient-warning" trend="neutral" />
-        <StatCard label="Meetings" value={meetings.length + allTasks.filter(t => t.category === "meeting").length} sub="การประชุมทั้งหมด" icon={Video} gradient="bg-gradient-to-br from-violet-500 to-purple-600" trend="neutral" />
-        <StatCard label="On-site Work" value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length} sub="งานออกกองทั้งหมด" icon={MapPin} gradient="bg-gradient-to-br from-rose-500 to-pink-600" trend="neutral" />
+        <StatCard label="Completion Rate" value={`${stats.rate}%`} sub={`${stats.completed}/${stats.total} tasks`} icon={ArrowTrendingUpIcon} gradient="bg-gradient-primary" trend={stats.rate >= 50 ? "up" : "down"} />
+        <StatCard label="Active Tasks" value={stats.inProgress} sub="In Progress" icon={ClockIcon} gradient="bg-gradient-success" trend="neutral" />
+        <StatCard label="Overdue Tasks" value={stats.overdue} sub="Past due date" icon={ExclamationCircleIcon} gradient="bg-gradient-danger" trend={stats.overdue > 0 ? "down" : "up"} trendLabel={stats.overdue > 0 ? "Needs attention" : "All on track"} />
+        <StatCard label="Team Size" value={employees.length} sub={`${filteredProjects.length} active projects`} icon={UsersIcon} gradient="bg-gradient-warning" trend="neutral" />
+        <StatCard label="Meetings" value={meetings.length + allTasks.filter(t => t.category === "meeting").length} sub="การประชุมทั้งหมด" icon={VideoCameraIcon} gradient="bg-gradient-to-br from-violet-500 to-purple-600" trend="neutral" />
+        <StatCard label="On-site Work" value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length} sub="งานออกกองทั้งหมด" icon={MapPinIcon} gradient="bg-gradient-to-br from-rose-500 to-pink-600" trend="neutral" />
       </div>
 
       {/* Team Progress — Full Width */}
@@ -254,7 +254,7 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-0.5">{employees.length} members · คลิกงานเพื่อดูรายละเอียด</p>
           </div>
           <Link to="/team" className="flex items-center gap-1 text-xs font-medium text-primary hover:gap-2 transition-all">
-            View all <ArrowRight className="w-3 h-3" />
+            View all <ArrowRightIcon className="w-3 h-3" />
           </Link>
         </div>
 
@@ -457,14 +457,14 @@ export default function Dashboard() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs hover:bg-muted transition-colors"
             >
               View Resource Workload
-              <ArrowRight className="w-3 h-3" />
+              <ArrowRightIcon className="w-3 h-3" />
             </Link>
             <button
               onClick={refetchWorkload}
               disabled={loadingWorkload}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs hover:bg-muted transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`w-3 h-3 ${loadingWorkload ? "animate-spin" : ""}`} />
+              <ArrowPathIcon className={`w-3 h-3 ${loadingWorkload ? "animate-spin" : ""}`} />
               Refresh
             </button>
           </div>
@@ -545,13 +545,13 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <Link to="/wiki" className="flex items-center gap-1 text-xs font-medium text-primary hover:gap-2 transition-all">
-              View all <ArrowRight className="w-3 h-3" />
+              View all <ArrowRightIcon className="w-3 h-3" />
             </Link>
             <button
               onClick={() => setWikiDialogOpen(true)}
               className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5"
             >
-              <Plus className="w-3.5 h-3.5" /> New Article
+              <PlusIcon className="w-3.5 h-3.5" /> New Article
             </button>
           </div>
         </div>
@@ -563,7 +563,7 @@ export default function Dashboard() {
             </div>
           ) : wikiPages.length === 0 ? (
             <div className="text-center py-8">
-              <BookOpen className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+              <BookOpenIcon className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground mb-3">No articles yet</p>
               <button
                 onClick={() => setWikiDialogOpen(true)}
@@ -581,7 +581,7 @@ export default function Dashboard() {
                   className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted/60 cursor-pointer group transition-colors"
                   onClick={() => setSelectedWikiPage(selectedWikiPage === page.id ? null : page.id)}
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <BookOpenIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors truncate block">
                       {page.title}
@@ -610,7 +610,7 @@ export default function Dashboard() {
                         onClick={() => setSelectedWikiPage(null)}
                         className="text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <XMarkIcon className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     <WikiViewer
@@ -638,7 +638,7 @@ export default function Dashboard() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <BookOpen className="w-4 h-4" />
+              <BookOpenIcon className="w-4 h-4" />
               New Wiki Article
             </DialogTitle>
           </DialogHeader>
@@ -689,7 +689,7 @@ export default function Dashboard() {
                 disabled={savingWiki || !wikiTitle.trim()}
                 className="btn-primary flex items-center gap-2 text-sm disabled:opacity-50"
               >
-                <Send className="w-3.5 h-3.5" />
+                <PaperAirplaneIcon className="w-3.5 h-3.5" />
                 {savingWiki ? "Saving…" : "Publish Article"}
               </button>
             </div>

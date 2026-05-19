@@ -1,5 +1,5 @@
+import { ArrowTrendingUpIcon, CalendarDaysIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon, FlagIcon, PencilIcon, PlusIcon, TrashIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useMemo } from "react";
-import { Plus, Target, Save, Trash2, Pencil, X, ChevronDown, ChevronRight, CalendarDays, TrendingUp, User } from "lucide-react";
 import { useOKRs } from "@/hooks/useOKRs";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -123,14 +123,14 @@ export default function OKRs() {
           <p className="text-sm text-muted-foreground mt-0.5">Objectives & Key Results</p>
         </div>
         <button onClick={openAddObj} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Objective
+          <PlusIcon className="w-4 h-4" /> New Objective
         </button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 mb-6 animate-stagger-2">
         <div className="flex items-center gap-1.5">
-          <CalendarDays className="w-4 h-4 text-muted-foreground" />
+          <CalendarDaysIcon className="w-4 h-4 text-muted-foreground" />
           <div className="flex gap-1">
             {yearOptions.map(y => (
               <button key={y} onClick={() => setFilterYear(y)}
@@ -196,7 +196,7 @@ export default function OKRs() {
           <div className="flex gap-3 mt-2">
             <button onClick={() => setShowObjDialog(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
             <button onClick={saveObj} className="flex-1 btn-primary flex items-center justify-center gap-2">
-              <Save className="w-4 h-4" /> {editingObj ? "Update" : "Create"}
+              <CheckIcon className="w-4 h-4" /> {editingObj ? "Update" : "Create"}
             </button>
           </div>
         </DialogContent>
@@ -222,7 +222,7 @@ export default function OKRs() {
                   value={krForm.initial_value} onChange={e => setKrForm({ ...krForm, initial_value: Number(e.target.value) })} />
               </div>
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Target</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">FlagIcon</label>
                 <input type="number" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
                   value={krForm.target_value} onChange={e => setKrForm({ ...krForm, target_value: Number(e.target.value) })} />
               </div>
@@ -236,7 +236,7 @@ export default function OKRs() {
           <div className="flex gap-3 mt-2">
             <button onClick={() => setShowKRDialog(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
             <button onClick={saveKR} className="flex-1 btn-primary flex items-center justify-center gap-2">
-              <Save className="w-4 h-4" /> Create
+              <CheckIcon className="w-4 h-4" /> Create
             </button>
           </div>
         </DialogContent>
@@ -253,7 +253,7 @@ export default function OKRs() {
             <button onClick={() => setConfirmDeleteObj(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
             <button onClick={async () => { if (confirmDeleteObj) { await deleteObjective.mutateAsync(confirmDeleteObj); setConfirmDeleteObj(null); } }}
               className="flex-1 px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors flex items-center justify-center gap-2">
-              <Trash2 className="w-4 h-4" /> Delete
+              <TrashIcon className="w-4 h-4" /> Delete
             </button>
           </div>
         </DialogContent>
@@ -270,7 +270,7 @@ export default function OKRs() {
             <button onClick={() => setConfirmDeleteKR(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
             <button onClick={async () => { if (confirmDeleteKR) { await deleteKeyResult.mutateAsync(confirmDeleteKR); setConfirmDeleteKR(null); } }}
               className="flex-1 px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors flex items-center justify-center gap-2">
-              <Trash2 className="w-4 h-4" /> Delete
+              <TrashIcon className="w-4 h-4" /> Delete
             </button>
           </div>
         </DialogContent>
@@ -279,7 +279,7 @@ export default function OKRs() {
       {/* Empty state */}
       {filtered.length === 0 && (
         <div className="text-center py-16">
-          <Target className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <FlagIcon className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-muted-foreground">No OKRs found for {filterYear}{filterQuarter !== "All" ? ` ${filterQuarter}` : ""}</p>
           <button onClick={openAddObj} className="mt-3 text-sm text-primary hover:underline">+ Add your first Objective</button>
         </div>
@@ -299,7 +299,7 @@ export default function OKRs() {
               <div className="p-5 cursor-pointer group" onClick={() => toggle(obj.id)}>
                 <div className="flex items-start gap-3">
                   <button className="mt-0.5 flex-shrink-0 text-muted-foreground">
-                    {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    {isExpanded ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -343,10 +343,10 @@ export default function OKRs() {
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={e => e.stopPropagation()}>
                     <button onClick={() => openEditObj(obj)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                      <Pencil className="w-3.5 h-3.5" />
+                      <PencilIcon className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => setConfirmDeleteObj(obj.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-500 transition-colors">
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <TrashIcon className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -363,7 +363,7 @@ export default function OKRs() {
                     const krPct = range > 0 ? Math.round(((kr.current_value - kr.initial_value) / range) * 100) : 0;
                     return (
                       <div key={kr.id} className="px-12 py-3 border-b border-border/20 last:border-b-0 group/kr flex items-center gap-3">
-                        <TrendingUp className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                        <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium text-foreground truncate">{kr.title}</span>
@@ -381,16 +381,16 @@ export default function OKRs() {
                               <input type="number" className="w-20 px-2 py-1 rounded-lg border border-border bg-background text-xs outline-none"
                                 value={editKRVal} onChange={e => setEditKRVal(e.target.value)} autoFocus
                                 onKeyDown={e => { if (e.key === "Enter") saveKRValue(kr.id); if (e.key === "Escape") setEditKR(null); }} />
-                              <button onClick={() => saveKRValue(kr.id)} className="btn-primary px-2 py-1 text-xs">Save</button>
-                              <button onClick={() => setEditKR(null)} className="px-1.5 py-1 rounded-lg border border-border text-xs hover:bg-muted"><X className="w-3 h-3" /></button>
+                              <button onClick={() => saveKRValue(kr.id)} className="btn-primary px-2 py-1 text-xs">CheckIcon</button>
+                              <button onClick={() => setEditKR(null)} className="px-1.5 py-1 rounded-lg border border-border text-xs hover:bg-muted"><XMarkIcon className="w-3 h-3" /></button>
                             </div>
                           ) : (
                             <>
                               <button onClick={() => startEditKR(kr)} className="w-6 h-6 rounded-lg flex items-center justify-center opacity-0 group-hover/kr:opacity-100 hover:bg-muted text-muted-foreground hover:text-foreground transition-all">
-                                <Pencil className="w-3 h-3" />
+                                <PencilIcon className="w-3 h-3" />
                               </button>
                               <button onClick={() => setConfirmDeleteKR(kr.id)} className="w-6 h-6 rounded-lg flex items-center justify-center opacity-0 group-hover/kr:opacity-100 hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-500 transition-all">
-                                <Trash2 className="w-3 h-3" />
+                                <TrashIcon className="w-3 h-3" />
                               </button>
                             </>
                           )}
@@ -400,7 +400,7 @@ export default function OKRs() {
                   })}
                   <div className="px-12 py-3">
                     <button onClick={() => openAddKR(obj.id)} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
-                      <Plus className="w-3.5 h-3.5" /> Add Key Result
+                      <PlusIcon className="w-3.5 h-3.5" /> Add Key Result
                     </button>
                   </div>
                 </div>

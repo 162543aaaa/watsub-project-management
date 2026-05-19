@@ -1,5 +1,5 @@
+import { CheckCircleIcon, CheckIcon, ClockIcon, PlusIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
-import { Plus, Check, X, Save, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { useLeave, LeaveRequest } from "@/hooks/useLeave";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -46,15 +46,15 @@ export default function Leave() {
           </p>
         </div>
         <button onClick={() => setShowAdd(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Request Leave
+          <PlusIcon className="w-4 h-4" /> Request Leave
         </button>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6 animate-stagger-2">
         {([
-          { label: "Pending", count: leaves.filter(l => l.status === "Pending").length, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Approved", count: leaves.filter(l => l.status === "Approved").length, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
-          { label: "Rejected", count: leaves.filter(l => l.status === "Rejected").length, icon: XCircle, color: "text-red-500", bg: "bg-red-50" },
+          { label: "Pending", count: leaves.filter(l => l.status === "Pending").length, icon: ClockIcon, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Approved", count: leaves.filter(l => l.status === "Approved").length, icon: CheckCircleIcon, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Rejected", count: leaves.filter(l => l.status === "Rejected").length, icon: XCircleIcon, color: "text-red-500", bg: "bg-red-50" },
         ] as const).map(s => (
           <div key={s.label} className={`rounded-xl p-4 ${s.bg} border border-border/50`}>
             <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ export default function Leave() {
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold">Request Leave</h3>
-              <button onClick={() => setShowAdd(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><X className="w-4 h-4" /></button>
+              <button onClick={() => setShowAdd(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><XMarkIcon className="w-4 h-4" /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -118,7 +118,7 @@ export default function Leave() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowAdd(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={handleAdd} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Submit</button>
+              <button onClick={handleAdd} className="flex-1 btn-primary flex items-center justify-center gap-2"><CheckIcon className="w-4 h-4" /> Submit</button>
             </div>
           </div>
         </div>
@@ -160,11 +160,11 @@ export default function Leave() {
                       <div className="flex items-center gap-1.5">
                         <button onClick={() => updateStatus(leave.id, "Approved")}
                           className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
-                          <Check className="w-3 h-3" /> Approve
+                          <CheckIcon className="w-3 h-3" /> Approve
                         </button>
                         <button onClick={() => updateStatus(leave.id, "Rejected")}
                           className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
-                          <X className="w-3 h-3" /> Reject
+                          <XMarkIcon className="w-3 h-3" /> Reject
                         </button>
                       </div>
                     )}
