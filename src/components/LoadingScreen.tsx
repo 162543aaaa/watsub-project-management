@@ -3,7 +3,7 @@ import loadingWebm from "@/assets/loading.webm";
 export default function LoadingScreen() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="w-56 h-56 sm:w-72 sm:h-72 flex items-center justify-center">
+      <div className="w-32 h-32 sm:w-48 sm:h-48 flex items-center justify-center">
         <video 
           autoPlay 
           loop 
@@ -23,7 +23,7 @@ export default function LoadingScreen() {
 export function GlobalLoadingScreen() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-      <div className="w-64 h-64 sm:w-80 sm:h-80 flex items-center justify-center">
+      <div className="w-32 h-32 sm:w-48 sm:h-48 flex items-center justify-center">
         <video 
           autoPlay 
           loop 
