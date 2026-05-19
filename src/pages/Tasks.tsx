@@ -2,6 +2,7 @@ import { useState, useMemo, forwardRef, useCallback, useRef, useEffect } from "r
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import LoadingScreen from "@/components/LoadingScreen";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { Plus, Pencil, Trash2, ExternalLink, Search, ArrowUpRight, Clock, AlertTriangle, Layers } from "lucide-react";
 import EditTaskModal from "@/components/EditTaskModal";
 import { useNavigate } from "react-router-dom";
@@ -37,15 +38,18 @@ interface AllTask extends Task {
 }
 
 function getColStyle(col: TaskStatus) {
-  if (col === "Done") return { bg: "hsl(142 71% 45% / 0.06)", border: "hsl(142 71% 45% / 0.2)" };
-  if (col === "In Progress") return { bg: "hsl(191 91% 37% / 0.06)", border: "hsl(191 91% 37% / 0.2)" };
-  return { bg: "hsl(220 14% 96%)", border: "hsl(220 13% 88%)" };
+  if (col === "Done") return { bg: "rgba(16, 185, 129, 0.05)", border: "rgba(255,255,255,0.1)" };
+  if (col === "In Progress") return { bg: "rgba(14, 165, 233, 0.05)", border: "rgba(255,255,255,0.1)" };
+  return { bg: "rgba(255, 255, 255, 0.02)", border: "rgba(255,255,255,0.1)" };
 }
 
 const PriorityBadge = forwardRef<HTMLSpanElement, { priority?: string }>(({ priority }, ref) => {
   if (!priority) return null;
+  const colors = priority === "High" ? "bg-red-500/10 text-red-400 border-red-500/20" 
+    : priority === "Medium" ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+    : "bg-blue-500/10 text-blue-400 border-blue-500/20";
   return (
-    <span ref={ref} className={priority === "High" ? "badge-high" : priority === "Medium" ? "badge-medium" : "badge-low"}>
+    <span ref={ref} className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border ${colors}`}>
       {priority}
     </span>
   );
@@ -107,11 +111,11 @@ function DroppableColumn({ id, children, style }: { id: string; children: React.
   return (
     <div
       ref={setNodeRef}
-      className="kanban-col transition-all duration-200"
+      className="kanban-col transition-all duration-200 rounded-2xl backdrop-blur-md"
       style={{
         background: style.bg,
-        borderColor: isOver ? "hsl(var(--primary))" : style.border,
-        boxShadow: isOver ? "0 0 0 2px hsl(var(--primary) / 0.2)" : "none",
+        borderColor: isOver ? "rgba(255,255,255,0.3)" : style.border,
+        boxShadow: isOver ? "0 0 0 2px rgba(255,255,255, 0.1)" : "none",
       }}
     >
       {children}
@@ -476,78 +480,80 @@ export default function Tasks() {
   return (
     <div className="p-6 page-enter">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5 animate-stagger-1">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-white/10 pb-5 mb-5 animate-stagger-1">
         <div>
-          <h1 className="text-2xl font-bold">Tasks</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{allTasks.length} total · {filtered.length} shown</p>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r flow-root from-white to-white/60 bg-clip-text text-transparent">Tasks Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">ติดตาม ตรวจสอบ และจัดการงานทั้งหมดภายในองค์กรของคุณ</p>
         </div>
-        <button onClick={() => setModal({ open: true, task: null })} className="btn-primary flex items-center gap-2" title="เพิ่ม Task (กด N)">
+        <button onClick={() => setModal({ open: true, task: null })} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.5)] hover:shadow-[0_0_25px_rgba(var(--primary),0.7)] px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-300 h-10" title="เพิ่ม Task (กด N)">
           <Plus className="w-4 h-4" /> New Task
         </button>
       </div>
 
       {/* Filters */}
-      <div className="space-y-3 mb-5 animate-stagger-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
-          </div>
-          <div className="flex gap-1.5">
-            {(["all", "High", "Medium", "Low"] as const).map(p => (
-              <button key={p} onClick={() => setPriorityFilter(p)}
-                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {p === "all" ? "All" : p}
-              </button>
-            ))}
-          </div>
-          {/* Fix #3: Project/Customer filter */}
-          <select
-            value={filterSource}
-            onChange={e => setFilterSource(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-border bg-background text-xs font-semibold focus:ring-2 focus:ring-primary/30 outline-none min-w-[160px]"
-          >
-            <option value="all">โครงการ / Customer ทั้งหมด</option>
-            {sourceOptions.map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setGroupByProject(g => !g)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupByProject ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}
-            title="จัดกลุ่มตามโครงการ"
-          >
-            <Layers className="w-3.5 h-3.5" />
-            Group by Project
-          </button>
-          <HideDoneToggle hideDone={!showDone} setHideDone={(val) => setShowDone(!val)} />
-        </div>
-        {/* Fix #10: Show all 12 months with horizontal scroll */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1">
-            {YEARS.map(y => (
-              <button key={y} onClick={() => setFilterYear(y)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterYear === y ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {y}
-              </button>
-            ))}
-          </div>
-          <div className="w-px h-4 bg-border" />
-          <div ref={monthScrollRef} className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            <button onClick={() => setFilterMonth("all")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-              All months
+      <GlassCard className="p-4 bg-black/20 backdrop-blur-md border-white/10 mb-5 animate-stagger-2">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
+            </div>
+            <div className="flex gap-1.5">
+              {(["all", "High", "Medium", "Low"] as const).map(p => (
+                <button key={p} onClick={() => setPriorityFilter(p)}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${priorityFilter === p ? "bg-primary text-primary-foreground" : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/10"}`}>
+                  {p === "all" ? "All" : p}
+                </button>
+              ))}
+            </div>
+            {/* Fix #3: Project/Customer filter */}
+            <select
+              value={filterSource}
+              onChange={e => setFilterSource(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white text-xs font-semibold focus:ring-2 focus:ring-primary/30 outline-none min-w-[160px]"
+            >
+              <option value="all">โครงการ / Customer ทั้งหมด</option>
+              {sourceOptions.map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setGroupByProject(g => !g)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupByProject ? "bg-primary text-primary-foreground" : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/10"}`}
+              title="จัดกลุ่มตามโครงการ"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Group by Project
             </button>
-            {ALL_MONTHS.map(m => (
-              <button key={m} onClick={() => setFilterMonth(m)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
-                {monthNames[m]?.slice(0, 3)}
+            <HideDoneToggle hideDone={!showDone} setHideDone={(val) => setShowDone(!val)} />
+          </div>
+          {/* Fix #10: Show all 12 months with horizontal scroll */}
+          <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
+            <div className="flex gap-1">
+              {YEARS.map(y => (
+                <button key={y} onClick={() => setFilterYear(y)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterYear === y ? "bg-white/20 text-white border border-white/20" : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5"}`}>
+                  {y}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-4 bg-white/10" />
+            <div ref={monthScrollRef} className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+              <button onClick={() => setFilterMonth("all")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === "all" ? "bg-primary text-primary-foreground" : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5"}`}>
+                All months
               </button>
-            ))}
+              {ALL_MONTHS.map(m => (
+                <button key={m} onClick={() => setFilterMonth(m)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterMonth === m ? "bg-primary text-primary-foreground" : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5"}`}>
+                  {monthNames[m]?.slice(0, 3)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* Kanban — Single DndContext for cross-column drag */}
       {/* Fix #1: columns align at top so page scrolls as one unit */}
@@ -567,16 +573,16 @@ export default function Tasks() {
             return (
               <DroppableColumn key={col} id={col} style={style}>
                 {/* Sticky column header */}
-                <div className="flex items-center justify-between mb-4 sticky top-0 z-10 py-1" style={{ background: style.bg }}>
+                <div className="flex items-center justify-between mb-4 sticky top-0 z-10 py-2 px-1 backdrop-blur-md rounded-t-2xl" style={{ background: style.bg }}>
                   <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-green-500" : col === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
-                    <span className="text-sm font-semibold text-foreground">{col}</span>
-                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{colT.length}</span>
+                    <span className={`w-2.5 h-2.5 rounded-full ${col === "Done" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : col === "In Progress" ? "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" : "bg-white/70 shadow-[0_0_8px_rgba(255,255,255,0.5)]"}`} />
+                    <span className="text-sm font-semibold text-white">{col}</span>
+                    <span className="text-xs text-muted-foreground bg-white/10 px-1.5 py-0.5 rounded-full">{colT.length}</span>
                   </div>
                   {/* Fix #4: Bigger + button with tooltip and hover effect */}
                   {col === "To Do" && (
                     <button onClick={() => setModal({ open: true, task: { status: col } })}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground hover:scale-110"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 hover:text-white transition-all text-muted-foreground hover:scale-110"
                       title="เพิ่ม Task">
                       <Plus className="w-4.5 h-4.5" />
                     </button>
@@ -689,8 +695,8 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
   const overdue = isOverdue(task.due_date, task.status);
   return (
     <div
-      className={`bg-card rounded-xl px-3.5 py-3.5 border group card-hover ${overdue ? "border-l-[3px] border-l-red-400 border-t-border/60 border-r-border/60 border-b-border/60" : "border-border/60"}`}
-      style={overdue ? { background: "hsl(0 84% 60% / 0.03)" } : undefined}
+      className={`bg-white/5 backdrop-blur-sm rounded-xl px-3.5 py-3.5 border group transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] ${overdue ? "border-l-[3px] border-l-red-500/80 border-t-white/10 border-r-white/10 border-b-white/10" : "border-white/10"}`}
+      style={overdue ? { background: "rgba(239, 68, 68, 0.05)" } : undefined}
       onDoubleClick={onEdit}
     >
       {/* Source label + navigate */}
@@ -738,7 +744,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
       )}
       <div className="flex items-center gap-1.5 flex-wrap">
         <button onClick={(e) => { e.stopPropagation(); onStatusToggle(); }}
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "badge-done" : col === "In Progress" ? "badge-progress" : "badge-todo"}`}>
+          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-all hover:scale-105 cursor-pointer ${col === "Done" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : col === "In Progress" ? "bg-sky-500/10 text-sky-400 border-sky-500/20" : "bg-slate-500/10 text-slate-400 border-slate-500/20"}`}>
           {task.status}
         </button>
         <PriorityBadge priority={task.priority} />
@@ -755,16 +761,16 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
       </div>
       <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
       {task.assigned_to && task.assigned_to.length > 0 && (
-        <div className="flex items-center mt-2">
+        <div className="flex items-center mt-2 -space-x-2">
           {task.assigned_to.slice(0, 3).map((a, i) => {
             const emp = employees?.find(e => e.name === a);
             return (
-              <div key={i} className="-ml-1 first:ml-0">
-                <EmployeeAvatar name={a} avatar={emp?.avatar} size="xs" index={i} className="border-2 border-card" />
+              <div key={i} className="">
+                <EmployeeAvatar name={a} avatar={emp?.avatar} size="xs" index={i} className="border-2 border-black/50" />
               </div>
             );
           })}
-          {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-1">+{task.assigned_to.length - 3}</span>}
+          {task.assigned_to.length > 3 && <span className="text-xs text-muted-foreground ml-3">+{task.assigned_to.length - 3}</span>}
         </div>
       )}
       {/* Fix #5: Consistent notes area — always show min height, truncate at 2 lines */}
