@@ -57,8 +57,8 @@ export default function Tasks() {
 
   // --- Filter Logic ---
   const filteredTasks = tasks.filter((task) => {
-    const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase()) ||
-      (task.description && task.description.toLowerCase().includes(search.toLowerCase()));
+    const matchesSearch = task.name.toLowerCase().includes(search.toLowerCase()) ||
+      (task.comments && task.comments.toLowerCase().includes(search.toLowerCase()));
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
     const matchesProject = projectFilter === "all" || task.project_id === projectFilter;
@@ -241,15 +241,15 @@ export default function Tasks() {
                         }}
                         className="cursor-pointer border-white/5 hover:bg-white/5 transition-colors duration-150 group"
                       >
-                        {/* Task Title & Details */}
+                        {/* Task Name & Details */}
                         <TableCell className="py-3.5 font-medium text-white max-w-sm truncate">
                           <div className="flex flex-col gap-0.5">
                             <span className="group-hover:text-primary transition-colors">
-                              {task.title}
+                              {task.name}
                             </span>
-                            {task.description && (
+                            {task.comments && (
                               <span className="text-xs text-muted-foreground font-normal line-clamp-1">
-                                {task.description}
+                                {task.comments}
                               </span>
                             )}
                           </div>
