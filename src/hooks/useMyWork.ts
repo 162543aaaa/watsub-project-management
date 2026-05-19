@@ -13,8 +13,8 @@ export function useMyWork() {
   const { user } = useAuthContext();
   const { employees } = useEmployees();
   const { tasks, loading: lt } = useTasks();
-  const { projects, loading: lp } = useProjects();
-  const { customers, loading: lc } = useCustomers();
+  const { projects, loading: lp } = useProjects("all");
+  const { customers, loading: lc } = useCustomers("all");
 
   const me = useMemo(
     () =>

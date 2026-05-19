@@ -49,8 +49,8 @@ function getWorkTenure(startDate?: string): string | null {
 export default function Team() {
   const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const { tasks: standaloneTasks } = useTasks();
-  const { customers } = useCustomers();
-  const { projects } = useProjects();
+  const { customers } = useCustomers("all");
+  const { projects } = useProjects("all");
   const { meetings } = useMeetings();
   const { onsiteWork } = useOnsiteWork();
   const { leaves } = useLeave();
