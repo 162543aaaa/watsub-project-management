@@ -1,5 +1,5 @@
+import { ArchiveBoxIcon, ArrowDownTrayIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckCircleIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon, ClockIcon, CurrencyDollarIcon, DocumentTextIcon, EllipsisVerticalIcon, ExclamationTriangleIcon, PencilIcon, PlusIcon, TrashIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useRef } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, DollarSign, Trash2, Pencil, Users2, GripVertical, Download, Sheet, FileText, Clock, AlertTriangle, CheckCircle2, Archive, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -45,7 +45,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
     if (diff >= 0) {
       badges.push(
         <span key="start" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium" style={{ background: "hsl(191 91% 37% / 0.1)", color: "hsl(191 91% 30%)" }}>
-          <Clock className="w-2.5 h-2.5" /> {diff} วัน
+          <ClockIcon className="w-2.5 h-2.5" /> {diff} วัน
         </span>
       );
     }
@@ -58,7 +58,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
     if (diff > 0) {
       badges.push(
         <span key="overdue" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold animate-pulse" style={{ background: "hsl(0 84% 60% / 0.1)", color: "hsl(0 84% 50%)" }}>
-          <AlertTriangle className="w-2.5 h-2.5" /> เลย {diff} วัน
+          <ExclamationTriangleIcon className="w-2.5 h-2.5" /> เลย {diff} วัน
         </span>
       );
     }
@@ -247,22 +247,22 @@ export default function Customers() {
               onClick={() => setShowExportMenu(v => !v)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all hover:scale-105 active:scale-95"
             >
-              <Download className="w-4 h-4" /> Export
+              <ArrowDownTrayIcon className="w-4 h-4" /> Export
             </button>
             {showExportMenu && (
               <div className="absolute right-0 top-full mt-2 w-44 bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden animate-scale-in">
                 <button onClick={handleExportCSV} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
-                  <Sheet className="w-4 h-4 text-green-600" /> Export CSV
+                  <DocumentTextIcon className="w-4 h-4 text-green-600" /> Export CSV
                 </button>
                 <div className="h-px bg-border" />
                 <button onClick={handleExportPDF} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
-                  <FileText className="w-4 h-4 text-red-500" /> Export PDF
+                  <DocumentTextIcon className="w-4 h-4 text-red-500" /> Export PDF
                 </button>
               </div>
             )}
           </div>
           <button onClick={() => setShowAdd(true)} className="btn-primary flex items-center gap-2">
-            <Plus className="w-4 h-4" /> New Customer
+            <PlusIcon className="w-4 h-4" /> New Customer
           </button>
         </div>
       </div>
@@ -292,7 +292,7 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Archive Toggle */}
+      {/* ArchiveBoxIcon Toggle */}
       <div className="flex items-center gap-2 mb-4">
         <Switch
           id="show-archived-customers"
@@ -390,7 +390,7 @@ export default function Customers() {
         })}
         {Object.keys(grouped).length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
-            <Users2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <UsersIcon className="w-10 h-10 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No customers found</p>
           </div>
         )}
@@ -418,7 +418,7 @@ function SortableCustCard({ id, children }: { id: string; children: React.ReactN
       <div {...attributes} {...listeners}
         className="absolute top-3 right-24 z-10 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground transition-colors"
         style={{ touchAction: "none" }}>
-        <GripVertical className="w-3.5 h-3.5" />
+        <EllipsisVerticalIcon className="w-3.5 h-3.5" />
       </div>
       {children}
     </div>
@@ -463,13 +463,13 @@ function CustomerCardComponent({
               <a href={cust.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                 className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
                 title={cust.link}>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
               </a>
             )}
             {cust.payment_fee && (
               <span className="flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full"
                 style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
-                <DollarSign className="w-2.5 h-2.5" />{cust.payment_fee}
+                <CurrencyDollarIcon className="w-2.5 h-2.5" />{cust.payment_fee}
               </span>
             )}
           </div>
@@ -479,28 +479,28 @@ function CustomerCardComponent({
         <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
           <button onClick={(e) => { e.stopPropagation(); openEditCustomer(cust); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
-            <Pencil className="w-3.5 h-3.5" />
+            <PencilIcon className="w-3.5 h-3.5" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openAddTask(cust.id); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
-            <Plus className="w-3.5 h-3.5" />
+            <PlusIcon className="w-3.5 h-3.5" />
           </button>
           {!showArchived ? (
             <button onClick={(e) => { e.stopPropagation(); archiveCustomer(cust.id); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-500/10 text-amber-600 transition-all hover:scale-110 active:scale-95"
-              title="Archive customer">
-              <Archive className="w-3.5 h-3.5" />
+              title="ArchiveBoxIcon customer">
+              <ArchiveBoxIcon className="w-3.5 h-3.5" />
             </button>
           ) : (
             <button onClick={(e) => { e.stopPropagation(); unarchiveCustomer(cust.id); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-green-500/10 text-green-600 transition-all hover:scale-110 active:scale-95"
               title="Unarchive customer">
-              <RefreshCw className="w-3.5 h-3.5" />
+              <ArrowPathIcon className="w-3.5 h-3.5" />
             </button>
           )}
           <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "customer", id: cust.id, name: cust.name }); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
-            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+            <TrashIcon className="w-3.5 h-3.5 text-destructive" />
           </button>
         </div>
       </div>
@@ -510,7 +510,7 @@ function CustomerCardComponent({
           {cust.tasks.length > 0 && cust.tasks.every((t: any) => t.status === "Done") && (
             <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
               style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}>
-              <CheckCircle2 className="w-3 h-3" /> Complete
+              <CheckCircleIcon className="w-3 h-3" /> Complete
             </span>
           )}
         </div>
@@ -519,12 +519,12 @@ function CustomerCardComponent({
       <div className="flex items-center gap-3 mt-3 flex-wrap">
         <span onClick={() => setIsExpanded(prev => !prev)}
           className="flex items-center gap-1.5 text-xs text-muted-foreground select-none hover:text-foreground transition-all cursor-pointer">
-          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          {isExpanded ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />}
           {isExpanded ? "Hide" : "Show"} tasks
         </span>
         <button onClick={(e) => { e.stopPropagation(); openAddTask(cust.id); }}
           className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-all hover:scale-105">
-          <Plus className="w-3.5 h-3.5" /> Add task
+          <PlusIcon className="w-3.5 h-3.5" /> Add task
         </button>
       </div>
       {isExpanded && (
@@ -562,7 +562,7 @@ function CustomerCardComponent({
                  <div className="flex items-center gap-1.5 flex-shrink-0">
                    {task.link && (
                      <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:text-primary/80 hover:scale-110 transition-all">
-                       <ExternalLink className="w-3 h-3" />
+                       <ArrowTopRightOnSquareIcon className="w-3 h-3" />
                      </a>
                    )}
                    <span className={task.status === "Done" ? "badge-done" : task.status === "In Progress" ? "badge-progress" : "badge-todo"}>
@@ -570,18 +570,18 @@ function CustomerCardComponent({
                    </span>
                     <button onClick={(e) => { e.stopPropagation(); openEditTask(cust.id, task); }}
                       className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
-                      <Pencil className="w-3 h-3 text-primary" />
+                      <PencilIcon className="w-3 h-3 text-primary" />
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "task", id: task.id, name: task.name, parentId: cust.id }); }}
                       className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
-                      <Trash2 className="w-3 h-3 text-destructive" />
+                      <TrashIcon className="w-3 h-3 text-destructive" />
                    </button>
                  </div>
                </div>
                {task.link && (
                   <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                     className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-5 truncate transition-colors">
-                   <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                   <ArrowTopRightOnSquareIcon className="w-2.5 h-2.5 flex-shrink-0" />
                    <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
                  </a>
                )}
@@ -728,7 +728,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
         {/* --- Footer (fixed) --- */}
         <div className="flex justify-end gap-3 p-6 pt-4 border-t border-border shrink-0">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all">Cancel</button>
-          <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save</button>
+          <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2"><CheckIcon className="w-4 h-4" /> CheckIcon</button>
         </div>
         </form>
       </DialogContent>

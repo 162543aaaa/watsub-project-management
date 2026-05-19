@@ -1,6 +1,6 @@
+import { SparklesIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Sparkles } from "lucide-react";
 import { TASK_TEMPLATES, expandTemplate } from "@/config/taskTemplates";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -55,10 +55,10 @@ export default function ApplyTemplateDialog({
       <div className="relative w-full max-w-lg bg-card rounded-2xl border border-border flex flex-col" style={{ maxHeight: "90vh" }}>
         <div className="flex items-center justify-between p-6 pb-4 shrink-0">
           <h3 className="text-lg font-bold flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" /> Apply Task Template
+            <SparklesIcon className="w-4 h-4 text-primary" /> Apply Task Template
           </h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted">
-            <X className="w-4 h-4" />
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
 

@@ -1,9 +1,9 @@
+import { ArrowPathIcon, CheckIcon, ChevronDownIcon, PencilIcon, ShieldCheckIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Check, X, ChevronDown, UserCog, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import type { Profile, UserRole } from "@/hooks/useAuth";
@@ -233,7 +233,7 @@ export default function AdminPanel() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-primary" />
+            <ShieldCheckIcon className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold">Admin Panel</h1>
@@ -242,7 +242,7 @@ export default function AdminPanel() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading} className="gap-1.5">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+            <ArrowPathIcon className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
           <Button onClick={handleSyncAll} disabled={isSyncing}>
             {isSyncing ? "กำลัง Sync All Data..." : "Sync All Data"}
@@ -268,10 +268,10 @@ export default function AdminPanel() {
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => handleApprove(u.profile.user_id, true)} className="gap-1">
-                    <Check className="w-3.5 h-3.5" /> อนุมัติ
+                    <CheckIcon className="w-3.5 h-3.5" /> อนุมัติ
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => handleApprove(u.profile.user_id, false)} className="gap-1">
-                    <X className="w-3.5 h-3.5" /> ปฏิเสธ
+                    <XMarkIcon className="w-3.5 h-3.5" /> ปฏิเสธ
                   </Button>
                   <Button
                     size="sm"
@@ -280,7 +280,7 @@ export default function AdminPanel() {
                     className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive gap-1"
                     title="ลบสมาชิกออกโดยถาวร"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> ลบออก
+                    <TrashIcon className="w-3.5 h-3.5" /> ลบออก
                   </Button>
                 </div>
               </div>
@@ -331,7 +331,7 @@ export default function AdminPanel() {
                       onClick={() => handleToggleAdmin(u.profile.user_id, userIsAdmin)}
                       className="gap-1 text-xs"
                     >
-                      <UserCog className="w-3.5 h-3.5" /> {userIsAdmin ? "ถอด Admin" : "ตั้ง Admin"}
+                      <PencilIcon className="w-3.5 h-3.5" /> {userIsAdmin ? "ถอด Admin" : "ตั้ง Admin"}
                     </Button>
                     <Button
                       size="sm"
@@ -339,7 +339,7 @@ export default function AdminPanel() {
                       onClick={() => setExpandedUser(expanded ? null : u.profile.user_id)}
                       className="gap-1 text-xs"
                     >
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} /> สิทธิ์หน้า
+                      <ChevronDownIcon className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} /> สิทธิ์หน้า
                     </Button>
                     <Button
                       size="sm"
@@ -355,7 +355,7 @@ export default function AdminPanel() {
                       onClick={() => setConfirmDeleteUser(u)}
                       className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive gap-1"
                     >
-                      <Trash2 className="w-3.5 h-3.5" /> ลบออก
+                      <TrashIcon className="w-3.5 h-3.5" /> ลบออก
                     </Button>
                   </div>
                 </div>

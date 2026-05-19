@@ -1,6 +1,6 @@
+import { CheckIcon, ClockIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Save, History, FileEdit } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import TaskActivityLog from "@/components/TaskActivityLog";
 import { toast } from "@/hooks/use-toast";
@@ -73,7 +73,7 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
           >
-            <X className="w-4 h-4" />
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
 
@@ -87,7 +87,7 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
                 ? { background: "hsl(191 91% 37% / 0.15)", color: "hsl(191 91% 55%)" }
                 : { color: "hsl(215 20% 55%)" }}
             >
-              <FileEdit className="w-3.5 h-3.5" /> Details
+              <PencilIcon className="w-3.5 h-3.5" /> Details
             </button>
             <button
               onClick={() => setActiveTab("activity")}
@@ -96,7 +96,7 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
                 ? { background: "hsl(191 91% 37% / 0.15)", color: "hsl(191 91% 55%)" }
                 : { color: "hsl(215 20% 55%)" }}
             >
-              <History className="w-3.5 h-3.5" /> Activity
+              <ClockIcon className="w-3.5 h-3.5" /> Activity
             </button>
             <div className="flex-1 border-b border-border self-end mb-0 pb-0" />
           </div>
@@ -243,7 +243,7 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
           </button>
           {activeTab === "details" && (
             <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
-              <Save className="w-4 h-4" /> {isExistingTask ? "Save" : "Add Task"}
+              <CheckIcon className="w-4 h-4" /> {isExistingTask ? "CheckIcon" : "Add Task"}
             </button>
           )}
         </div>

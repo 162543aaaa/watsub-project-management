@@ -1,5 +1,5 @@
+import { PencilIcon } from '@heroicons/react/24/solid';
 import React from "react";
-import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EditHintProps {
@@ -19,7 +19,7 @@ export function EditHint({ onClick, className }: EditHintProps) {
       )}
       title="แก้ไข"
     >
-      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+      <PencilIcon className="w-3.5 h-3.5 text-muted-foreground" />
     </button>
   );
 }

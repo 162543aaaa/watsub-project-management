@@ -1,10 +1,9 @@
+import { CheckIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { Plus, Save, Trash2, X } from "lucide-react";
-
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -346,7 +345,7 @@ export function OrgAdminEditor({
                       <p className="text-sm font-semibold">Milestones</p>
                       <Button type="button" size="sm" variant="outline"
                         onClick={() => msAppend({ value: "" })}>
-                        <Plus className="w-3.5 h-3.5 mr-1" /> เพิ่ม
+                        <PlusIcon className="w-3.5 h-3.5 mr-1" /> เพิ่ม
                       </Button>
                     </div>
                     <div className="space-y-2">
@@ -354,7 +353,7 @@ export function OrgAdminEditor({
                         <div key={f.id} className="flex gap-2">
                           <Input {...form.register(`milestones.${i}.value`)} placeholder="2025: ..." />
                           <Button type="button" variant="ghost" size="icon" onClick={() => msRemove(i)}>
-                            <X className="w-4 h-4" />
+                            <XMarkIcon className="w-4 h-4" />
                           </Button>
                         </div>
                       ))}
@@ -370,7 +369,7 @@ export function OrgAdminEditor({
                       <p className="text-sm font-semibold">สวัสดิการพนักงาน</p>
                       <Button type="button" size="sm" variant="outline"
                         onClick={() => bnAppend({ value: "" })}>
-                        <Plus className="w-3.5 h-3.5 mr-1" /> เพิ่ม
+                        <PlusIcon className="w-3.5 h-3.5 mr-1" /> เพิ่ม
                       </Button>
                     </div>
                     <div className="space-y-2">
@@ -378,7 +377,7 @@ export function OrgAdminEditor({
                         <div key={f.id} className="flex gap-2">
                           <Input {...form.register(`benefits.${i}.value`)} placeholder="สวัสดิการ..." />
                           <Button type="button" variant="ghost" size="icon" onClick={() => bnRemove(i)}>
-                            <X className="w-4 h-4" />
+                            <XMarkIcon className="w-4 h-4" />
                           </Button>
                         </div>
                       ))}
@@ -394,7 +393,7 @@ export function OrgAdminEditor({
                       <p className="text-sm font-semibold">Resources & Links</p>
                       <Button type="button" size="sm" variant="outline"
                         onClick={() => resAppend({ label: "", url: "" })}>
-                        <Plus className="w-3.5 h-3.5 mr-1" /> เพิ่ม
+                        <PlusIcon className="w-3.5 h-3.5 mr-1" /> เพิ่ม
                       </Button>
                     </div>
                     <div className="space-y-2">
@@ -403,7 +402,7 @@ export function OrgAdminEditor({
                           <Input {...form.register(`resources.${i}.label`)} placeholder="ชื่อ link" />
                           <Input {...form.register(`resources.${i}.url`)}   placeholder="https://..." />
                           <Button type="button" variant="ghost" size="icon" onClick={() => resRemove(i)}>
-                            <X className="w-4 h-4" />
+                            <XMarkIcon className="w-4 h-4" />
                           </Button>
                         </div>
                       ))}
@@ -441,7 +440,7 @@ export function OrgAdminEditor({
                       <Button type="button" variant="ghost" size="icon"
                         className="text-destructive hover:text-destructive flex-shrink-0 w-8 h-8"
                         onClick={() => void handleDeleteMember(m.id, m.name)}>
-                        <Trash2 className="w-4 h-4" />
+                        <TrashIcon className="w-4 h-4" />
                       </Button>
                     </div>
                   ))}
@@ -507,7 +506,7 @@ export function OrgAdminEditor({
                     )} />
                   </div>
                   <Button type="submit" size="sm" variant="outline" disabled={memberSaving} className="w-full">
-                    <Plus className="w-4 h-4 mr-1" />
+                    <PlusIcon className="w-4 h-4 mr-1" />
                     {memberSaving ? "กำลังเพิ่ม..." : "เพิ่มสมาชิก"}
                   </Button>
                 </form>
@@ -520,7 +519,7 @@ export function OrgAdminEditor({
             <div className="px-6 py-4 border-t flex justify-end gap-2 flex-shrink-0">
               <Button variant="outline" onClick={() => onOpenChange(false)}>ยกเลิก</Button>
               <Button type="submit" form="org-info-form" disabled={saving}>
-                <Save className="w-4 h-4 mr-2" />
+                <CheckIcon className="w-4 h-4 mr-2" />
                 {saving ? "กำลังบันทึก..." : "บันทึก"}
               </Button>
             </div>

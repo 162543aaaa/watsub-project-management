@@ -1,16 +1,16 @@
+import { ArrowPathIcon, CalendarDaysIcon, CheckCircleIcon, ClipboardDocumentListIcon, ClockIcon, ExclamationCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { useMyWork } from "@/hooks/useMyWork";
 import { Link } from "react-router-dom";
-import { AlertCircle, Clock, CalendarDays, Loader2, CheckCircle2, AlertTriangle, ListTodo } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import type { MyWorkTask } from "@/hooks/useMyWork";
 
 const SECTION_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  overdue:           { label: "Overdue / เลยกำหนด",          icon: AlertCircle,    color: "hsl(0 84% 55%)" },
-  today:             { label: "Due Today / ครบกำหนดวันนี้",   icon: CalendarDays,   color: "hsl(35 90% 50%)" },
-  dueSoon:           { label: "Due Soon (7 days)",            icon: Clock,          color: "hsl(191 91% 45%)" },
-  inProgress:        { label: "In Progress",                  icon: Loader2,        color: "hsl(220 70% 55%)" },
-  waitingEvidence:   { label: "Waiting for Evidence / Link",  icon: AlertTriangle,  color: "hsl(280 70% 55%)" },
-  recentlyCompleted: { label: "Recently Completed",           icon: CheckCircle2,   color: "hsl(142 71% 45%)" },
+  overdue:           { label: "Overdue / เลยกำหนด",          icon: ExclamationCircleIcon,    color: "hsl(0 84% 55%)" },
+  today:             { label: "Due Today / ครบกำหนดวันนี้",   icon: CalendarDaysIcon,   color: "hsl(35 90% 50%)" },
+  dueSoon:           { label: "Due Soon (7 days)",            icon: ClockIcon,          color: "hsl(191 91% 45%)" },
+  inProgress:        { label: "In Progress",                  icon: ArrowPathIcon,        color: "hsl(220 70% 55%)" },
+  waitingEvidence:   { label: "Waiting for Evidence / Link",  icon: ExclamationTriangleIcon,  color: "hsl(280 70% 55%)" },
+  recentlyCompleted: { label: "Recently Completed",           icon: CheckCircleIcon,   color: "hsl(142 71% 45%)" },
 };
 
 function sourceLink(t: MyWorkTask): string {
@@ -55,7 +55,7 @@ export default function MyWork() {
       <div className="p-6 page-enter">
         <h1 className="text-2xl font-bold mb-2">My Work</h1>
         <div className="bg-card border border-border/60 rounded-2xl p-8 text-center">
-          <ListTodo className="w-10 h-10 mx-auto text-muted-foreground mb-3 opacity-40" />
+          <ClipboardDocumentListIcon className="w-10 h-10 mx-auto text-muted-foreground mb-3 opacity-40" />
           <p className="text-sm text-muted-foreground">
             Your account email is not linked to an employee record. Ask an admin to add you to the team list.
           </p>
@@ -96,7 +96,7 @@ export default function MyWork() {
         })}
         {orderedKeys.every((k) => sections[k].length === 0) && (
           <div className="bg-card border border-border/60 rounded-2xl p-8 text-center">
-            <CheckCircle2 className="w-10 h-10 mx-auto text-success mb-3" />
+            <CheckCircleIcon className="w-10 h-10 mx-auto text-success mb-3" />
             <p className="text-sm">All clear! No active tasks right now.</p>
           </div>
         )}

@@ -1,7 +1,7 @@
+import { ArrowDownTrayIcon, ArrowPathIcon, CheckCircleIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -90,7 +90,7 @@ export default function Export() {
           </p>
         </div>
         <Button onClick={handleExportAll} className="gap-2">
-          <Download className="w-4 h-4" />
+          <ArrowDownTrayIcon className="w-4 h-4" />
           ดาวน์โหลดทั้งหมด
         </Button>
       </div>
@@ -98,7 +98,7 @@ export default function Export() {
       <Card style={{ background: "hsl(222 47% 10%)", borderColor: "hsl(222 47% 15%)" }}>
         <CardHeader>
           <CardTitle className="text-base" style={{ color: "hsl(210 40% 98%)" }}>
-            <FileSpreadsheet className="w-5 h-5 inline-block mr-2" style={{ color: "hsl(191 91% 55%)" }} />
+            <DocumentTextIcon className="w-5 h-5 inline-block mr-2" style={{ color: "hsl(191 91% 55%)" }} />
             วิธีนำเข้า Google Sheets
           </CardTitle>
           <CardDescription style={{ color: "hsl(215 20% 55%)" }}>
@@ -129,11 +129,11 @@ export default function Export() {
                 className="gap-1.5"
               >
                 {loading[t.key] ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
                 ) : exported[t.key] ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                  <CheckCircleIcon className="w-3.5 h-3.5 text-green-400" />
                 ) : (
-                  <Download className="w-3.5 h-3.5" />
+                  <ArrowDownTrayIcon className="w-3.5 h-3.5" />
                 )}
                 {exported[t.key] ? "เสร็จ" : "CSV"}
               </Button>

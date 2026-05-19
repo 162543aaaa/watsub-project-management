@@ -1,7 +1,6 @@
+import { ArrowDownTrayIcon, ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, StarIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { ArrowLeft, ChevronDown, ChevronRight, Star, Download } from "lucide-react";
-
 import { useKpiPeriods, useKpiEvaluations, KPI_CATEGORIES, type KpiEvaluation } from "@/hooks/useKpi";
 import { useEmployees, type Employee } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -165,12 +164,12 @@ function exportToCsv(
   URL.revokeObjectURL(url);
 }
 
-// ─── Star display ─────────────────────────────────────────────────────────────
+// ─── StarIcon display ─────────────────────────────────────────────────────────────
 function StarDisplay({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-0.5 mt-1">
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star
+        <StarIcon
           key={n}
           className="w-4 h-4"
           fill={n <= value ? "hsl(38 92% 50%)" : "none"}
@@ -213,8 +212,8 @@ function EvalBlock({
       >
         <div className="flex items-center gap-2 min-w-0">
           {open
-            ? <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            : <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+            ? <ChevronDownIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            : <ChevronRightIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
           <span
             className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
             style={{ background: `${color}18`, color }}
@@ -305,8 +304,8 @@ function EvaluateeCard({
             {sorted.filter((e) => e.submitted_at).length}/{sorted.length} ส่งแล้ว
           </span>
           {open
-            ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+            ? <ChevronDownIcon className="w-4 h-4 text-muted-foreground" />
+            : <ChevronRightIcon className="w-4 h-4 text-muted-foreground" />}
         </div>
       </button>
 
@@ -403,7 +402,7 @@ export default function KpiPeriodSummary() {
         onClick={() => navigate("/kpi/admin")}
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" /> กลับ KPI Admin
+        <ArrowLeftIcon className="w-4 h-4" /> กลับ KPI Admin
       </button>
 
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -419,7 +418,7 @@ export default function KpiPeriodSummary() {
           disabled={loading}
           className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors disabled:opacity-40 flex-shrink-0"
         >
-          <Download className="w-4 h-4" /> Export CSV
+          <ArrowDownTrayIcon className="w-4 h-4" /> Export CSV
         </button>
       </div>
 

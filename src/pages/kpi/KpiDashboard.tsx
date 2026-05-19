@@ -1,8 +1,7 @@
+import { ArrowDownTrayIcon, BellIcon, LockClosedIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { BarChart, Bar, CartesianGrid, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Download, Plus, Bell, Lock } from "lucide-react";
-
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useKpiEvaluations, useKpiPeriods, calcFinalScore } from "@/hooks/useKpi";
@@ -252,7 +251,7 @@ export default function KpiDashboard() {
                   <td>{donePeer >= 1 ? "✓" : "pending"}</td>
                   <td>{donePeer >= 2 ? "✓" : "pending"}</td>
                   <td>{m.status.supervisor ? "✓" : "pending"}</td>
-                  <td>{ok ? "complete" : <button className="text-xs border rounded px-2 py-1 inline-flex items-center gap-1" onClick={() => remind(m.emp.name)}><Bell className="w-3 h-3" /> remind</button>}</td>
+                  <td>{ok ? "complete" : <button className="text-xs border rounded px-2 py-1 inline-flex items-center gap-1" onClick={() => remind(m.emp.name)}><BellIcon className="w-3 h-3" /> remind</button>}</td>
                 </tr>
               );
             })}
@@ -283,9 +282,9 @@ export default function KpiDashboard() {
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Link to="/kpi/admin/new-period" className="px-3 py-2 border rounded-lg inline-flex items-center gap-1 text-sm"><Plus className="w-4 h-4" /> สร้างรอบใหม่</Link>
-        <button onClick={() => updatePeriod(currentPeriod.id, { status: "closed" })} className="px-3 py-2 border rounded-lg inline-flex items-center gap-1 text-sm"><Lock className="w-4 h-4" /> ปิดรอบปัจจุบัน</button>
-        <button onClick={exportCsv} className="px-3 py-2 border rounded-lg inline-flex items-center gap-1 text-sm"><Download className="w-4 h-4" /> export CSV</button>
+        <Link to="/kpi/admin/new-period" className="px-3 py-2 border rounded-lg inline-flex items-center gap-1 text-sm"><PlusIcon className="w-4 h-4" /> สร้างรอบใหม่</Link>
+        <button onClick={() => updatePeriod(currentPeriod.id, { status: "closed" })} className="px-3 py-2 border rounded-lg inline-flex items-center gap-1 text-sm"><LockClosedIcon className="w-4 h-4" /> ปิดรอบปัจจุบัน</button>
+        <button onClick={exportCsv} className="px-3 py-2 border rounded-lg inline-flex items-center gap-1 text-sm"><ArrowDownTrayIcon className="w-4 h-4" /> export CSV</button>
       </div>
     </div>
   );

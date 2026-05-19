@@ -1,6 +1,6 @@
+import { ArrowRightOnRectangleIcon, ClockIcon } from '@heroicons/react/24/solid';
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Clock, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function WaitingApproval() {
@@ -14,7 +14,7 @@ export default function WaitingApproval() {
     <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
       <div className="w-full max-w-sm bg-card rounded-2xl border border-border/60 p-8 text-center" style={{ boxShadow: "0 10px 30px -10px hsl(var(--primary) / 0.15)" }}>
         <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-          <Clock className="w-7 h-7 text-amber-600 animate-pulse" />
+          <ClockIcon className="w-7 h-7 text-amber-600 animate-pulse" />
         </div>
         <h2 className="text-xl font-bold text-foreground mb-2">รอการอนุมัติ</h2>
         <p className="text-sm text-muted-foreground mb-6">
@@ -25,7 +25,7 @@ export default function WaitingApproval() {
             ตรวจสอบสถานะ
           </Button>
           <Button variant="ghost" className="w-full text-muted-foreground" onClick={signOut}>
-            <LogOut className="w-4 h-4 mr-2" /> ออกจากระบบ
+            <ArrowRightOnRectangleIcon className="w-4 h-4 mr-2" /> ออกจากระบบ
           </Button>
         </div>
       </div>

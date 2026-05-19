@@ -1,10 +1,6 @@
+import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, ArrowTrendingUpIcon, ChartBarIcon, CheckCircleIcon, ChevronDownIcon, ChevronUpIcon, ClockIcon, DocumentTextIcon, ExclamationCircleIcon, FolderOpenIcon, TrophyIcon, UsersIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  BarChart3, Users, CheckCircle2, AlertCircle, FolderOpen, Clock,
-  Trophy, TrendingUp, Download, FileText, Sheet, ChevronDown, ChevronUp,
-  ExternalLink
-} from "lucide-react";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { exportCSV, escapeHtml } from "@/lib/exportUtils";
 import {
@@ -98,12 +94,12 @@ export default function Reports() {
   const allTasks = filteredTasks;
 
   const stats = [
-    { label: "Total Tasks", value: allTasks.length, icon: BarChart3, color: "bg-gradient-primary" },
-    { label: "Completed", value: allTasks.filter(t => t.status === "Done").length, icon: CheckCircle2, color: "bg-gradient-success" },
-    { label: "In Progress", value: allTasks.filter(t => t.status === "In Progress").length, icon: Clock, color: "bg-gradient-warning" },
-    { label: "Overdue", value: allTasks.filter(t => t.status !== "Done" && t.due_date && new Date(t.due_date) < today).length, icon: AlertCircle, color: "bg-gradient-danger" },
-    { label: "Projects", value: filteredProjects.length, icon: FolderOpen, color: "bg-gradient-primary" },
-    { label: "Customers", value: filteredCustomers.length, icon: Users, color: "bg-gradient-warning" },
+    { label: "Total Tasks", value: allTasks.length, icon: ChartBarIcon, color: "bg-gradient-primary" },
+    { label: "Completed", value: allTasks.filter(t => t.status === "Done").length, icon: CheckCircleIcon, color: "bg-gradient-success" },
+    { label: "In Progress", value: allTasks.filter(t => t.status === "In Progress").length, icon: ClockIcon, color: "bg-gradient-warning" },
+    { label: "Overdue", value: allTasks.filter(t => t.status !== "Done" && t.due_date && new Date(t.due_date) < today).length, icon: ExclamationCircleIcon, color: "bg-gradient-danger" },
+    { label: "Projects", value: filteredProjects.length, icon: FolderOpenIcon, color: "bg-gradient-primary" },
+    { label: "Customers", value: filteredCustomers.length, icon: UsersIcon, color: "bg-gradient-warning" },
   ];
 
   const topPerformers = useMemo(() => employees.map(emp => {
@@ -237,16 +233,16 @@ export default function Reports() {
         <div className="relative" ref={exportRef}>
           <button onClick={() => setShowExportMenu(v => !v)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all shadow-sm">
-            <Download className="w-4 h-4" /> Export
+            <ArrowDownTrayIcon className="w-4 h-4" /> Export
           </button>
           {showExportMenu && (
             <div className="absolute right-0 top-full mt-2 w-44 bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden animate-scale-in">
               <button onClick={handleExportCSV} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
-                <Sheet className="w-4 h-4 text-green-600" /> Export CSV
+                <DocumentTextIcon className="w-4 h-4 text-green-600" /> Export CSV
               </button>
               <div className="h-px bg-border" />
               <button onClick={handleExportPDF} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
-                <FileText className="w-4 h-4 text-red-500" /> Export PDF
+                <DocumentTextIcon className="w-4 h-4 text-red-500" /> Export PDF
               </button>
             </div>
           )}
@@ -295,7 +291,7 @@ export default function Reports() {
         <div className="bg-card rounded-2xl border border-border/60 p-5 animate-stagger-4" style={{ boxShadow: "var(--shadow-sm)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-amber-500" />
+              <TrophyIcon className="w-5 h-5 text-amber-500" />
               <h2 className="font-bold text-foreground">Top Performers</h2>
             </div>
             <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">All tasks</span>
@@ -325,7 +321,7 @@ export default function Reports() {
         {/* Task Distribution */}
         <div className="bg-card rounded-2xl border border-border/60 p-5 animate-stagger-5" style={{ boxShadow: "var(--shadow-sm)" }}>
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-primary" />
+            <ArrowTrendingUpIcon className="w-5 h-5 text-primary" />
             <h2 className="font-bold text-foreground">Task Distribution</h2>
           </div>
           <div className="space-y-4">
@@ -357,7 +353,7 @@ export default function Reports() {
       <div className="bg-card rounded-2xl border border-border/60 p-5 animate-stagger-5" style={{ boxShadow: "var(--shadow-sm)" }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-foreground flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-500" /> Overdue Analysis
+            <ExclamationCircleIcon className="w-5 h-5 text-red-500" /> Overdue Analysis
             {overdueTasks.length > 0 && (
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
                 {overdueTasks.length}
@@ -372,13 +368,13 @@ export default function Reports() {
                 onClick={() => setExpandedTask(expandedTask === t.id ? null : t.id)}
                 className="w-full flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 hover:bg-red-100/70 dark:hover:bg-red-950/30 transition-colors text-left"
               >
-                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <ExclamationCircleIcon className="w-4 h-4 text-red-500 flex-shrink-0" />
                 <span className="text-sm font-medium text-foreground flex-1 truncate">{t.name}</span>
                 <span className="text-xs text-muted-foreground flex-shrink-0">{getTaskContext(t)}</span>
                 <span className="text-xs text-red-500 font-semibold flex-shrink-0">
                   Due {new Date(t.due_date!).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
                 </span>
-                {expandedTask === t.id ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                {expandedTask === t.id ? <ChevronUpIcon className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDownIcon className="w-3.5 h-3.5 text-muted-foreground" />}
               </button>
               {expandedTask === t.id && (
                 <div className="ml-7 mt-1 mb-2 p-3 rounded-lg bg-muted/50 border border-border/50 text-sm space-y-1.5 animate-scale-in">
@@ -400,7 +396,7 @@ export default function Reports() {
                     <div className="flex gap-2">
                       <span className="text-muted-foreground w-20 flex-shrink-0">Link:</span>
                       <a href={t.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 truncate">
-                        <ExternalLink className="w-3 h-3" /> {t.link.length > 50 ? t.link.slice(0, 50) + "..." : t.link}
+                        <ArrowTopRightOnSquareIcon className="w-3 h-3" /> {t.link.length > 50 ? t.link.slice(0, 50) + "..." : t.link}
                       </a>
                     </div>
                   )}

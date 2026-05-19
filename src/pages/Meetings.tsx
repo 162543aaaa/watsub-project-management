@@ -1,5 +1,5 @@
+import { CalendarIcon, CheckIcon, ClockIcon, DocumentTextIcon, MapPinIcon, PencilIcon, PlusIcon, TrashIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
-import { Plus, Pencil, Trash2, X, Save, Calendar, Clock, MapPin, FileText, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useMeetings, Meeting } from "@/hooks/useMeetings";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -72,13 +72,13 @@ export default function Meetings() {
           <p className="text-sm text-muted-foreground mt-0.5">{meetings.length} การประชุม</p>
         </div>
         <button onClick={openAdd} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus className="w-4 h-4" /> เพิ่มการประชุม
+          <PlusIcon className="w-4 h-4" /> เพิ่มการประชุม
         </button>
       </div>
 
       {meetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <Calendar className="w-12 h-12 mb-3 opacity-30" />
+          <CalendarIcon className="w-12 h-12 mb-3 opacity-30" />
           <p className="text-sm">ยังไม่มีการประชุม</p>
           <button onClick={openAdd} className="mt-3 text-xs text-primary font-medium hover:underline">เพิ่มการประชุมแรก →</button>
         </div>
@@ -89,30 +89,30 @@ export default function Meetings() {
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-sm font-semibold text-foreground flex-1 truncate pr-2">{m.title}</h3>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></button>
-                  <button onClick={() => setConfirmDelete(m.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"><Trash2 className="w-3.5 h-3.5 text-destructive/70" /></button>
+                  <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><PencilIcon className="w-3.5 h-3.5 text-muted-foreground" /></button>
+                  <button onClick={() => setConfirmDelete(m.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"><TrashIcon className="w-3.5 h-3.5 text-destructive/70" /></button>
                 </div>
               </div>
               <div className="space-y-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                  <CalendarIcon className="w-3.5 h-3.5 flex-shrink-0" />
                   <span>{new Date(m.meeting_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}</span>
                 </div>
                 {(m.start_time || m.end_time) && (
                   <div className="flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                    <ClockIcon className="w-3.5 h-3.5 flex-shrink-0" />
                     <span>{m.start_time || "?"} - {m.end_time || "?"}</span>
                   </div>
                 )}
                 {m.location && (
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <MapPinIcon className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="truncate">{m.location}</span>
                   </div>
                 )}
                 {m.note && (
                   <div className="flex items-start gap-2">
-                    <FileText className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <DocumentTextIcon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                     <span className="line-clamp-2">{m.note}</span>
                   </div>
                 )}
@@ -186,7 +186,7 @@ export default function Meetings() {
               <button onClick={() => { setShowForm(false); setEditing(null); }}
                 className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ยกเลิก</button>
               <button onClick={save}
-                className="flex-1 btn-primary flex items-center justify-center gap-2 text-sm"><Save className="w-4 h-4" /> บันทึก</button>
+                className="flex-1 btn-primary flex items-center justify-center gap-2 text-sm"><CheckIcon className="w-4 h-4" /> บันทึก</button>
             </div>
           </div>
         </DialogContent>

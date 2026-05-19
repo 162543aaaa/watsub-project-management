@@ -1,3 +1,4 @@
+import { ArrowTrendingUpIcon, ClockIcon, ExclamationCircleIcon, UsersIcon } from '@heroicons/react/24/solid';
 import { useMemo } from "react";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
@@ -5,8 +6,6 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Task } from "@/hooks/useProjects";
-import { AlertCircle, Clock, Users, TrendingUp } from "lucide-react";
-
 interface EnrichedTask extends Task {
   _source: "standalone" | "project" | "customer";
   _sourceName?: string;
@@ -82,10 +81,10 @@ export default function ManagerDashboard() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard icon={AlertCircle} label="Overdue" value={overdue.length} color="hsl(0 84% 55%)" />
-        <KpiCard icon={Clock} label="Due in 7 days" value={dueSoon.length} color="hsl(35 90% 50%)" />
-        <KpiCard icon={TrendingUp} label="At risk" value={atRisk.length} color="hsl(280 70% 55%)" />
-        <KpiCard icon={Users} label={canSeeAll ? "Overloaded (5+)" : "Active tasks"} value={canSeeAll ? overloaded.length : allTasks.filter(t => t.status !== "Done").length} color="hsl(191 91% 45%)" />
+        <KpiCard icon={ExclamationCircleIcon} label="Overdue" value={overdue.length} color="hsl(0 84% 55%)" />
+        <KpiCard icon={ClockIcon} label="Due in 7 days" value={dueSoon.length} color="hsl(35 90% 50%)" />
+        <KpiCard icon={ArrowTrendingUpIcon} label="At risk" value={atRisk.length} color="hsl(280 70% 55%)" />
+        <KpiCard icon={UsersIcon} label={canSeeAll ? "Overloaded (5+)" : "Active tasks"} value={canSeeAll ? overloaded.length : allTasks.filter(t => t.status !== "Done").length} color="hsl(191 91% 45%)" />
       </div>
 
       {/* Workload table */}

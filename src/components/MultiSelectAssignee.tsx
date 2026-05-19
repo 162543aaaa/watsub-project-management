@@ -1,5 +1,5 @@
+import { CheckCircleIcon, ChevronDownIcon, ChevronUpIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useRef, useEffect } from "react";
-import { X, ChevronDown, ChevronUp, Search, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Employee {
@@ -78,7 +78,7 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
                 <Avatar avatar={emp?.avatar} name={name} size="sm" />
                 {name}
                 <button onClick={() => onChange(selected.filter(s => s !== name))} className="hover:text-destructive transition-colors">
-                  <X className="w-3 h-3" />
+                  <XMarkIcon className="w-3 h-3" />
                 </button>
               </span>
             );
@@ -93,7 +93,7 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
         className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none hover:border-primary/50 transition-colors"
       >
         <span className="text-muted-foreground">{open ? "Close" : "Select members..."}</span>
-        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        {open ? <ChevronUpIcon className="w-4 h-4 text-muted-foreground" /> : <ChevronDownIcon className="w-4 h-4 text-muted-foreground" />}
       </button>
 
       {/* Dropdown */}
@@ -101,11 +101,11 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
         <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-card border-2 border-primary/30 rounded-xl shadow-lg overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
           <div className="p-2 border-b border-border">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
                 type="text"
                 className="w-full pl-8 pr-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                placeholder="Search team members..."
+                placeholder="MagnifyingGlassIcon team members..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 autoFocus
@@ -127,7 +127,7 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-muted/80 transition-colors text-left ${isSelected ? "bg-primary/5" : ""}`}
                   >
                     {isSelected ? (
-                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                      <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0" />
                     ) : (
                       <div className="w-5 h-5 rounded-full border-2 border-border flex-shrink-0" />
                     )}

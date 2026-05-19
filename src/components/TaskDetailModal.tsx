@@ -1,6 +1,6 @@
+import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Save } from "lucide-react";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import { Task } from "@/hooks/useProjects";
 
@@ -68,7 +68,7 @@ export default function TaskDetailModal({ isOpen, onClose, task, employees, onSa
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0"
           >
-            <X className="w-4 h-4" />
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
 
@@ -199,7 +199,7 @@ export default function TaskDetailModal({ isOpen, onClose, task, employees, onSa
             disabled={isSaving}
             className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            <Save className="w-4 h-4" /> {isSaving ? "Saving..." : "Save"}
+            <CheckIcon className="w-4 h-4" /> {isSaving ? "Saving..." : "CheckIcon"}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
+import { ArrowLeftIcon, ArrowTrendingUpIcon, ChartBarIcon, ExclamationTriangleIcon, StarIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, BarChart2, TrendingUp, Star, AlertTriangle } from "lucide-react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -171,7 +171,7 @@ export default function KpiReport() {
     <div className="p-4 md:p-6 page-enter max-w-3xl mx-auto">
       <button onClick={() => navigate("/kpi/overview")}
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> กลับ
+        <ArrowLeftIcon className="w-4 h-4" /> กลับ
       </button>
 
       {/* Member header */}
@@ -183,7 +183,7 @@ export default function KpiReport() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <BarChart2 className="w-4 h-4 text-primary flex-shrink-0" />
+            <ChartBarIcon className="w-4 h-4 text-primary flex-shrink-0" />
             <h1 className="text-xl font-bold truncate">{member.name}</h1>
           </div>
           <p className="text-sm text-muted-foreground">{member.position}</p>
@@ -201,7 +201,7 @@ export default function KpiReport() {
       {/* Period not closed — show status only */}
       {hasOnlyOpenPeriods && (
         <div className="bg-card border border-amber-300/50 rounded-2xl p-6 text-center">
-          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <ExclamationTriangleIcon className="w-10 h-10 text-amber-500 mx-auto mb-3" />
           <p className="font-semibold text-sm mb-1">รอบประเมินยังเปิดอยู่</p>
           <p className="text-sm text-muted-foreground">ผลคะแนนจะแสดงเมื่อรอบประเมินปิดแล้วเท่านั้น ดูได้เฉพาะสถานะ submitted / pending</p>
         </div>
@@ -215,7 +215,7 @@ export default function KpiReport() {
 
       {latest && !peerComplete && (
         <div className="bg-card border border-amber-300/50 rounded-2xl p-6 text-center mb-5">
-          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <ExclamationTriangleIcon className="w-10 h-10 text-amber-500 mx-auto mb-3" />
           <p className="font-semibold text-sm mb-1">ยังไม่สามารถแสดงรายงานได้</p>
           <p className="text-sm text-muted-foreground">
             Peer ส่งแล้ว {breakdown?.peerCount ?? 0} คน จากที่ต้องการอย่างน้อย {Math.min(2, eligiblePeerCount)} คน
@@ -251,7 +251,7 @@ export default function KpiReport() {
             {/* Peer anonymity note */}
             {!isAdmin && (breakdown?.peerCount ?? 0) > 0 && (
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-3">
-                <Star className="w-3 h-3" />
+                <StarIcon className="w-3 h-3" />
                 คะแนนเพื่อนร่วมงาน ({breakdown?.peerCount} คน) เป็นนิรนาม
               </p>
             )}
@@ -307,7 +307,7 @@ export default function KpiReport() {
           {trendData.length >= 2 && (
             <div className="bg-card border border-border/60 rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-4 h-4 text-primary" />
+                <ArrowTrendingUpIcon className="w-4 h-4 text-primary" />
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">แนวโน้มคะแนน</h2>
               </div>
               <p className="text-xs text-muted-foreground mb-4">เปรียบเทียบรอบที่ผ่านมา</p>
@@ -329,7 +329,7 @@ export default function KpiReport() {
           {/* Action plan */}
           <div className="bg-card border border-border/60 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
-              <Star className="w-4 h-4 text-primary" />
+              <StarIcon className="w-4 h-4 text-primary" />
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Action Plan</h2>
             </div>
             <p className="text-xs text-muted-foreground mb-3">เป้าหมายที่ต้องการพัฒนาในโปรเจกต์ถัดไป</p>

@@ -1,5 +1,5 @@
+import { ArchiveBoxIcon, ArrowDownTrayIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon, ClockIcon, DocumentTextIcon, EllipsisVerticalIcon, ExclamationTriangleIcon, FolderOpenIcon, PencilIcon, PlusIcon, QueueListIcon, TableCellsIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useRef, lazy, Suspense } from "react";
-import { Plus, ChevronDown, ChevronUp, ExternalLink, X, Save, Trash2, Pencil, GripVertical, Download, Sheet, FileText, FolderOpen, Clock, AlertTriangle, LayoutList, GanttChartSquare, Archive, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -53,7 +53,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
     if (diff >= 0) {
       badges.push(
         <span key="start" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium" style={{ background: "hsl(191 91% 37% / 0.1)", color: "hsl(191 91% 30%)" }}>
-          <Clock className="w-2.5 h-2.5" /> {diff} วัน
+          <ClockIcon className="w-2.5 h-2.5" /> {diff} วัน
         </span>
       );
     }
@@ -66,7 +66,7 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
     if (diff > 0) {
       badges.push(
         <span key="overdue" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold animate-pulse" style={{ background: "hsl(0 84% 60% / 0.1)", color: "hsl(0 84% 50%)" }}>
-          <AlertTriangle className="w-2.5 h-2.5" /> เลย {diff} วัน
+          <ExclamationTriangleIcon className="w-2.5 h-2.5" /> เลย {diff} วัน
         </span>
       );
     }
@@ -206,16 +206,16 @@ export default function Projects() {
               onClick={() => setShowExportMenu(v => !v)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-semibold hover:bg-muted transition-all hover:scale-105 active:scale-95"
             >
-              <Download className="w-4 h-4" /> Export
+              <ArrowDownTrayIcon className="w-4 h-4" /> Export
             </button>
             {showExportMenu && (
               <div className="absolute right-0 top-full mt-2 w-44 bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden animate-scale-in">
                 <button onClick={handleExportCSV} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
-                  <Sheet className="w-4 h-4 text-green-600" /> Export CSV
+                  <DocumentTextIcon className="w-4 h-4 text-green-600" /> Export CSV
                 </button>
                 <div className="h-px bg-border" />
                 <button onClick={handleExportPDF} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left">
-                  <FileText className="w-4 h-4 text-red-500" /> Export PDF
+                  <DocumentTextIcon className="w-4 h-4 text-red-500" /> Export PDF
                 </button>
               </div>
             )}
@@ -226,17 +226,17 @@ export default function Projects() {
               onClick={() => setViewMode("list")}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition-all ${viewMode === "list" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
             >
-              <LayoutList className="w-4 h-4" /> List
+              <QueueListIcon className="w-4 h-4" /> List
             </button>
             <button
               onClick={() => setViewMode("gantt")}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition-all ${viewMode === "gantt" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
             >
-              <GanttChartSquare className="w-4 h-4" /> Timeline
+              <TableCellsIcon className="w-4 h-4" /> Timeline
             </button>
           </div>
           <button onClick={() => setShowAddProject(true)} className="btn-primary flex items-center gap-2">
-            <Plus className="w-4 h-4" /> New Project
+            <PlusIcon className="w-4 h-4" /> New Project
           </button>
         </div>
       </div>
@@ -285,7 +285,7 @@ export default function Projects() {
         </div>
       </div>
 
-      {/* Archive Toggle */}
+      {/* ArchiveBoxIcon Toggle */}
       <div className="flex items-center gap-2 mb-4">
         <Switch
           id="show-archived-projects"
@@ -305,7 +305,7 @@ export default function Projects() {
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold">New Project</h3>
-              <button onClick={() => setShowAddProject(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><X className="w-4 h-4" /></button>
+              <button onClick={() => setShowAddProject(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-all hover:scale-110"><XMarkIcon className="w-4 h-4" /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -349,7 +349,7 @@ export default function Projects() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowAddProject(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]">Cancel</button>
-              <button onClick={handleAddProject} className="flex-1 btn-primary flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Create</button>
+              <button onClick={handleAddProject} className="flex-1 btn-primary flex items-center justify-center gap-2"><CheckIcon className="w-4 h-4" /> Create</button>
             </div>
           </div>
         </div>
@@ -427,7 +427,7 @@ export default function Projects() {
           })}
           {Object.keys(grouped).length === 0 && (
             <div className="text-center py-16">
-              <FolderOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+              <FolderOpenIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground font-medium">No projects found</p>
               <button onClick={() => setShowAddProject(true)} className="mt-3 text-xs text-primary font-semibold hover:underline">
                 Create your first project →
@@ -461,7 +461,7 @@ function SortableProjCard({ id, children }: { id: string; children: React.ReactN
       <div {...attributes} {...listeners}
         className="absolute top-3 right-12 z-10 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground transition-colors"
         style={{ touchAction: "none" }}>
-        <GripVertical className="w-3.5 h-3.5" />
+        <EllipsisVerticalIcon className="w-3.5 h-3.5" />
       </div>
       {children}
     </div>
@@ -509,7 +509,7 @@ function ProjectCardComponent({
               <a href={proj.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                 className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
                 title={proj.link}>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
               </a>
             )}
           </div>
@@ -523,28 +523,28 @@ function ProjectCardComponent({
         <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200" onClick={e => e.stopPropagation()}>
           <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
-            <Pencil className="w-3.5 h-3.5" />
+            <PencilIcon className="w-3.5 h-3.5" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
-            <Plus className="w-3.5 h-3.5" />
+            <PlusIcon className="w-3.5 h-3.5" />
           </button>
           {!showArchived ? (
             <button onClick={(e) => { e.stopPropagation(); archiveProject(proj.id); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-500/10 text-amber-600 transition-all hover:scale-110 active:scale-95"
-              title="Archive project">
-              <Archive className="w-3.5 h-3.5" />
+              title="ArchiveBoxIcon project">
+              <ArchiveBoxIcon className="w-3.5 h-3.5" />
             </button>
           ) : (
             <button onClick={(e) => { e.stopPropagation(); unarchiveProject(proj.id); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-green-500/10 text-green-600 transition-all hover:scale-110 active:scale-95"
               title="Unarchive project">
-              <RefreshCw className="w-3.5 h-3.5" />
+              <ArrowPathIcon className="w-3.5 h-3.5" />
             </button>
           )}
           <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "project", id: proj.id, name: proj.name }); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
-            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+            <TrashIcon className="w-3.5 h-3.5 text-destructive" />
           </button>
         </div>
       </div>
@@ -556,12 +556,12 @@ function ProjectCardComponent({
       <div className="flex items-center gap-3 mt-auto pt-1">
         <span onClick={() => setIsExpanded(prev => !prev)}
           className="flex items-center gap-1.5 text-xs text-muted-foreground select-none hover:text-foreground transition-all cursor-pointer">
-          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          {isExpanded ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />}
           {isExpanded ? "Hide" : "Show"} tasks
         </span>
         <button onClick={(e) => { e.stopPropagation(); openAddTask(proj.id); }}
           className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-semibold transition-all hover:scale-105">
-          <Plus className="w-3.5 h-3.5" /> Add task
+          <PlusIcon className="w-3.5 h-3.5" /> Add task
         </button>
       </div>
       {isExpanded && (
@@ -602,21 +602,21 @@ function ProjectCardComponent({
                  <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
                     {task.link && (
                       <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
-                        <ExternalLink className="w-3 h-3 text-primary" />
+                        <ArrowTopRightOnSquareIcon className="w-3 h-3 text-primary" />
                       </a>
                     )}
                  <button onClick={(e) => { e.stopPropagation(); openEditTask(proj.id, task); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
-                   <Pencil className="w-3 h-3 text-primary" />
+                   <PencilIcon className="w-3 h-3 text-primary" />
                  </button>
                  <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "task", id: task.id, name: task.name, parentId: proj.id }); }} className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110">
-                   <Trash2 className="w-3 h-3 text-destructive" />
+                   <TrashIcon className="w-3 h-3 text-destructive" />
                 </button>
                  </div>
                </div>
                {task.link && (
                  <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                     className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-4 truncate transition-colors">
-                   <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                   <ArrowTopRightOnSquareIcon className="w-2.5 h-2.5 flex-shrink-0" />
                    <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
                  </a>
                )}

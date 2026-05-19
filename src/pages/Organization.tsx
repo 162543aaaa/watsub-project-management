@@ -1,20 +1,5 @@
+import { ArrowTopRightOnSquareIcon, BuildingOffice2Icon, ClockIcon, EnvelopeIcon, ExclamationCircleIcon, FlagIcon, GiftIcon, LinkIcon, MapPinIcon, PaintBrushIcon, PencilIcon, SparklesIcon, UsersIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
-import {
-  Building2,
-  CircleAlert,
-  ExternalLink,
-  Gift,
-  History,
-  Link2,
-  Mail,
-  MapPin,
-  Palette,
-  Pencil,
-  Sparkles,
-  Target,
-  Users,
-} from "lucide-react";
-
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useCompanyInfo } from "@/hooks/useCompanyInfo";
 import { OrgAdminEditor } from "@/components/OrgAdminEditor";
@@ -83,7 +68,7 @@ function EditHint({ onClick, className }: { onClick: () => void; className?: str
       )}
       title="แก้ไข"
     >
-      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+      <PencilIcon className="w-3.5 h-3.5 text-muted-foreground" />
     </button>
   );
 }
@@ -140,7 +125,7 @@ export default function Organization() {
       {error && (
         <div className="p-4 relative z-10">
           <Alert variant="destructive" className="bg-destructive/90 text-white border-none">
-            <CircleAlert className="h-4 w-4" />
+            <ExclamationCircleIcon className="h-4 w-4" />
             <AlertTitle>โหลดข้อมูลไม่สำเร็จ</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -187,15 +172,15 @@ export default function Organization() {
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs
                              bg-white/5 hover:bg-white/12 text-white/80 transition-colors border border-white/10 shadow-lg"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#F4622A]" />
+                  <MapPinIcon className="w-3.5 h-3.5 text-[#F4622A]" />
                   {locationLabel}
-                  <ExternalLink className="w-3 h-3 opacity-50" />
+                  <ArrowTopRightOnSquareIcon className="w-3 h-3 opacity-50" />
                 </a>
               )}
               {companyInfo?.contact_email && (
                 <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs
                                  bg-white/5 text-white/80 border border-white/10 shadow-lg">
-                  <Mail className="w-3.5 h-3.5 text-[#3EADD4]" />
+                  <EnvelopeIcon className="w-3.5 h-3.5 text-[#3EADD4]" />
                   {companyInfo.contact_email}
                 </span>
               )}
@@ -208,7 +193,7 @@ export default function Organization() {
               className="flex-shrink-0 font-bold text-black px-6 py-5 rounded-xl hover:scale-105 transition-all shadow-lg shadow-[#D2FA00]/20 border-none"
               style={{ backgroundColor: brandColors.primary }}
             >
-              <Pencil className="w-4 h-4 mr-2" />
+              <PencilIcon className="w-4 h-4 mr-2" />
               แก้ไของค์กร
             </Button>
           )}
@@ -260,7 +245,7 @@ export default function Organization() {
             {isAdmin && <EditHint onClick={() => openEditor("general")} />}
             <GlassCardHeader>
               <GlassCardTitle className="flex items-center gap-2 text-base text-white">
-                <Target className="w-4 h-4 text-[#D2FA00]" />
+                <FlagIcon className="w-4 h-4 text-[#D2FA00]" />
                 Vision 2026
               </GlassCardTitle>
             </GlassCardHeader>
@@ -276,7 +261,7 @@ export default function Organization() {
             {isAdmin && <EditHint onClick={() => openEditor("general")} />}
             <GlassCardHeader>
               <GlassCardTitle className="flex items-center gap-2 text-base text-white">
-                <Sparkles className="w-4 h-4 text-[#3EADD4]" />
+                <SparklesIcon className="w-4 h-4 text-[#3EADD4]" />
                 Mission
               </GlassCardTitle>
             </GlassCardHeader>
@@ -286,14 +271,14 @@ export default function Organization() {
           </GlassCard>
         </div>
 
-        {/* ── History + Milestones ──────────────────────────── */}
+        {/* ── ClockIcon + Milestones ──────────────────────────── */}
         <GlassCard
           className="relative group bg-slate-950/50"
         >
           {isAdmin && <EditHint onClick={() => openEditor("general")} />}
           <GlassCardHeader>
             <GlassCardTitle className="flex items-center gap-2 text-base text-white">
-              <History className="w-4 h-4 text-[#3EADD4]" />
+              <ClockIcon className="w-4 h-4 text-[#3EADD4]" />
               ประวัติองค์กร
             </GlassCardTitle>
           </GlassCardHeader>
@@ -320,7 +305,7 @@ export default function Organization() {
           {/* Core Values with High-Fidelity Custom Brand Frames */}
           <div className="lg:col-span-8 space-y-4">
             <h3 className="text-lg font-black tracking-wider text-white uppercase flex items-center gap-2">
-              <Palette className="w-5 h-5 text-[#D2FA00]" />
+              <PaintBrushIcon className="w-5 h-5 text-[#D2FA00]" />
               Core Values — 3 Pillars
             </h3>
             
@@ -400,7 +385,7 @@ export default function Organization() {
           {/* Brand Colors palette box */}
           <div className="lg:col-span-4 space-y-4">
             <h3 className="text-lg font-black tracking-wider text-white uppercase flex items-center gap-2">
-              <Palette className="w-5 h-5 text-[#3EADD4]" />
+              <PaintBrushIcon className="w-5 h-5 text-[#3EADD4]" />
               Brand Colors
             </h3>
             <GlassCard className="relative group bg-slate-950/60 p-5 h-[272px] flex flex-col justify-between">
@@ -430,7 +415,7 @@ export default function Organization() {
             {isAdmin && <EditHint onClick={() => openEditor("content")} />}
             <GlassCardHeader>
               <GlassCardTitle className="flex items-center gap-2 text-base text-white">
-                <Gift className="w-4 h-4 text-[#D2FA00]" />
+                <GiftIcon className="w-4 h-4 text-[#D2FA00]" />
                 สวัสดิการพนักงาน
               </GlassCardTitle>
             </GlassCardHeader>
@@ -452,7 +437,7 @@ export default function Organization() {
             {isAdmin && <EditHint onClick={() => openEditor("content")} />}
             <GlassCardHeader>
               <GlassCardTitle className="flex items-center gap-2 text-base text-white">
-                <Link2 className="w-4 h-4 text-[#3EADD4]" />
+                <LinkIcon className="w-4 h-4 text-[#3EADD4]" />
                 Resources & Location
               </GlassCardTitle>
             </GlassCardHeader>
@@ -464,7 +449,7 @@ export default function Organization() {
                   rel="noreferrer"
                   className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
                 >
-                  <MapPin className="w-4 h-4 text-[#F4622A]" />
+                  <MapPinIcon className="w-4 h-4 text-[#F4622A]" />
                   <span className="hover:underline">{locationLabel}</span>
                 </a>
               )}
@@ -476,7 +461,7 @@ export default function Organization() {
                   rel="noreferrer"
                   className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
                 >
-                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                  <ArrowTopRightOnSquareIcon className="w-4 h-4 flex-shrink-0" />
                   <span className="hover:underline">{r.label}</span>
                 </a>
               ))}
@@ -490,7 +475,7 @@ export default function Organization() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <GlassCardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
+                  <UsersIcon className="w-5 h-5 text-primary" />
                   Interactive Org Chart
                 </GlassCardTitle>
                 <GlassCardDescription className="mt-1">
@@ -504,7 +489,7 @@ export default function Organization() {
                   onClick={() => openEditor("orgchart")}
                   className="flex-shrink-0"
                 >
-                  <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                  <PencilIcon className="w-3.5 h-3.5 mr-1.5" />
                   จัดการสมาชิก
                 </Button>
               )}
