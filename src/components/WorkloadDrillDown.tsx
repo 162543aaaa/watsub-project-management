@@ -52,6 +52,7 @@ export default function WorkloadDrillDown({
         .select("id, name")
         .eq("active", true)
         .eq("type", "fulltime")
+        .or("is_archived.is.null,is_archived.eq.false")
         .order("name", { ascending: true });
 
       if (error) {
