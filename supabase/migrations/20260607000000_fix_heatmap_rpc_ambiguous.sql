@@ -1,3 +1,5 @@
+DROP FUNCTION IF EXISTS public.get_team_workload_heatmap(date, date);
+
 CREATE OR REPLACE FUNCTION public.get_team_workload_heatmap(start_date date, end_date date)
  RETURNS TABLE(employee_id uuid, employee_name text, date date, task_count integer, is_on_leave boolean)
  LANGUAGE plpgsql
