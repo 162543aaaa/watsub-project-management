@@ -107,22 +107,38 @@ serve(async (req) => {
     }
 
     if (action === 'delete-user') {
-      // 1. Delete notifications for this user explicitly
-      await supabase.from('notifications').delete().eq('recipient_user_id', user_id);
+      // 1. Soft delete / archive profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ is_archived: true, status: 'inactive', is_approved: false })
+        .eq('user_id', user_id);
       
-      // 2. Delete user roles
+      if (profileError) {
+        return new Response(JSON.stringify({ error: profileError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // 2. Soft delete / archive employee
+      const { error: employeeError } = await supabase
+        .from('employees')
+        .update({ is_archived: true, status: 'inactive' })
+        .eq('user_id', user_id);
+      
+      if (employeeError) {
+        console.error("Employee update error:", employeeError);
+      }
+
+      // 3. Delete user roles (optional but recommended to revoke access)
       await supabase.from('user_roles').delete().eq('user_id', user_id);
-      
-      // 3. Delete employee record (which cascades to other kpi and objective tables)
-      await supabase.from('employees').delete().eq('user_id', user_id);
-      
-      // 4. Delete profile
-      await supabase.from('profiles').delete().eq('user_id', user_id);
-      
-      // 5. Delete auth user via Admin API
-      const { error: deleteError } = await supabase.auth.admin.deleteUser(user_id);
-      if (deleteError) {
-        return new Response(JSON.stringify({ error: deleteError.message }), {
+
+      // 4. Disable auth user via Admin API
+      const { error: disableError } = await supabase.auth.admin.updateUserById(user_id, {
+        ban_duration: '876000h', // Ban for 100 years
+      });
+      if (disableError) {
+        return new Response(JSON.stringify({ error: disableError.message }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

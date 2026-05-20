@@ -18,6 +18,7 @@ export interface Employee {
   promptpay_qr?: string;
   start_date?: string;
   note?: string;
+  is_archived?: boolean;
   created_at?: string;
 }
 
@@ -36,7 +37,10 @@ export function useEmployees() {
     setCurrentEmployee(currEmp);
 
     if (error) { console.error(error); setEmployees([]); setLoading(false); return; }
-    setEmployees(data || []);
+    
+    // Filter out archived employees to prevent them from showing up in dropdowns
+    const activeEmployees = (data || []).filter(e => e.is_archived !== true);
+    setEmployees(activeEmployees);
     setLoading(false);
   };
 

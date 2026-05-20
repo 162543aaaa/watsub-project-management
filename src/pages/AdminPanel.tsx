@@ -55,17 +55,21 @@ export default function AdminPanel() {
   const handleDeleteUser = async (userId: string) => {
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("admin-users", {
+      const { data, error } = await supabase.functions.invoke("admin-users", {
         body: { action: "delete-user", user_id: userId },
       });
       if (error) {
-        toast({ title: "เกิดข้อผิดพลาดในการลบผู้ใช้", description: error.message, variant: "destructive" });
+        console.error("Supabase function delete-user error:", error);
+        toast({ title: "เกิดข้อผิดพลาดในการระงับ/เก็บข้อมูลผู้ใช้", description: error.message, variant: "destructive" });
+      } else if (data?.error) {
+        console.error("Supabase function delete-user data error:", data.error);
+        toast({ title: "เกิดข้อผิดพลาดในการระงับ/เก็บข้อมูลผู้ใช้", description: data.error, variant: "destructive" });
       } else {
-        toast({ title: "ลบผู้ใช้สำเร็จ!" });
+        toast({ title: "เก็บถาวรและระงับสิทธิ์การใช้งานผู้ใช้สำเร็จ!" });
         fetchUsers();
       }
     } catch (err) {
-      console.error("handleDeleteUser error:", err);
+      console.error("handleDeleteUser catch block error:", err);
       toast({ title: "เกิดข้อผิดพลาด", description: String(err), variant: "destructive" });
     }
     setLoading(false);
@@ -86,11 +90,13 @@ export default function AdminPanel() {
         return;
       }
 
-      const usersData: UserInfo[] = (profiles ?? []).map(p => ({
-        profile: p as unknown as Profile,
-        roles: ((roles ?? []) as UserRole[]).filter(r => r.user_id === p.user_id),
-        email: "",
-      }));
+      const usersData: UserInfo[] = (profiles ?? [])
+        .filter(p => !(p as any).is_archived)
+        .map(p => ({
+          profile: p as unknown as Profile,
+          roles: ((roles ?? []) as UserRole[]).filter(r => r.user_id === p.user_id),
+          email: "",
+        }));
 
       setUsers(usersData);
     } catch (err) {
@@ -423,8 +429,8 @@ export default function AdminPanel() {
           handleDeleteUser(confirmDeleteUser.profile.user_id);
           setConfirmDeleteUser(null);
         }}
-        title="ยืนยันการลบผู้ใช้"
-        description={`คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ "${confirmDeleteUser?.profile.display_name}" ออกจากระบบ? บัญชีและสิทธิ์ทั้งหมดของผู้ใช้นี้จะถูกลบอย่างถาวรและไม่สามารถย้อนกลับได้`}
+        title="ยืนยันการเก็บถาวรและระงับสิทธิ์ผู้ใช้"
+        description={`คุณแน่ใจหรือไม่ว่าต้องการเก็บถาวรและระงับสิทธิ์การใช้งานผู้ใช้ "${confirmDeleteUser?.profile.display_name}"? บัญชีนี้จะถูกระงับสิทธิ์เข้าใช้งานและข้อมูลจะถูกเก็บถาวรในระบบ`}
       />
     </div>
   );
