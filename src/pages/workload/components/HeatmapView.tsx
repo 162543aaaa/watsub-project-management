@@ -25,7 +25,11 @@ interface RpcRow {
 
 const DAYS_AHEAD = 14;
 
-export function HeatmapView() {
+interface HeatmapViewProps {
+  onEmployeeClick?: (employeeId: string, employeeName: string) => void;
+}
+
+export function HeatmapView({ onEmployeeClick }: HeatmapViewProps = {}) {
   const [rows, setRows] = useState<HeatmapRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +133,18 @@ export function HeatmapView() {
           {rows.map((row) => (
             <tr key={row.employee_id} className="hover:bg-muted/30 transition-colors group">
               <td className="px-4 py-3 text-xs font-medium sticky left-0 z-10 whitespace-nowrap bg-card group-hover:bg-muted/30 border-r border-border/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] text-foreground">
-                {row.employee_name}
+                {onEmployeeClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onEmployeeClick(row.employee_id, row.employee_name)}
+                    className="text-left hover:text-primary hover:underline transition-colors cursor-pointer"
+                    title="View task details"
+                  >
+                    {row.employee_name}
+                  </button>
+                ) : (
+                  row.employee_name
+                )}
               </td>
               {dateColumns.map((date) => {
                 const cell = row.days[date] ?? { task_count: 0, is_on_leave: false };

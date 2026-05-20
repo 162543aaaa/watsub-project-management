@@ -879,11 +879,11 @@ export type Database = {
       get_team_workload_heatmap: {
         Args: { end_date: string; start_date: string }
         Returns: {
+          date: string
           employee_id: string
           employee_name: string
           is_on_leave: boolean
           task_count: number
-          task_date: string
         }[]
       }
       has_role: {
