@@ -21,8 +21,9 @@ async function logAudit(params: {
       old_values: params.oldValues ?? null,
       new_values: params.newValues ?? null,
     });
-  } catch {
-    // Silently swallow audit errors so they never block the main operation
+  } catch (err) {
+    // Log audit errors but don't throw them so they never block the main operation
+    console.error("Audit log failed:", err);
   }
 }
 
