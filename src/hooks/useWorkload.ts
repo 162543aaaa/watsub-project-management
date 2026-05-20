@@ -83,7 +83,6 @@ export function useWorkload(startDate?: string, endDate?: string) {
       const { data: employees, error: empError } = await supabase
         .from("employees")
         .select("id, name, avatar, position")
-        .or("is_archived.is.null,is_archived.eq.false")
         .order("name", { ascending: true });
 
       if (empError) throw empError;
@@ -113,8 +112,11 @@ export function useWorkload(startDate?: string, endDate?: string) {
       const activeTasks: TaskRow[] = (tasks ?? []) as TaskRow[];
       const approvedLeaves: LeaveRow[] = (leaves ?? []) as LeaveRow[];
 
+      // Filter active employees client-side to prevent PostgREST schema cache errors
+      const activeEmployees = ((employees ?? []) as any[]).filter(emp => emp.is_archived !== true);
+
       // 4. Aggregate per employee
-      const workload: WorkloadData[] = ((employees ?? []) as EmployeeRow[]).map((emp) => {
+      const workload: WorkloadData[] = activeEmployees.map((emp) => {
         const myTasks = activeTasks.filter((task) => {
           const assignees: string[] = task.assigned_to ?? [];
           if (!assignees.includes(emp.name)) return false;
@@ -165,8 +167,9 @@ export function useWorkload(startDate?: string, endDate?: string) {
       });
 
       setData(workload);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load workload data");
+    } catch (err: any) {
+      console.error("Workload fetch error:", err);
+      setError(err?.message || "Failed to load workload data");
     } finally {
       setIsLoading(false);
     }
