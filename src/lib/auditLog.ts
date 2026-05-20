@@ -17,14 +17,16 @@ export interface LogAuditParams {
  */
 export async function logAudit(params: LogAuditParams): Promise<void> {
   try {
-    await supabase.from("audit_logs").insert({
-      user_id: params.userId,
-      action: params.action,
-      entity_type: params.entityType,
-      entity_id: params.entityId,
-      old_values: params.oldValues ?? null,
-      new_values: params.newValues ?? null,
-    });
+    await supabase.from("audit_logs").insert([
+      {
+        user_id: params.userId,
+        action: params.action,
+        entity_type: params.entityType,
+        entity_id: params.entityId,
+        old_values: (params.oldValues ?? null) as never,
+        new_values: (params.newValues ?? null) as never,
+      },
+    ]);
   } catch (err) {
     console.error("Audit log failed:", err);
   }
