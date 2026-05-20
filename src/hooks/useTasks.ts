@@ -3,29 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import type { Task } from "./useProjects";
-
-async function logAudit(params: {
-  userId: string | null;
-  action: string;
-  entityType: string;
-  entityId: string;
-  oldValues?: Record<string, unknown>;
-  newValues?: Record<string, unknown>;
-}) {
-  try {
-    await supabase.from("audit_logs").insert({
-      user_id: params.userId,
-      action: params.action,
-      entity_type: params.entityType,
-      entity_id: params.entityId,
-      old_values: params.oldValues ?? null,
-      new_values: params.newValues ?? null,
-    });
-  } catch (err) {
-    // Log audit errors but don't throw them so they never block the main operation
-    console.error("Audit log failed:", err);
-  }
-}
+import { logAudit, getCurrentUserId, taskUpdateAction } from "@/lib/auditLog";
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -54,14 +32,14 @@ export function useTasks() {
   useEffect(() => { fetchTasks(); }, []);
 
   const addTask = async (task: Omit<Task, "id" | "created_at">) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const userId = await getCurrentUserId();
     const { data, error } = await supabase.from("tasks").insert(task).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setTasks(prev => [data as Task, ...prev]);
     void autoSyncToGoogleSheets("tasks", data);
     toast({ title: "เพิ่มงานสำเร็จ!" });
     await logAudit({
-      userId: user?.id ?? null,
+      userId,
       action: "created",
       entityType: "task",
       entityId: (data as Task).id,
@@ -71,7 +49,7 @@ export function useTasks() {
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const userId = await getCurrentUserId();
     // Capture the current task for old_values
     const currentTask = tasks.find(t => t.id === id);
     const { data, error } = await supabase.from("tasks").update(updates).eq("id", id).select().single();
@@ -80,13 +58,10 @@ export function useTasks() {
     void autoSyncToGoogleSheets("tasks", data);
     toast({ title: "อัปเดตงานสำเร็จ!" });
 
-    // Determine a meaningful action label
-    const action = updates.status && currentTask?.status !== updates.status
-      ? `status_changed:${currentTask?.status}→${updates.status}`
-      : "updated";
+    const action = taskUpdateAction(currentTask?.status, updates.status);
 
     await logAudit({
-      userId: user?.id ?? null,
+      userId,
       action,
       entityType: "task",
       entityId: id,
@@ -97,7 +72,7 @@ export function useTasks() {
   };
 
   const deleteTask = async (id: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const userId = await getCurrentUserId();
     const currentTask = tasks.find(t => t.id === id);
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
@@ -105,7 +80,7 @@ export function useTasks() {
     setTasks(prev => prev.filter(t => t.id !== id));
     toast({ title: "ลบงานสำเร็จ!" });
     await logAudit({
-      userId: user?.id ?? null,
+      userId,
       action: "deleted",
       entityType: "task",
       entityId: id,

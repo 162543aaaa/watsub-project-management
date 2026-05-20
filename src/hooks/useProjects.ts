@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
+import { logAudit, getCurrentUserId, taskUpdateAction } from "@/lib/auditLog";
 
 function isMissingArchivedColumnError(error: { message?: string } | null): boolean {
   if (!error?.message) return false;
@@ -101,28 +102,55 @@ export function useProjects(filterType: "active" | "archived" | "all" = "active"
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
   const addProject = async (proj: { name: string; month: number; year?: number; note?: string; link?: string; pillar: Pillar }) => {
+    const userId = await getCurrentUserId();
     const { data, error } = await supabase.from("projects").insert(proj).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setProjects(prev => [...prev, { ...data, pillar: data.pillar as Pillar, tasks: [] }]);
     void autoSyncToGoogleSheets("projects", data);
     toast({ title: "สร้างโปรเจกต์สำเร็จ!" });
+    await logAudit({
+      userId,
+      action: "created",
+      entityType: "project",
+      entityId: data.id,
+      newValues: data as Record<string, unknown>,
+    });
     return data;
   };
 
   const updateProject = async (id: string, updates: Partial<Omit<Project, "id" | "created_at" | "tasks">>) => {
+    const userId = await getCurrentUserId();
+    const current = projects.find(p => p.id === id);
     const { data, error } = await supabase.from("projects").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data, pillar: (data.pillar as Pillar) } : p));
     void autoSyncToGoogleSheets("projects", data);
     toast({ title: "อัปเดตโปรเจกต์สำเร็จ!" });
+    await logAudit({
+      userId,
+      action: "updated",
+      entityType: "project",
+      entityId: id,
+      oldValues: current as unknown as Record<string, unknown>,
+      newValues: updates as Record<string, unknown>,
+    });
   };
 
   const deleteProject = async (id: string) => {
+    const userId = await getCurrentUserId();
+    const current = projects.find(p => p.id === id);
     const { error } = await supabase.from("projects").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     void autoSyncToGoogleSheets("projects", { id }, "delete");
     setProjects(prev => prev.filter(p => p.id !== id));
     toast({ title: "ลบโปรเจกต์สำเร็จ!" });
+    await logAudit({
+      userId,
+      action: "deleted",
+      entityType: "project",
+      entityId: id,
+      oldValues: current as unknown as Record<string, unknown>,
+    });
   };
 
   const archiveProject = async (id: string) => {
@@ -158,6 +186,7 @@ export function useProjects(filterType: "active" | "archived" | "all" = "active"
   };
 
   const addTask = async (task: Omit<Task, "id" | "created_at">) => {
+    const userId = await getCurrentUserId();
     const { data, error } = await supabase.from("tasks").insert(task).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setProjects(prev => prev.map(p =>
@@ -165,10 +194,23 @@ export function useProjects(filterType: "active" | "archived" | "all" = "active"
     ));
     void autoSyncToGoogleSheets("tasks", data);
     toast({ title: "เพิ่มงานสำเร็จ!" });
+    await logAudit({
+      userId,
+      action: "created",
+      entityType: "task",
+      entityId: (data as Task).id,
+      newValues: data as Record<string, unknown>,
+    });
     return data;
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
+    const userId = await getCurrentUserId();
+    let currentTask: Task | undefined;
+    for (const p of projects) {
+      const t = p.tasks.find(x => x.id === id);
+      if (t) { currentTask = t; break; }
+    }
     const { data, error } = await supabase.from("tasks").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setProjects(prev => prev.map(p => ({
@@ -177,10 +219,20 @@ export function useProjects(filterType: "active" | "archived" | "all" = "active"
     })));
     void autoSyncToGoogleSheets("tasks", data);
     toast({ title: "อัปเดตงานสำเร็จ!" });
+    await logAudit({
+      userId,
+      action: taskUpdateAction(currentTask?.status, updates.status),
+      entityType: "task",
+      entityId: id,
+      oldValues: currentTask as unknown as Record<string, unknown>,
+      newValues: updates as Record<string, unknown>,
+    });
     return data as Task;
   };
 
   const deleteTask = async (id: string, projectId: string) => {
+    const userId = await getCurrentUserId();
+    const currentTask = projects.find(p => p.id === projectId)?.tasks.find(t => t.id === id);
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     void autoSyncToGoogleSheets("tasks", { id }, "delete");
@@ -188,6 +240,13 @@ export function useProjects(filterType: "active" | "archived" | "all" = "active"
       p.id === projectId ? { ...p, tasks: p.tasks.filter(t => t.id !== id) } : p
     ));
     toast({ title: "ลบงานสำเร็จ!" });
+    await logAudit({
+      userId,
+      action: "deleted",
+      entityType: "task",
+      entityId: id,
+      oldValues: currentTask as unknown as Record<string, unknown>,
+    });
   };
 
   // Persist reordered projects — assigns new sort_order values and updates local state immediately
