@@ -10,7 +10,7 @@ const HOURS_PER_LEAVE_DAY = 8;
 
 type TaskRow = Pick<
   Database["public"]["Tables"]["tasks"]["Row"],
-  "id" | "name" | "assigned_to" | "status" | "due_date" | "estimated_hours" | "priority"
+  "id" | "name" | "assigned_to" | "status" | "due_date" | "priority"
 >;
 
 type EmployeeRow = Pick<
@@ -90,7 +90,7 @@ export function useWorkload(startDate?: string, endDate?: string) {
       // 2. Fetch Tasks
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
-        .select("id, name, assigned_to, status, due_date, estimated_hours, priority")
+        .select("id, name, assigned_to, status, due_date, priority")
         .neq("status", "Done");
 
       if (tasksError) throw tasksError;
@@ -112,8 +112,7 @@ export function useWorkload(startDate?: string, endDate?: string) {
       const activeTasks: TaskRow[] = (tasks ?? []) as TaskRow[];
       const approvedLeaves: LeaveRow[] = (leaves ?? []) as LeaveRow[];
 
-      // Filter active employees client-side to prevent PostgREST schema cache errors
-      const activeEmployees = ((employees ?? []) as any[]).filter(emp => emp.is_archived !== true);
+      const activeEmployees = (employees ?? []) as EmployeeRow[];
 
       // 4. Aggregate per employee
       const workload: WorkloadData[] = activeEmployees.map((emp) => {
@@ -131,7 +130,7 @@ export function useWorkload(startDate?: string, endDate?: string) {
         });
 
         const totalHours = myTasks.reduce((sum, task) => {
-          return sum + (task.estimated_hours ?? DEFAULT_HOURS_PER_TASK);
+          return sum + DEFAULT_HOURS_PER_TASK;
         }, 0);
 
         const leaveDays = approvedLeaves.reduce((sum, leave) => {

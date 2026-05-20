@@ -49,9 +49,7 @@ export default function WorkloadDrillDown({
     const fetchMembers = async () => {
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, is_archived")
-        .eq("active", true)
-        .eq("type", "fulltime")
+        .select("id, name")
         .order("name", { ascending: true });
 
       if (error) {
@@ -59,9 +57,7 @@ export default function WorkloadDrillDown({
         return;
       }
 
-      // Client-side filtering for is_archived to prevent schema cache errors
-      const activeMembers = ((data ?? []) as any[]).filter(m => m.is_archived !== true);
-      setTeamMembers(activeMembers as EmployeeOption[]);
+      setTeamMembers((data ?? []) as EmployeeOption[]);
     };
 
     fetchMembers();
@@ -136,7 +132,7 @@ export default function WorkloadDrillDown({
                       <div>
                         <p className="text-sm font-medium text-foreground">{task.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          Status: {task.status} · Due: {task.due_date ?? "No due date"} · Est: {task.estimated_hours ?? 0}h
+                          Status: {task.status} · Due: {task.due_date ?? "No due date"} · Priority: {task.priority}
                         </p>
                       </div>
 
