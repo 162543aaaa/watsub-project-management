@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import { useState, useMemo, useEffect } from "react";
+import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
 import { 
   UsersIcon, 
   CalendarDaysIcon, 
@@ -31,8 +31,28 @@ export default function Workload() {
   const [activeTab, setActiveTab] = useState<ViewTab>("utilization");
   const [selectedEmployee, setSelectedEmployee] = useState<WorkloadData | null>(null);
   const [isDrillDownOpen, setIsDrillDownOpen] = useState(false);
+  const [pendingDrillEmployeeId, setPendingDrillEmployeeId] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useWorkload(startDate, endDate);
+
+  // When user clicks an employee name in the heatmap, expand the date range to
+  // cover the next 14 days, then open the drill-down once that data arrives.
+  useEffect(() => {
+    if (!pendingDrillEmployeeId || isLoading) return;
+    const found = data.find((d) => d.employee_id === pendingDrillEmployeeId);
+    if (found) {
+      setSelectedEmployee(found);
+      setIsDrillDownOpen(true);
+      setPendingDrillEmployeeId(null);
+    }
+  }, [pendingDrillEmployeeId, isLoading, data]);
+
+  const handleHeatmapEmployeeClick = (employeeId: string) => {
+    const today = new Date();
+    setStartDate(format(today, "yyyy-MM-dd"));
+    setEndDate(format(addDays(today, 13), "yyyy-MM-dd"));
+    setPendingDrillEmployeeId(employeeId);
+  };
 
   // Summary stats memoized
   const stats = useMemo(() => {
@@ -216,7 +236,7 @@ export default function Workload() {
               ))}
             </div>
             
-            <HeatmapView />
+            <HeatmapView onEmployeeClick={handleHeatmapEmployeeClick} />
           </div>
         )}
       </div>
