@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowUpTrayIcon, BriefcaseIcon, CalendarDaysIcon, CameraIcon, CheckIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, FunnelIcon, MapPinIcon, PencilIcon, PhoneIcon, PlusIcon, QrCodeIcon, TrashIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { ArchiveBoxIcon, ArrowLeftIcon, ArrowPathIcon, ArrowUpTrayIcon, BriefcaseIcon, CalendarDaysIcon, CameraIcon, CheckIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, FunnelIcon, MapPinIcon, NoSymbolIcon, PencilIcon, PhoneIcon, PlusIcon, QrCodeIcon, TrashIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useRef, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -29,11 +29,12 @@ function getPublicUrl(path: string) {
   return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
 }
 
-function getWorkTenure(startDate?: string): string | null {
+function getWorkTenure(startDate?: string, endDate?: string): string | null {
   if (!startDate) return null;
   const start = new Date(startDate);
-  const now = new Date();
+  const now = endDate ? new Date(endDate) : new Date();
   if (isNaN(start.getTime())) return null;
+  if (endDate && isNaN(now.getTime())) return null;
   let years = now.getFullYear() - start.getFullYear();
   let months = now.getMonth() - start.getMonth();
   if (now.getDate() < start.getDate()) months--;
@@ -56,12 +57,20 @@ export default function Team() {
   const { leaves } = useLeave();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
-  const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" });
+  const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "", end_date: "", end_reason: "", is_archived: false });
   const [detail, setDetail] = useState<Employee | null>(null);
   const [confirmDeleteEmp, setConfirmDeleteEmp] = useState<Employee | null>(null);
+  const [endingEmp, setEndingEmp] = useState<Employee | null>(null);
+  const [endForm, setEndForm] = useState({ end_date: new Date().toISOString().slice(0, 10), end_reason: "" });
+  const [showArchived, setShowArchived] = useState(false);
   const [uploading, setUploading] = useState<{ avatar?: boolean; qr?: boolean }>({});
   const avatarRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLInputElement>(null);
+
+  const visibleEmployees = useMemo(
+    () => employees.filter(e => showArchived ? e.is_archived : !e.is_archived),
+    [employees, showArchived]
+  );
 
   // Filters
   const [filterYear, setFilterYear] = useState(currentYear);
@@ -177,13 +186,28 @@ export default function Team() {
     }
     setShowAdd(false);
     setEditing(null);
-    setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" });
+    setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "", end_date: "", end_reason: "", is_archived: false });
   };
 
   const startEdit = (emp: Employee) => {
     setEditing(emp);
-    setForm({ name: emp.name, position: emp.position, email: emp.email, role: emp.role, phone: emp.phone || "", avatar: emp.avatar || "", promptpay_qr: emp.promptpay_qr || "", start_date: emp.start_date || "", note: emp.note || "" });
+    setForm({ name: emp.name, position: emp.position, email: emp.email, role: emp.role, phone: emp.phone || "", avatar: emp.avatar || "", promptpay_qr: emp.promptpay_qr || "", start_date: emp.start_date || "", note: emp.note || "", end_date: emp.end_date || "", end_reason: emp.end_reason || "", is_archived: !!emp.is_archived });
     setShowAdd(true);
+  };
+
+  const confirmEndEmployment = async () => {
+    if (!endingEmp) return;
+    await updateEmployee(endingEmp.id, {
+      end_date: endForm.end_date,
+      end_reason: endForm.end_reason,
+      is_archived: true,
+    });
+    setEndingEmp(null);
+    setEndForm({ end_date: new Date().toISOString().slice(0, 10), end_reason: "" });
+  };
+
+  const reactivateEmployee = async (emp: Employee) => {
+    await updateEmployee(emp.id, { is_archived: false, end_date: null as unknown as string, end_reason: null as unknown as string });
   };
 
   // FunnelIcon controls component
