@@ -39,10 +39,8 @@ export function useEmployees() {
     setCurrentEmployee(currEmp);
 
     if (error) { console.error(error); setEmployees([]); setLoading(false); return; }
-    
-    // Filter out archived employees to prevent them from showing up in dropdowns
-    const activeEmployees = (data || []).filter(e => e.is_archived !== true);
-    setEmployees(activeEmployees);
+
+    setEmployees((data || []) as Employee[]);
     setLoading(false);
   };
 
