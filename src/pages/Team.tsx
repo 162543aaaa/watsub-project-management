@@ -384,11 +384,20 @@ export default function Team() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 animate-stagger-1">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Team</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{employees.length} team members</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {visibleEmployees.length} {showArchived ? "อดีตพนักงาน" : "team members"}
+            {!showArchived && employees.some(e => e.is_archived) && (
+              <span className="ml-2 text-xs text-muted-foreground/70">({employees.filter(e => e.is_archived).length} เก็บเข้าคลัง)</span>
+            )}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <FilterBar />
-          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" }); }}
+          <button onClick={() => setShowArchived(s => !s)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${showArchived ? "bg-red-500/10 text-red-600 border-red-500/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}>
+            <ArchiveBoxIcon className="w-3.5 h-3.5" /> {showArchived ? "กลับสู่พนักงานปัจจุบัน" : "ดูอดีตพนักงาน"}
+          </button>
+          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "", end_date: "", end_reason: "", is_archived: false }); }}
             className="btn-primary flex items-center gap-2 text-sm"><PlusIcon className="w-4 h-4" /> Add</button>
         </div>
       </div>
@@ -496,18 +505,18 @@ export default function Team() {
 
       {/* Employee Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-        {employees.map((emp, i) => {
+        {visibleEmployees.map((emp, i) => {
           const stats = getStats(emp.name, filteredTasks);
           const overallStats = getStats(emp.name);
           const extra = getExtraStats(emp.name);
           const grad = gradients[i % gradients.length];
           return (
-            <div key={emp.id} className={`bg-card rounded-2xl border border-border/60 p-4 sm:p-5 card-hover animate-stagger-${Math.min(i + 1, 5)} group`}>
+            <div key={emp.id} className={`bg-card rounded-2xl border ${emp.is_archived ? "border-red-500/30 opacity-90" : "border-border/60"} p-4 sm:p-5 card-hover animate-stagger-${Math.min(i + 1, 5)} group`}>
               <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
                     {emp.avatar ? (
-                      <img src={getPublicUrl(emp.avatar)} alt={emp.name} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover avatar-hover" />
+                      <img src={getPublicUrl(emp.avatar)} alt={emp.name} className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover avatar-hover ${emp.is_archived ? "grayscale" : ""}`} />
                     ) : (
                       <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white text-base sm:text-lg font-bold avatar-hover`}>
                         {emp.name.charAt(0).toUpperCase()}
@@ -520,7 +529,10 @@ export default function Team() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-bold text-foreground text-sm leading-tight truncate">{emp.name}</h3>
+                    <h3 className="font-bold text-foreground text-sm leading-tight truncate flex items-center gap-1.5">
+                      {emp.name}
+                      {emp.is_archived && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-600">อดีต</span>}
+                    </h3>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{emp.position}</p>
                   </div>
                 </div>
@@ -532,6 +544,15 @@ export default function Team() {
                   <button onClick={() => startEdit(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
                     <PencilIcon className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
+                  {emp.is_archived ? (
+                    <button onClick={() => reactivateEmployee(emp)} title="กลับมาเป็นพนักงานปัจจุบัน" className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-emerald-50 transition-colors">
+                      <ArrowPathIcon className="w-3.5 h-3.5 text-emerald-500" />
+                    </button>
+                  ) : (
+                    <button onClick={() => { setEndingEmp(emp); setEndForm({ end_date: new Date().toISOString().slice(0, 10), end_reason: "" }); }} title="สิ้นสุดการทำงาน" className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-50 transition-colors">
+                      <NoSymbolIcon className="w-3.5 h-3.5 text-amber-500" />
+                    </button>
+                  )}
                   <button onClick={() => setConfirmDeleteEmp(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
                     <TrashIcon className="w-3.5 h-3.5 text-red-400" />
                   </button>
@@ -550,11 +571,17 @@ export default function Team() {
                 )}
                 <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
                   <BriefcaseIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                  {emp.start_date && getWorkTenure(emp.start_date)
-                    ? `อายุงาน: ${getWorkTenure(emp.start_date)}`
+                  {emp.start_date && getWorkTenure(emp.start_date, emp.end_date)
+                    ? `อายุงาน: ${getWorkTenure(emp.start_date, emp.end_date)}${emp.is_archived ? " (สิ้นสุดแล้ว)" : ""}`
                     : <span className="text-muted-foreground font-normal">อายุงาน: ยังไม่ระบุวันเริ่มงาน</span>
                   }
                 </div>
+                {emp.is_archived && emp.end_date && (
+                  <div className="flex items-start gap-1.5 text-xs text-red-600">
+                    <NoSymbolIcon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <span>สิ้นสุด: {emp.end_date}{emp.end_reason ? ` — ${emp.end_reason}` : ""}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <CalendarDaysIcon className="w-3.5 h-3.5 flex-shrink-0" /> วันลา: {getLeaveDays(emp.name)} วัน
                 </div>
