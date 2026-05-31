@@ -19,6 +19,8 @@ export interface Employee {
   start_date?: string;
   note?: string;
   is_archived?: boolean;
+  end_date?: string;
+  end_reason?: string;
   created_at?: string;
 }
 
