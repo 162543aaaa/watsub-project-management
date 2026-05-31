@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowUpTrayIcon, BriefcaseIcon, CalendarDaysIcon, CameraIcon, CheckIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, FunnelIcon, MapPinIcon, PencilIcon, PhoneIcon, PlusIcon, QrCodeIcon, TrashIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { ArchiveBoxIcon, ArrowLeftIcon, ArrowPathIcon, ArrowUpTrayIcon, BriefcaseIcon, CalendarDaysIcon, CameraIcon, CheckIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, FunnelIcon, MapPinIcon, NoSymbolIcon, PencilIcon, PhoneIcon, PlusIcon, QrCodeIcon, TrashIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState, useRef, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -29,11 +29,12 @@ function getPublicUrl(path: string) {
   return `${SUPABASE_URL}/storage/v1/object/public/employee-assets/${path}`;
 }
 
-function getWorkTenure(startDate?: string): string | null {
+function getWorkTenure(startDate?: string, endDate?: string): string | null {
   if (!startDate) return null;
   const start = new Date(startDate);
-  const now = new Date();
+  const now = endDate ? new Date(endDate) : new Date();
   if (isNaN(start.getTime())) return null;
+  if (endDate && isNaN(now.getTime())) return null;
   let years = now.getFullYear() - start.getFullYear();
   let months = now.getMonth() - start.getMonth();
   if (now.getDate() < start.getDate()) months--;
@@ -56,12 +57,20 @@ export default function Team() {
   const { leaves } = useLeave();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
-  const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" });
+  const [form, setForm] = useState({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "", end_date: "", end_reason: "", is_archived: false });
   const [detail, setDetail] = useState<Employee | null>(null);
   const [confirmDeleteEmp, setConfirmDeleteEmp] = useState<Employee | null>(null);
+  const [endingEmp, setEndingEmp] = useState<Employee | null>(null);
+  const [endForm, setEndForm] = useState({ end_date: new Date().toISOString().slice(0, 10), end_reason: "" });
+  const [showArchived, setShowArchived] = useState(false);
   const [uploading, setUploading] = useState<{ avatar?: boolean; qr?: boolean }>({});
   const avatarRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLInputElement>(null);
+
+  const visibleEmployees = useMemo(
+    () => employees.filter(e => showArchived ? e.is_archived : !e.is_archived),
+    [employees, showArchived]
+  );
 
   // Filters
   const [filterYear, setFilterYear] = useState(currentYear);
@@ -177,13 +186,28 @@ export default function Team() {
     }
     setShowAdd(false);
     setEditing(null);
-    setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" });
+    setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "", end_date: "", end_reason: "", is_archived: false });
   };
 
   const startEdit = (emp: Employee) => {
     setEditing(emp);
-    setForm({ name: emp.name, position: emp.position, email: emp.email, role: emp.role, phone: emp.phone || "", avatar: emp.avatar || "", promptpay_qr: emp.promptpay_qr || "", start_date: emp.start_date || "", note: emp.note || "" });
+    setForm({ name: emp.name, position: emp.position, email: emp.email, role: emp.role, phone: emp.phone || "", avatar: emp.avatar || "", promptpay_qr: emp.promptpay_qr || "", start_date: emp.start_date || "", note: emp.note || "", end_date: emp.end_date || "", end_reason: emp.end_reason || "", is_archived: !!emp.is_archived });
     setShowAdd(true);
+  };
+
+  const confirmEndEmployment = async () => {
+    if (!endingEmp) return;
+    await updateEmployee(endingEmp.id, {
+      end_date: endForm.end_date,
+      end_reason: endForm.end_reason,
+      is_archived: true,
+    });
+    setEndingEmp(null);
+    setEndForm({ end_date: new Date().toISOString().slice(0, 10), end_reason: "" });
+  };
+
+  const reactivateEmployee = async (emp: Employee) => {
+    await updateEmployee(emp.id, { is_archived: false, end_date: null as unknown as string, end_reason: null as unknown as string });
   };
 
   // FunnelIcon controls component
@@ -238,9 +262,9 @@ export default function Team() {
                   <h1 className="text-lg font-bold text-foreground truncate">{detail.name}</h1>
                   <p className="text-sm text-muted-foreground mt-0.5">{detail.position}</p>
                   <span className="inline-block mt-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{detail.role}</span>
-                  {getWorkTenure(detail.start_date) && (
+                {getWorkTenure(detail.start_date, detail.end_date) && (
                     <p className="text-xs text-primary mt-1 flex items-center gap-1">
-                      <BriefcaseIcon className="w-3 h-3" /> {getWorkTenure(detail.start_date)}
+                      <BriefcaseIcon className="w-3 h-3" /> {getWorkTenure(detail.start_date, detail.end_date)}
                     </p>
                   )}
                 </div>
@@ -249,10 +273,16 @@ export default function Team() {
                 <h1 className="text-xl font-bold text-foreground">{detail.name}</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">{detail.position}</p>
                 <span className="inline-block mt-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{detail.role}</span>
-                {getWorkTenure(detail.start_date) && (
+                {getWorkTenure(detail.start_date, detail.end_date) && (
                   <p className="text-sm text-primary mt-1 flex items-center gap-1.5">
-                    <BriefcaseIcon className="w-4 h-4" /> อายุงาน: {getWorkTenure(detail.start_date)}
+                    <BriefcaseIcon className="w-4 h-4" /> อายุงาน: {getWorkTenure(detail.start_date, detail.end_date)}
                   </p>
+                )}
+                {detail.is_archived && (
+                  <div className="mt-2 inline-flex flex-col gap-1 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-600">
+                    <span className="flex items-center gap-1.5 font-semibold"><NoSymbolIcon className="w-3.5 h-3.5" /> สิ้นสุดการทำงาน{detail.end_date ? ` เมื่อ ${detail.end_date}` : ""}</span>
+                    {detail.end_reason && <span className="text-red-600/80">เหตุผล: {detail.end_reason}</span>}
+                  </div>
                 )}
               </div>
               <button onClick={() => startEdit(detail)} className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted transition-colors flex-shrink-0">
@@ -354,11 +384,20 @@ export default function Team() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 animate-stagger-1">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Team</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{employees.length} team members</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {visibleEmployees.length} {showArchived ? "อดีตพนักงาน" : "team members"}
+            {!showArchived && employees.some(e => e.is_archived) && (
+              <span className="ml-2 text-xs text-muted-foreground/70">({employees.filter(e => e.is_archived).length} เก็บเข้าคลัง)</span>
+            )}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <FilterBar />
-          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "" }); }}
+          <button onClick={() => setShowArchived(s => !s)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${showArchived ? "bg-red-500/10 text-red-600 border-red-500/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}>
+            <ArchiveBoxIcon className="w-3.5 h-3.5" /> {showArchived ? "กลับสู่พนักงานปัจจุบัน" : "ดูอดีตพนักงาน"}
+          </button>
+          <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ name: "", position: "", email: "", role: "employee", phone: "", avatar: "", promptpay_qr: "", start_date: "", note: "", end_date: "", end_reason: "", is_archived: false }); }}
             className="btn-primary flex items-center gap-2 text-sm"><PlusIcon className="w-4 h-4" /> Add</button>
         </div>
       </div>
@@ -466,18 +505,18 @@ export default function Team() {
 
       {/* Employee Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-        {employees.map((emp, i) => {
+        {visibleEmployees.map((emp, i) => {
           const stats = getStats(emp.name, filteredTasks);
           const overallStats = getStats(emp.name);
           const extra = getExtraStats(emp.name);
           const grad = gradients[i % gradients.length];
           return (
-            <div key={emp.id} className={`bg-card rounded-2xl border border-border/60 p-4 sm:p-5 card-hover animate-stagger-${Math.min(i + 1, 5)} group`}>
+            <div key={emp.id} className={`bg-card rounded-2xl border ${emp.is_archived ? "border-red-500/30 opacity-90" : "border-border/60"} p-4 sm:p-5 card-hover animate-stagger-${Math.min(i + 1, 5)} group`}>
               <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
                     {emp.avatar ? (
-                      <img src={getPublicUrl(emp.avatar)} alt={emp.name} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover avatar-hover" />
+                      <img src={getPublicUrl(emp.avatar)} alt={emp.name} className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover avatar-hover ${emp.is_archived ? "grayscale" : ""}`} />
                     ) : (
                       <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white text-base sm:text-lg font-bold avatar-hover`}>
                         {emp.name.charAt(0).toUpperCase()}
@@ -490,7 +529,10 @@ export default function Team() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-bold text-foreground text-sm leading-tight truncate">{emp.name}</h3>
+                    <h3 className="font-bold text-foreground text-sm leading-tight truncate flex items-center gap-1.5">
+                      {emp.name}
+                      {emp.is_archived && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-600">อดีต</span>}
+                    </h3>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{emp.position}</p>
                   </div>
                 </div>
@@ -502,6 +544,15 @@ export default function Team() {
                   <button onClick={() => startEdit(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
                     <PencilIcon className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
+                  {emp.is_archived ? (
+                    <button onClick={() => reactivateEmployee(emp)} title="กลับมาเป็นพนักงานปัจจุบัน" className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-emerald-50 transition-colors">
+                      <ArrowPathIcon className="w-3.5 h-3.5 text-emerald-500" />
+                    </button>
+                  ) : (
+                    <button onClick={() => { setEndingEmp(emp); setEndForm({ end_date: new Date().toISOString().slice(0, 10), end_reason: "" }); }} title="สิ้นสุดการทำงาน" className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-50 transition-colors">
+                      <NoSymbolIcon className="w-3.5 h-3.5 text-amber-500" />
+                    </button>
+                  )}
                   <button onClick={() => setConfirmDeleteEmp(emp)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
                     <TrashIcon className="w-3.5 h-3.5 text-red-400" />
                   </button>
@@ -520,11 +571,17 @@ export default function Team() {
                 )}
                 <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
                   <BriefcaseIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                  {emp.start_date && getWorkTenure(emp.start_date)
-                    ? `อายุงาน: ${getWorkTenure(emp.start_date)}`
+                  {emp.start_date && getWorkTenure(emp.start_date, emp.end_date)
+                    ? `อายุงาน: ${getWorkTenure(emp.start_date, emp.end_date)}${emp.is_archived ? " (สิ้นสุดแล้ว)" : ""}`
                     : <span className="text-muted-foreground font-normal">อายุงาน: ยังไม่ระบุวันเริ่มงาน</span>
                   }
                 </div>
+                {emp.is_archived && emp.end_date && (
+                  <div className="flex items-start gap-1.5 text-xs text-red-600">
+                    <NoSymbolIcon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <span>สิ้นสุด: {emp.end_date}{emp.end_reason ? ` — ${emp.end_reason}` : ""}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <CalendarDaysIcon className="w-3.5 h-3.5 flex-shrink-0" /> วันลา: {getLeaveDays(emp.name)} วัน
                 </div>
@@ -587,6 +644,46 @@ export default function Team() {
         onConfirm={() => { if (confirmDeleteEmp) { deleteEmployee(confirmDeleteEmp.id); setConfirmDeleteEmp(null); } }}
         description={`ต้องการลบพนักงาน "${confirmDeleteEmp?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
       />
+
+      {/* End Employment Dialog */}
+      <Dialog open={!!endingEmp} onOpenChange={(open) => { if (!open) setEndingEmp(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <NoSymbolIcon className="w-5 h-5" /> สิ้นสุดการทำงาน
+            </DialogTitle>
+            <DialogDescription>
+              บันทึกการสิ้นสุดการทำงานของ <span className="font-semibold text-foreground">{endingEmp?.name}</span> — พนักงานจะถูกย้ายไปอยู่ในคลัง "อดีตพนักงาน" และจะไม่แสดงในรายชื่อปัจจุบัน
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">วันที่สิ้นสุด</label>
+              <input
+                type="date"
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={endForm.end_date}
+                onChange={e => setEndForm({ ...endForm, end_date: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">เหตุผล (ไม่บังคับ)</label>
+              <Textarea
+                className="w-full rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none min-h-[80px]"
+                value={endForm.end_reason}
+                onChange={e => setEndForm({ ...endForm, end_reason: e.target.value })}
+                placeholder="เช่น ลาออก, สิ้นสุดสัญญา, เกษียณ..."
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button onClick={() => setEndingEmp(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ยกเลิก</button>
+            <button onClick={confirmEndEmployment} disabled={!endForm.end_date} className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+              <NoSymbolIcon className="w-4 h-4" /> ยืนยันสิ้นสุดการทำงาน
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

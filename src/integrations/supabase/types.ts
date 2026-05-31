@@ -165,7 +165,10 @@ export type Database = {
           avatar: string | null
           created_at: string
           email: string
+          end_date: string | null
+          end_reason: string | null
           id: string
+          is_archived: boolean
           name: string
           note: string | null
           phone: string | null
@@ -179,7 +182,10 @@ export type Database = {
           avatar?: string | null
           created_at?: string
           email?: string
+          end_date?: string | null
+          end_reason?: string | null
           id?: string
+          is_archived?: boolean
           name: string
           note?: string | null
           phone?: string | null
@@ -193,7 +199,10 @@ export type Database = {
           avatar?: string | null
           created_at?: string
           email?: string
+          end_date?: string | null
+          end_reason?: string | null
           id?: string
+          is_archived?: boolean
           name?: string
           note?: string | null
           phone?: string | null
