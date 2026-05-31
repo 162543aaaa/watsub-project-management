@@ -644,6 +644,46 @@ export default function Team() {
         onConfirm={() => { if (confirmDeleteEmp) { deleteEmployee(confirmDeleteEmp.id); setConfirmDeleteEmp(null); } }}
         description={`ต้องการลบพนักงาน "${confirmDeleteEmp?.name}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
       />
+
+      {/* End Employment Dialog */}
+      <Dialog open={!!endingEmp} onOpenChange={(open) => { if (!open) setEndingEmp(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <NoSymbolIcon className="w-5 h-5" /> สิ้นสุดการทำงาน
+            </DialogTitle>
+            <DialogDescription>
+              บันทึกการสิ้นสุดการทำงานของ <span className="font-semibold text-foreground">{endingEmp?.name}</span> — พนักงานจะถูกย้ายไปอยู่ในคลัง "อดีตพนักงาน" และจะไม่แสดงในรายชื่อปัจจุบัน
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">วันที่สิ้นสุด</label>
+              <input
+                type="date"
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={endForm.end_date}
+                onChange={e => setEndForm({ ...endForm, end_date: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">เหตุผล (ไม่บังคับ)</label>
+              <Textarea
+                className="w-full rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none min-h-[80px]"
+                value={endForm.end_reason}
+                onChange={e => setEndForm({ ...endForm, end_reason: e.target.value })}
+                placeholder="เช่น ลาออก, สิ้นสุดสัญญา, เกษียณ..."
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button onClick={() => setEndingEmp(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ยกเลิก</button>
+            <button onClick={confirmEndEmployment} disabled={!endForm.end_date} className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+              <NoSymbolIcon className="w-4 h-4" /> ยืนยันสิ้นสุดการทำงาน
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
