@@ -148,7 +148,7 @@ export default function Dashboard() {
   }, [allTasks]);
 
   const employeeStats = useMemo(() => {
-    return employees.map(emp => {
+    return employees.filter(emp => !emp.is_archived).map(emp => {
       const myTasks = allTasks.filter(t => t.assigned_to?.includes(emp.name) && t.category !== "meeting" && t.category !== "onsite");
       const done = myTasks.filter(t => t.status === "Done").length;
       const inProgress = myTasks.filter(t => t.status === "In Progress").length;
