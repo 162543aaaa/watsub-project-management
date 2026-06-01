@@ -4,6 +4,7 @@ import { useLeave, LeaveRequest } from "@/hooks/useLeave";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { toast } from "@/hooks/use-toast";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 type LeaveStatus = "Pending" | "Approved" | "Rejected";
 const leaveTypes = ["Annual", "Sick", "Personal", "Unpaid", "Maternity"];
@@ -11,6 +12,8 @@ const leaveTypes = ["Annual", "Sick", "Personal", "Unpaid", "Maternity"];
 export default function Leave() {
   const { leaves, loading, addLeave, updateStatus } = useLeave();
   const { employees } = useEmployees();
+  const { profile, isAdmin } = useAuthContext() as any;
+  const currentName = profile?.display_name ?? "";
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<LeaveStatus | "all">("all");
   const [form, setForm] = useState({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
@@ -19,10 +22,11 @@ export default function Leave() {
   const pending = leaves.filter(l => l.status === "Pending").length;
 
   const handleAdd = async () => {
-    if (!form.requested_by || !form.leave_start || !form.leave_end || !form.leave_reason) {
+    const requestedBy = currentName || form.requested_by;
+    if (!requestedBy || !form.leave_start || !form.leave_end || !form.leave_reason) {
       toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" }); return;
     }
-    await addLeave({ ...form, status: "Pending", requested_date: new Date().toISOString() });
+    await addLeave({ ...form, requested_by: requestedBy, status: "Pending", requested_date: new Date().toISOString() });
     setShowAdd(false);
     setForm({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
   };
@@ -85,11 +89,16 @@ export default function Leave() {
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Requester</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={form.requested_by} onChange={e => setForm({ ...form, requested_by: e.target.value })}>
-                  <option value="">Select employee...</option>
-                  {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
-                </select>
+                {isAdmin ? (
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={form.requested_by || currentName} onChange={e => setForm({ ...form, requested_by: e.target.value })}>
+                    <option value="">Select employee...</option>
+                    {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+                  </select>
+                ) : (
+                  <input readOnly value={currentName}
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted text-sm outline-none" />
+                )}
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Leave Type</label>
