@@ -89,11 +89,16 @@ export default function Leave() {
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Requester</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={form.requested_by} onChange={e => setForm({ ...form, requested_by: e.target.value })}>
-                  <option value="">Select employee...</option>
-                  {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
-                </select>
+                {isAdmin ? (
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={form.requested_by || currentName} onChange={e => setForm({ ...form, requested_by: e.target.value })}>
+                    <option value="">Select employee...</option>
+                    {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+                  </select>
+                ) : (
+                  <input readOnly value={currentName}
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted text-sm outline-none" />
+                )}
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Leave Type</label>
