@@ -1,4 +1,4 @@
-import { ArrowDownTrayIcon, ArrowTrendingUpIcon, ArrowUpTrayIcon, BellIcon, BoltIcon, BookOpenIcon, BuildingOffice2Icon, CalendarIcon, ChartBarIcon, CheckBadgeIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardDocumentCheckIcon, FlagIcon, FolderOpenIcon, MapPinIcon, PaperAirplaneIcon, Squares2X2Icon, UsersIcon, VideoCameraIcon, WalletIcon } from '@heroicons/react/24/solid';
+import { ArrowTrendingUpIcon, ArrowUpTrayIcon, BellIcon, BoltIcon, BookOpenIcon, BuildingOffice2Icon, CalendarIcon, ChartBarIcon, CheckBadgeIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardDocumentCheckIcon, FlagIcon, FolderOpenIcon, MapPinIcon, PaperAirplaneIcon, Squares2X2Icon, UsersIcon, VideoCameraIcon, WalletIcon } from '@heroicons/react/24/solid';
 import { useLocation, Link } from "react-router-dom";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
