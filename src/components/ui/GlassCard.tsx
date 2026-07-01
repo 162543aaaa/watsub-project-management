@@ -1,6 +1,8 @@
-import { ReactNode } from "react";
-import { Card, CardProps } from "@/components/ui/card";
+import { ReactNode, HTMLAttributes } from "react";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+type CardProps = HTMLAttributes<HTMLDivElement>;
 
 /**
  * GlassCard – a thin wrapper around the existing Card component that adds
