@@ -50,6 +50,56 @@ export default function Export() {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [exported, setExported] = useState<Record<string, boolean>>({});
 
+  const now = new Date();
+  const [taskYear, setTaskYear] = useState<number>(now.getFullYear());
+  const [taskMonth, setTaskMonth] = useState<number>(0); // 0 = ทั้งปี, 1-12
+  const [taskDateField, setTaskDateField] = useState<"due_date" | "created_at" | "updated_at">("due_date");
+  const [taskLoading, setTaskLoading] = useState(false);
+
+  const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 2 + i);
+  const months = [
+     "ทั้งปี", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+     "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+  ];
+
+  const handleExportTasksByPeriod = async () => {
+    setTaskLoading(true);
+    try {
+      let start: string;
+      let end: string;
+      if (taskMonth === 0) {
+        start = `${taskYear}-01-01`;
+        end = `${taskYear + 1}-01-01`;
+      } else {
+        const mm = String(taskMonth).padStart(2, "0");
+        start = `${taskYear}-${mm}-01`;
+        const nextY = taskMonth === 12 ? taskYear + 1 : taskYear;
+        const nextM = taskMonth === 12 ? 1 : taskMonth + 1;
+        end = `${nextY}-${String(nextM).padStart(2, "0")}-01`;
+      }
+
+      let query = supabase.from("tasks").select("*").order(taskDateField, { ascending: true });
+      // For date fields, use gte/lt. For created_at/updated_at (timestamptz), same pattern works.
+      query = query.gte(taskDateField, start).lt(taskDateField, end);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        toast({ title: "ไม่มีข้อมูล", description: `ไม่พบงานในช่วงเวลาที่เลือก` });
+        return;
+      }
+      const csv = convertToCSV(data as Record<string, unknown>[]);
+      const label = taskMonth === 0 ? `${taskYear}` : `${taskYear}-${String(taskMonth).padStart(2, "0")}`;
+      downloadCSV(csv, `tasks_${taskDateField}_${label}.csv`);
+      toast({ title: "สำเร็จ!", description: `ดาวน์โหลดงาน ${data.length} รายการ` });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setTaskLoading(false);
+    }
+  };
+
   const handleExport = async (tableKey: TableKey) => {
     setLoading((p) => ({ ...p, [tableKey]: true }));
     try {
@@ -105,6 +155,62 @@ export default function Export() {
             1. ดาวน์โหลดไฟล์ CSV ด้านล่าง → 2. เปิด Google Sheets → 3. File → Import → Upload → เลือกไฟล์ CSV
           </CardDescription>
         </CardHeader>
+      </Card>
+
+      {/* Export Tasks by month/year */}
+      <Card style={{ background: "hsl(222 47% 10%)", borderColor: "hsl(222 47% 15%)" }}>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2" style={{ color: "hsl(210 40% 98%)" }}>
+            <span className="text-xl">✅</span>
+            Export Tasks ตามเดือน/ปี
+          </CardTitle>
+          <CardDescription style={{ color: "hsl(215 20% 55%)" }}>
+            เลือกเดือนและปี เพื่อดาวน์โหลดงานทั้งหมดในช่วงเวลานั้น
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs" style={{ color: "hsl(215 20% 55%)" }}>ปี</label>
+              <select
+                value={taskYear}
+                onChange={(e) => setTaskYear(Number(e.target.value))}
+                className="h-9 rounded-md px-3 text-sm border"
+                style={{ background: "hsl(222 47% 8%)", borderColor: "hsl(222 47% 20%)", color: "hsl(210 40% 98%)" }}
+              >
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs" style={{ color: "hsl(215 20% 55%)" }}>เดือน</label>
+              <select
+                value={taskMonth}
+                onChange={(e) => setTaskMonth(Number(e.target.value))}
+                className="h-9 rounded-md px-3 text-sm border"
+                style={{ background: "hsl(222 47% 8%)", borderColor: "hsl(222 47% 20%)", color: "hsl(210 40% 98%)" }}
+              >
+                {months.map((m, i) => <option key={m} value={i}>{m}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs" style={{ color: "hsl(215 20% 55%)" }}>อ้างอิงจากวันที่</label>
+              <select
+                value={taskDateField}
+                onChange={(e) => setTaskDateField(e.target.value as typeof taskDateField)}
+                className="h-9 rounded-md px-3 text-sm border"
+                style={{ background: "hsl(222 47% 8%)", borderColor: "hsl(222 47% 20%)", color: "hsl(210 40% 98%)" }}
+              >
+                <option value="due_date">Due date (กำหนดส่ง)</option>
+                <option value="created_at">Created at (วันที่สร้าง)</option>
+                <option value="updated_at">Updated at (วันที่อัปเดต)</option>
+              </select>
+            </div>
+            <Button onClick={handleExportTasksByPeriod} disabled={taskLoading} className="gap-2">
+              {taskLoading ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <ArrowDownTrayIcon className="w-4 h-4" />}
+              ดาวน์โหลด CSV
+            </Button>
+          </div>
+        </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
