@@ -572,10 +572,6 @@ export default function Tasks() {
             strategy: MeasuringStrategy.Always,
           },
         }}
-        layoutMeasuring={{
-          strategy: MeasuringStrategy.Always,
-          frequency: 'optimized',
-        }}
       >
         <div className="flex gap-5 items-start overflow-x-auto snap-x pb-4 md:grid md:overflow-visible md:snap-none animate-stagger-3" style={{ gridTemplateColumns: showDone ? "repeat(3, minmax(280px, 1fr))" : "repeat(2, minmax(280px, 1fr))" }}>
           {visibleColumns.map((col) => {
