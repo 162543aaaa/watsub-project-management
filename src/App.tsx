@@ -20,8 +20,8 @@ import OnsiteWorkPage from "./pages/OnsiteWork";
 import Budget from "./pages/Budget";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
-import Import from "./pages/Import";
-import Export from "./pages/Export";
+import ImportExport from "./pages/ImportExport";
+import { Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import WaitingApproval from "./pages/WaitingApproval";
@@ -85,8 +85,8 @@ const App = () => (
                 <Route path="/budget" element={<Budget />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/notifications" element={<Notifications />} />
-                <Route path="/import" element={<Import />} />
-                <Route path="/export" element={<Export />} />
+                <Route path="/import" element={<ImportExport />} />
+                <Route path="/export" element={<Navigate to="/import" replace />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/kpi/overview" element={<KpiOverview />} />
                 <Route path="/kpi/evaluate/:evaluateeId/:periodId" element={<KpiEvaluate />} />

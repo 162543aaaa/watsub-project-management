@@ -1,4 +1,4 @@
-import { ArrowDownTrayIcon, ArrowTrendingUpIcon, ArrowUpTrayIcon, BellIcon, BoltIcon, BookOpenIcon, BuildingOffice2Icon, CalendarIcon, ChartBarIcon, CheckBadgeIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardDocumentCheckIcon, FlagIcon, FolderOpenIcon, MapPinIcon, PaperAirplaneIcon, Squares2X2Icon, UsersIcon, VideoCameraIcon, WalletIcon } from '@heroicons/react/24/solid';
+import { ArrowTrendingUpIcon, ArrowUpTrayIcon, BellIcon, BoltIcon, BookOpenIcon, BuildingOffice2Icon, CalendarIcon, ChartBarIcon, CheckBadgeIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardDocumentCheckIcon, FlagIcon, FolderOpenIcon, MapPinIcon, PaperAirplaneIcon, Squares2X2Icon, UsersIcon, VideoCameraIcon, WalletIcon } from '@heroicons/react/24/solid';
 import { useLocation, Link } from "react-router-dom";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -24,8 +24,7 @@ const navItems = [
   { label: "KPI", icon: ArrowTrendingUpIcon, path: "/kpi/overview" },
   { label: "Reports", icon: ChartBarIcon, path: "/reports" },
   { label: "Notifications", icon: BellIcon, path: "/notifications" },
-  { label: "Import", icon: ArrowUpTrayIcon, path: "/import" },
-  { label: "Export", icon: ArrowDownTrayIcon, path: "/export" },
+  { label: "Import / Export", icon: ArrowUpTrayIcon, path: "/import" },
 ];
 
 export default function AppSidebar() {
