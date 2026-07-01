@@ -5,7 +5,7 @@ import type { Task } from "@/hooks/useProjects";
  * When showDone is true the input array is returned as-is.
  * Display-only — never mutates the underlying list.
  */
-export function filterDoneTasks<T extends Pick<Task, "status">>(
+export function filterDoneTasks<T extends Pick<Task, "status"> = Task>(
   tasks: T[],
   showDone: boolean,
 ): T[] {
@@ -18,7 +18,7 @@ export function filterDoneTasks<T extends Pick<Task, "status">>(
  * date are kept. Set `days` to 0 or null to disable. Display-only.
  */
 export function filterDoneByAge<
-  T extends Pick<Task, "status"> & { due_date?: string; created_at?: string },
+  T extends Pick<Task, "status"> & { due_date?: string; created_at?: string } = Task,
 >(tasks: T[], days: number | null): T[] {
   if (!days || days <= 0) return tasks;
   const cutoff = Date.now() - days * 86400_000;

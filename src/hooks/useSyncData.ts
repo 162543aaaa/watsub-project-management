@@ -27,7 +27,8 @@ export const useSyncData = () => {
           });
 
           const result = await response.json();
-          console.log(`[${tableName}] ID: ${row.id} -> ${result.action}`);
+          const r = row as { id?: string | number };
+          console.log(`[${tableName}] ID: ${r.id} -> ${result.action}`);
 
           await new Promise((res) => setTimeout(res, 250));
         }

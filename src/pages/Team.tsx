@@ -444,7 +444,7 @@ export default function Team() {
                 <div key={f.key}>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">{f.label}</label>
                   <input type={f.type} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                    value={form[f.key as keyof typeof form]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} placeholder={f.placeholder} />
+                    value={String(form[f.key as keyof typeof form] ?? "")} onChange={e => setForm({ ...form, [f.key]: e.target.value })} placeholder={f.placeholder} />
                 </div>
               ))}
 
