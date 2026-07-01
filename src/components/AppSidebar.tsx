@@ -24,8 +24,7 @@ const navItems = [
   { label: "KPI", icon: ArrowTrendingUpIcon, path: "/kpi/overview" },
   { label: "Reports", icon: ChartBarIcon, path: "/reports" },
   { label: "Notifications", icon: BellIcon, path: "/notifications" },
-  { label: "Import", icon: ArrowUpTrayIcon, path: "/import" },
-  { label: "Export", icon: ArrowDownTrayIcon, path: "/export" },
+  { label: "Import / Export", icon: ArrowUpTrayIcon, path: "/import" },
 ];
 
 export default function AppSidebar() {
