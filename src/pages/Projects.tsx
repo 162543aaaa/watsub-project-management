@@ -36,6 +36,18 @@ const PILLAR_PRESETS: Record<Pillar, string[]> = {
   JOINT: ["WORK WOK", "COOL SUB", "LiVE SUB"],
 };
 
+const PRESET_LINKS: Record<string, string> = {
+  "COLOR WALK": "https://drive.google.com/drive/folders/12tmjjUHMlNO64cb4-QNqKiAsU_0ohXcj?usp=drive_link",
+  "MOOD": "https://drive.google.com/drive/folders/18JD8egA2ML-z-L3OTHtdKiikvY-5_f-U?usp=drive_link",
+  "Wat Life?": "https://drive.google.com/drive/folders/1G-6MYBNv-unwa34PgcbGicKkbYypoeCC?usp=drive_link",
+  "SGNC": "https://drive.google.com/drive/folders/16P_jGV7rxbM_GjQNYMKidQnVIGoblgmS?usp=drive_link",
+  "RAW GEN": "https://drive.google.com/drive/folders/1Wu7gXyrvETLeqYMncTSNicscM8JNQF_Z?usp=drive_link",
+  "Wat Write": "https://drive.google.com/drive/folders/1K4bV0Got0PUeBVl17wp7dvO0aixMgi9e?usp=drive_link",
+  "WORK WOK": "https://drive.google.com/drive/folders/1rMInMIjtAprWsjACB8RXGSW6tAfNb4A1?usp=drive_link",
+  "COOL SUB": "https://drive.google.com/drive/folders/1QCRNi3_FB7XGD3qGWYG2VABnif7IVtiB?usp=drive_link",
+  "LiVE SUB": "https://drive.google.com/drive/folders/1stEv__CRxCMda3AXha31svnUTaOevds5?usp=drive_link",
+};
+
 function ProgressBar({ tasks }: { tasks: Task[] }) {
   const done = tasks.filter(t => t.status === "Done").length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
@@ -337,7 +349,7 @@ export default function Projects() {
                   onChange={e => {
                     const v = e.target.value;
                     if (v === "__custom__") setNewProject({ ...newProject, customName: true, name: "" });
-                    else setNewProject({ ...newProject, customName: false, name: v });
+                    else setNewProject({ ...newProject, customName: false, name: v, link: PRESET_LINKS[v] || newProject.link });
                   }}
                 >
                   <option value="">— เลือกโปรเจกต์ —</option>
