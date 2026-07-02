@@ -323,32 +323,37 @@ export default function Projects() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Project Name</label>
-                <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                  value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })} placeholder="Project name..." autoFocus />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Year</label>
-                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={newProject.year} onChange={e => setNewProject({ ...newProject, year: Number(e.target.value) })}>
-                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
-                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                    value={newProject.month} onChange={e => setNewProject({ ...newProject, month: Number(e.target.value) })}>
-                    {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Pillar <span className="text-destructive">*</span></label>
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
-                  value={newProject.pillar} onChange={e => setNewProject({ ...newProject, pillar: e.target.value as Pillar })}>
+                  value={newProject.pillar} onChange={e => setNewProject({ ...newProject, pillar: e.target.value as Pillar, name: "", customName: false })}>
                   {PILLARS.map(p => <option key={p} value={p}>{PILLAR_CONFIG[p].label}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Project Name</label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none mb-2"
+                  value={newProject.customName ? "__custom__" : newProject.name}
+                  onChange={e => {
+                    const v = e.target.value;
+                    if (v === "__custom__") setNewProject({ ...newProject, customName: true, name: "" });
+                    else setNewProject({ ...newProject, customName: false, name: v });
+                  }}
+                >
+                  <option value="">— เลือกโปรเจกต์ —</option>
+                  {PILLAR_PRESETS[newProject.pillar].map(n => <option key={n} value={n}>{n}</option>)}
+                  <option value="__custom__">อื่นๆ (พิมพ์เอง)</option>
+                </select>
+                {newProject.customName && (
+                  <input
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                    value={newProject.name}
+                    onChange={e => setNewProject({ ...newProject, name: e.target.value })}
+                    placeholder="พิมพ์ชื่อโปรเจกต์..."
+                    autoFocus
+                  />
+                )}
+                <p className="text-[11px] text-muted-foreground mt-1.5">เดือน/ปีจะถูกกำหนดอัตโนมัติจากวันที่กดสร้าง ({monthNames[new Date().getMonth() + 1]} {new Date().getFullYear()})</p>
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
