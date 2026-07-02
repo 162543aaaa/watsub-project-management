@@ -30,6 +30,12 @@ const PILLAR_CONFIG: Record<Pillar, { label: string; color: string; textColor: s
 };
 const PILLARS: Pillar[] = ["VIBES", "SOUL", "JOINT"];
 
+const PILLAR_PRESETS: Record<Pillar, string[]> = {
+  VIBES: ["COLOR WALK", "MOOD", "Wat Life?"],
+  SOUL: ["SGNC", "RAW GEN", "Wat Write"],
+  JOINT: ["WORK WOK", "COOL SUB", "LiVE SUB"],
+};
+
 function ProgressBar({ tasks }: { tasks: Task[] }) {
   const done = tasks.filter(t => t.status === "Done").length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
