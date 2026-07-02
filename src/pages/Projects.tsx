@@ -93,7 +93,7 @@ export default function Projects() {
   const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(showArchived ? "archived" : "active");
   const { employees } = useEmployees();
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", month: 1, year: new Date().getFullYear(), note: "", link: "", pillar: "SOUL" as Pillar });
+  const [newProject, setNewProject] = useState({ name: "", note: "", link: "", pillar: "SOUL" as Pillar, customName: false });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
@@ -114,8 +114,16 @@ export default function Projects() {
 
   const handleAddProject = async () => {
     if (!newProject.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    await addProject({ name: newProject.name, month: newProject.month, year: newProject.year, note: newProject.note, link: newProject.link, pillar: newProject.pillar });
-    setNewProject({ name: "", month: 1, year: new Date().getFullYear(), note: "", link: "", pillar: "SOUL" });
+    const now = new Date();
+    await addProject({
+      name: newProject.name,
+      month: now.getMonth() + 1,
+      year: now.getFullYear(),
+      note: newProject.note,
+      link: newProject.link,
+      pillar: newProject.pillar,
+    });
+    setNewProject({ name: "", note: "", link: "", pillar: "SOUL", customName: false });
     setShowAddProject(false);
   };
 
