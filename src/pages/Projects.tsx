@@ -105,7 +105,7 @@ export default function Projects() {
   const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(showArchived ? "archived" : "active");
   const { employees } = useEmployees();
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", note: "", link: "", pillar: "SOUL" as Pillar, customName: false });
+  const [newProject, setNewProject] = useState({ name: "", note: "", link: "", pillar: "SOUL" as Pillar, customName: false, month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number>(2026);
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
@@ -126,16 +126,15 @@ export default function Projects() {
 
   const handleAddProject = async () => {
     if (!newProject.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
-    const now = new Date();
     await addProject({
       name: newProject.name,
-      month: now.getMonth() + 1,
-      year: now.getFullYear(),
+      month: newProject.month,
+      year: newProject.year,
       note: newProject.note,
       link: newProject.link,
       pillar: newProject.pillar,
     });
-    setNewProject({ name: "", note: "", link: "", pillar: "SOUL", customName: false });
+    setNewProject({ name: "", note: "", link: "", pillar: "SOUL", customName: false, month: new Date().getMonth() + 1, year: new Date().getFullYear() });
     setShowAddProject(false);
   };
 
@@ -365,7 +364,28 @@ export default function Projects() {
                     autoFocus
                   />
                 )}
-                <p className="text-[11px] text-muted-foreground mt-1.5">เดือน/ปีจะถูกกำหนดอัตโนมัติจากวันที่กดสร้าง ({monthNames[new Date().getMonth() + 1]} {new Date().getFullYear()})</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Year</label>
+                  <select
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={newProject.year}
+                    onChange={e => setNewProject({ ...newProject, year: Number(e.target.value) })}
+                  >
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Month</label>
+                  <select
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={newProject.month}
+                    onChange={e => setNewProject({ ...newProject, month: Number(e.target.value) })}
+                  >
+                    {monthNames.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
