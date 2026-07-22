@@ -25,6 +25,24 @@ serve(async (req) => {
 
     // 1. SETUP ADMIN (No Auth required — initial setup only)
     if (action === 'setup-admin') {
+      // Guard: block once any admin already exists in the system.
+      const { count: existingAdminCount, error: adminCountError } = await supabase
+        .from('user_roles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'admin');
+      if (adminCountError) {
+        return new Response(JSON.stringify({ error: adminCountError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if ((existingAdminCount ?? 0) > 0) {
+        return new Response(JSON.stringify({ error: 'Setup already complete' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email,
         password,
