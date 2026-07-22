@@ -196,7 +196,7 @@ export default function Projects() {
     setShowExportMenu(false);
     let html = `<h1>Projects – ${escapeHtml(periodLabel)}</h1><div class="sub">Generated ${escapeHtml(new Date().toLocaleString("en"))}</div>`;
     Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, projs]) => {
-      html += `<div class="section-title">${escapeHtml(monthNames[Number(month)])} ${filterYear} (${projs.length} projects)</div>`;
+      html += `<div class="section-title">${escapeHtml(monthNames[Number(month)])} ${yearLabel} (${projs.length} projects)</div>`;
       projs.forEach(proj => {
         const done = proj.tasks.filter(t => t.status === "Done").length;
         const pct = proj.tasks.length ? Math.round((done / proj.tasks.length) * 100) : 0;
@@ -445,7 +445,7 @@ export default function Projects() {
                   <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                     {monthNames[monthNum]?.slice(0, 3)}
                   </div>
-                  <h2 className="text-lg font-bold text-foreground">{monthNames[monthNum]} {filterYear}</h2>
+                  <h2 className="text-lg font-bold text-foreground">{monthNames[monthNum]} {yearLabel}</h2>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{projs.length} projects</span>
                 </div>
                 <DndContext sensors={sensors} collisionDetection={closestCenter}
