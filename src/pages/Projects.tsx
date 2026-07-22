@@ -166,7 +166,8 @@ export default function Projects() {
     setTaskModal(null);
   };
 
-  const periodLabel = filterMonth === "all" ? `${filterYear}` : `${monthNames[filterMonth]} ${filterYear}`;
+  const yearLabel = filterYear === "all" ? "All Years" : `${filterYear}`;
+  const periodLabel = filterMonth === "all" ? yearLabel : `${monthNames[filterMonth]} ${yearLabel}`;
 
   const handleExportCSV = () => {
     setShowExportMenu(false);
@@ -269,6 +270,10 @@ export default function Projects() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-6 animate-stagger-2">
         <div className="flex gap-1">
+          <button onClick={() => setFilterYear("all")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterYear === "all" ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
+            All
+          </button>
           {YEARS.map(y => (
             <button key={y} onClick={() => setFilterYear(y)}
               className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterYear === y ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
