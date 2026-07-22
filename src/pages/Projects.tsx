@@ -107,7 +107,7 @@ export default function Projects() {
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", note: "", link: "", pillar: "SOUL" as Pillar, customName: false, month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
-  const [filterYear, setFilterYear] = useState<number>(2026);
+  const [filterYear, setFilterYear] = useState<number | "all">("all");
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
   const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; year: number; note: string; link: string; pillar: Pillar } | null>(null);
@@ -119,7 +119,7 @@ export default function Projects() {
 
   const months = [...new Set(projects.map(p => p.month))].sort();
   const afterPillar = filterPillar === "all" ? projects : projects.filter(p => p.pillar === filterPillar);
-  const afterYear = afterPillar.filter(p => p.year === filterYear);
+  const afterYear = filterYear === "all" ? afterPillar : afterPillar.filter(p => p.year === filterYear);
   const filtered = filterMonth === "all" ? afterYear : afterYear.filter(p => p.month === filterMonth);
   const grouped: Record<number, typeof projects> = {};
   filtered.forEach(p => { if (!grouped[p.month]) grouped[p.month] = []; grouped[p.month].push(p); });
