@@ -107,7 +107,7 @@ export default function Projects() {
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", note: "", link: "", pillar: "SOUL" as Pillar, customName: false, month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
-  const [filterYear, setFilterYear] = useState<number>(2026);
+  const [filterYear, setFilterYear] = useState<number | "all">("all");
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
   const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; year: number; note: string; link: string; pillar: Pillar } | null>(null);
@@ -119,7 +119,7 @@ export default function Projects() {
 
   const months = [...new Set(projects.map(p => p.month))].sort();
   const afterPillar = filterPillar === "all" ? projects : projects.filter(p => p.pillar === filterPillar);
-  const afterYear = afterPillar.filter(p => p.year === filterYear);
+  const afterYear = filterYear === "all" ? afterPillar : afterPillar.filter(p => p.year === filterYear);
   const filtered = filterMonth === "all" ? afterYear : afterYear.filter(p => p.month === filterMonth);
   const grouped: Record<number, typeof projects> = {};
   filtered.forEach(p => { if (!grouped[p.month]) grouped[p.month] = []; grouped[p.month].push(p); });
@@ -166,7 +166,8 @@ export default function Projects() {
     setTaskModal(null);
   };
 
-  const periodLabel = filterMonth === "all" ? `${filterYear}` : `${monthNames[filterMonth]} ${filterYear}`;
+  const yearLabel = filterYear === "all" ? "All Years" : `${filterYear}`;
+  const periodLabel = filterMonth === "all" ? yearLabel : `${monthNames[filterMonth]} ${yearLabel}`;
 
   const handleExportCSV = () => {
     setShowExportMenu(false);
@@ -195,7 +196,7 @@ export default function Projects() {
     setShowExportMenu(false);
     let html = `<h1>Projects – ${escapeHtml(periodLabel)}</h1><div class="sub">Generated ${escapeHtml(new Date().toLocaleString("en"))}</div>`;
     Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).forEach(([month, projs]) => {
-      html += `<div class="section-title">${escapeHtml(monthNames[Number(month)])} ${filterYear} (${projs.length} projects)</div>`;
+      html += `<div class="section-title">${escapeHtml(monthNames[Number(month)])} ${yearLabel} (${projs.length} projects)</div>`;
       projs.forEach(proj => {
         const done = proj.tasks.filter(t => t.status === "Done").length;
         const pct = proj.tasks.length ? Math.round((done / proj.tasks.length) * 100) : 0;
@@ -269,6 +270,10 @@ export default function Projects() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-6 animate-stagger-2">
         <div className="flex gap-1">
+          <button onClick={() => setFilterYear("all")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterYear === "all" ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
+            All
+          </button>
           {YEARS.map(y => (
             <button key={y} onClick={() => setFilterYear(y)}
               className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterYear === y ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
@@ -440,7 +445,7 @@ export default function Projects() {
                   <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                     {monthNames[monthNum]?.slice(0, 3)}
                   </div>
-                  <h2 className="text-lg font-bold text-foreground">{monthNames[monthNum]} {filterYear}</h2>
+                  <h2 className="text-lg font-bold text-foreground">{monthNames[monthNum]} {yearLabel}</h2>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{projs.length} projects</span>
                 </div>
                 <DndContext sensors={sensors} collisionDetection={closestCenter}
