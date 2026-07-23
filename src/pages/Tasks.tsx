@@ -396,21 +396,49 @@ export default function Tasks() {
 
   const handleSave = async (form: Partial<AllTask>) => {
     try {
-      const updates = { name: form.name, status: form.status, priority: form.priority, assigned_to: form.assigned_to, due_date: form.due_date, start_date: form.start_date, comments: form.comments, link: form.link, category: form.category || "none" };
-      
-      // Optimistic update
-      if (form.id) {
-        setLocalTasks(prev => prev.map(t => getCardId(t) === `${form._source}-${form.id}` ? { ...t, ...updates } : t));
-      }
+      const task_type: Task["task_type"] =
+        form.task_type === "project" ? "project" : form.task_type === "customer" ? "customer" : "standalone";
+      const project_id = task_type === "project" ? (form.project_id ?? null) : null;
+      const customer_id = task_type === "customer" ? (form.customer_id ?? null) : null;
 
-      if (form.id && form._source === "project" && form.project_id) {
-        await updateProjectTask(form.id, updates);
-      } else if (form.id && form._source === "customer" && form.customer_id) {
-        await updateCustomerTask(form.id, updates);
-      } else if (form.id) {
-        await updateTask(form.id, updates);
+      const updates = {
+        name: form.name,
+        status: form.status,
+        priority: form.priority,
+        assigned_to: form.assigned_to,
+        due_date: form.due_date,
+        start_date: form.start_date,
+        comments: form.comments,
+        link: form.link,
+        category: form.category || "none",
+        task_type,
+        project_id,
+        customer_id,
+      };
+
+      if (form.id) {
+        // Update directly on tasks table so parent re-assignment works across sources
+        const { error } = await supabase.from("tasks").update(updates).eq("id", form.id);
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return;
+        }
+        toast({ title: "อัปเดตงานสำเร็จ!" });
       } else {
-        await addTask({ name: form.name!, status: form.status || "To Do", priority: form.priority || "Medium", assigned_to: form.assigned_to || [], due_date: form.due_date || "", start_date: form.start_date || "", comments: form.comments || "", link: form.link || "", task_type: "standalone", category: form.category || "none" });
+        await addTask({
+          name: form.name!,
+          status: form.status || "To Do",
+          priority: form.priority || "Medium",
+          assigned_to: form.assigned_to || [],
+          due_date: form.due_date || "",
+          start_date: form.start_date || "",
+          comments: form.comments || "",
+          link: form.link || "",
+          task_type,
+          project_id: project_id ?? undefined,
+          customer_id: customer_id ?? undefined,
+          category: form.category || "none",
+        });
       }
       refetchAll();
     } catch (err) {
@@ -691,6 +719,8 @@ export default function Tasks() {
         task={modal.task}
         employees={employees}
         onSave={handleSave}
+        projects={projects.map(p => ({ id: p.id, name: p.name, month: p.month }))}
+        customers={customers.map(c => ({ id: c.id, name: c.name, month: c.month }))}
         onClose={() => setModal({ open: false, task: null })}
       />
 
