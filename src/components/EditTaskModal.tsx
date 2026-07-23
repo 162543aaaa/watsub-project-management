@@ -1,5 +1,5 @@
 import { CheckIcon, ClockIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import MultiSelectAssignee from "@/components/MultiSelectAssignee";
 import TaskActivityLog from "@/components/TaskActivityLog";
@@ -11,17 +11,25 @@ interface Employee {
   avatar?: string;
 }
 
+interface ParentOption {
+  id: string;
+  name: string;
+  month?: number;
+}
+
 interface EditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: Partial<Task> | null;
   employees: Employee[];
   onSave: (data: Partial<Task>) => Promise<void> | void;
+  projects?: ParentOption[];
+  customers?: ParentOption[];
 }
 
 type Tab = "details" | "activity";
 
-export default function EditTaskModal({ isOpen, onClose, task, employees, onSave }: EditTaskModalProps) {
+export default function EditTaskModal({ isOpen, onClose, task, employees, onSave, projects = [], customers = [] }: EditTaskModalProps) {
   const [form, setForm] = useState<Partial<Task>>(
     task ?? { name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", link: "", comments: "", category: "none" }
   );
@@ -35,11 +43,58 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
     setActiveTab("details");
   }
 
+  // Parent selector state derived from form
+  const parentType: "none" | "project" | "customer" =
+    form.task_type === "project" ? "project" : form.task_type === "customer" ? "customer" : "none";
+  const parentId = parentType === "project" ? form.project_id : parentType === "customer" ? form.customer_id : "";
+
+  const parentList: ParentOption[] = parentType === "project" ? projects : parentType === "customer" ? customers : [];
+  const availableMonths = useMemo(() => {
+    const s = new Set<number>();
+    parentList.forEach(p => { if (p.month) s.add(p.month); });
+    return [...s].sort((a, b) => a - b);
+  }, [parentList]);
+
+  const [parentMonth, setParentMonth] = useState<number | "all">(() => {
+    const current = parentList.find(p => p.id === parentId);
+    return current?.month ?? "all";
+  });
+  const [prevParentType, setPrevParentType] = useState(parentType);
+  if (parentType !== prevParentType) {
+    setPrevParentType(parentType);
+    const current = parentList.find(p => p.id === parentId);
+    setParentMonth(current?.month ?? "all");
+  }
+
+  const filteredParents = useMemo(
+    () => parentMonth === "all" ? parentList : parentList.filter(p => p.month === parentMonth),
+    [parentList, parentMonth]
+  );
+
+  const setParentType = (t: "none" | "project" | "customer") => {
+    if (t === "none") {
+      setForm({ ...form, task_type: "standalone", project_id: null as unknown as string | undefined, customer_id: null as unknown as string | undefined });
+    } else if (t === "project") {
+      setForm({ ...form, task_type: "project", customer_id: null as unknown as string | undefined, project_id: form.project_id ?? undefined });
+    } else {
+      setForm({ ...form, task_type: "customer", project_id: null as unknown as string | undefined, customer_id: form.customer_id ?? undefined });
+    }
+  };
+
+  const setParentId = (id: string) => {
+    if (parentType === "project") setForm({ ...form, project_id: id || (null as unknown as string | undefined) });
+    else if (parentType === "customer") setForm({ ...form, customer_id: id || (null as unknown as string | undefined) });
+  };
+
   if (!isOpen) return null;
 
   const save = async () => {
     if (!form.name?.trim()) {
       toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" });
+      return;
+    }
+    if (parentType !== "none" && !parentId) {
+      toast({ title: `กรุณาเลือก${parentType === "project" ? "โปรเจกต์" : "ลูกค้า"}`, variant: "destructive" });
       return;
     }
     // Feature 4: Quality gatekeeper — block marking Done without description OR link
@@ -167,6 +222,63 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
                   <option value="meeting">🗓 Meetings</option>
                   <option value="onsite">📍 On-site Work</option>
                 </select>
+              </div>
+
+              {/* Attach to Project / Customer */}
+              <div className="rounded-xl border border-border p-3 space-y-2 bg-muted/30">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">
+                  ผูกงานเข้ากับ / Attach to
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["none", "project", "customer"] as const).map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setParentType(t)}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                        parentType === t
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border hover:bg-muted"
+                      }`}
+                    >
+                      {t === "none" ? "Standalone" : t === "project" ? "🚀 Project" : "💼 Customer"}
+                    </button>
+                  ))}
+                </div>
+                {parentType !== "none" && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Month</label>
+                      <select
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none"
+                        value={parentMonth}
+                        onChange={e => setParentMonth(e.target.value === "all" ? "all" : Number(e.target.value))}
+                      >
+                        <option value="all">ทุกเดือน</option>
+                        {availableMonths.map(m => (
+                          <option key={m} value={m}>เดือน {m}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">
+                        {parentType === "project" ? "Project" : "Customer"}
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none"
+                        value={parentId || ""}
+                        onChange={e => setParentId(e.target.value)}
+                      >
+                        <option value="">— เลือก —</option>
+                        {filteredParents.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}{p.month ? ` · เดือน ${p.month}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Assigned To */}
