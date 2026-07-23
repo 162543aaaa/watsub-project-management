@@ -93,6 +93,10 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
       toast({ title: "กรุณากรอกชื่องาน", variant: "destructive" });
       return;
     }
+    if (parentType !== "none" && !parentId) {
+      toast({ title: `กรุณาเลือก${parentType === "project" ? "โปรเจกต์" : "ลูกค้า"}`, variant: "destructive" });
+      return;
+    }
     // Feature 4: Quality gatekeeper — block marking Done without description OR link
     if (form.status === "Done" && !form.link && (!form.comments || form.comments.trim().length < 20)) {
       toast({
