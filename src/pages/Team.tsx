@@ -597,6 +597,12 @@ export default function Team() {
                     : <span className="text-muted-foreground font-normal">อายุงาน: ยังไม่ระบุวันเริ่มงาน</span>
                   }
                 </div>
+                {emp.role === "intern" && !emp.is_archived && (emp.start_date || emp.end_date) && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <BriefcaseIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>ฝึกงาน: {emp.start_date || "—"} → {emp.end_date || "—"}</span>
+                  </div>
+                )}
                 {emp.is_archived && emp.end_date && (
                   <div className="flex items-start gap-1.5 text-xs text-red-600">
                     <NoSymbolIcon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
