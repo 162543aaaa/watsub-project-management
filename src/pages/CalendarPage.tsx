@@ -13,6 +13,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { useMeetings, type Meeting } from "@/hooks/useMeetings";
 import { useOnsiteWork, type OnsiteWork } from "@/hooks/useOnsiteWork";
 import { useHolidays } from "@/hooks/useHolidays";
+import { useLeave } from "@/hooks/useLeave";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type TaskStatus = "To Do" | "In Progress" | "Done";
-type CalendarItemType = "task" | "meeting" | "onsite" | "holiday";
+type CalendarItemType = "task" | "meeting" | "onsite" | "holiday" | "leave";
 type TaskSource = "standalone" | "project" | "customer";
 
 interface CalendarItem {
@@ -50,6 +51,9 @@ interface CalendarItem {
   holidayStartDate?: string;
   holidayEndDate?: string;
   start_date?: string;
+  leaveType?: string;
+  leaveStatus?: string;
+  requestedBy?: string;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -64,6 +68,7 @@ const getItemStyle = (item: CalendarItem) => {
   if (item.type === "holiday") return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
   if (item.type === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
   if (item.type === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
+  if (item.type === "leave") return "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400";
   if (item.category === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
   if (item.category === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
   if (item.status === "Done") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
@@ -75,6 +80,7 @@ const getItemIcon = (item: CalendarItem) => {
   if (item.type === "holiday") return "🎉 ";
   if (item.type === "meeting" || item.category === "meeting") return "🗓 ";
   if (item.type === "onsite" || item.category === "onsite") return "📍 ";
+  if (item.type === "leave") return "🌴 ";
   return "";
 };
 
@@ -142,7 +148,7 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getItemStyle(item)}`}>
-              {item.type === "holiday" ? "🎉 วันหยุด" : item.type === "meeting" ? "🗓 Meeting" : item.type === "onsite" ? "📍 On-site" : item.status || "Task"}
+              {item.type === "holiday" ? "🎉 วันหยุด" : item.type === "meeting" ? "🗓 Meeting" : item.type === "onsite" ? "📍 On-site" : item.type === "leave" ? `🌴 ลา${item.leaveType || ""}` : item.status || "Task"}
             </span>
             {item.holidayType && (
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
@@ -740,7 +746,7 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
 export default function CalendarPage() {
   const today = new Date();
   const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [filterCategory, setFilterCategory] = useState<"all" | "meeting" | "onsite" | "holiday">("all");
+  const [filterCategory, setFilterCategory] = useState<"all" | "meeting" | "onsite" | "holiday" | "leave">("all");
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -759,6 +765,7 @@ export default function CalendarPage() {
   const { meetings, addMeeting, updateMeeting } = useMeetings();
   const { onsiteWork, addOnsiteWork, updateOnsiteWork } = useOnsiteWork();
   const { holidays, addHoliday, updateHoliday, deleteHoliday } = useHolidays();
+  const { leaves } = useLeave();
   const { employees } = useEmployees();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -822,8 +829,32 @@ export default function CalendarPage() {
         current.setDate(current.getDate() + 1);
       }
     });
-    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems, ...holidayItems];
-  }, [standaloneTasks, projects, customers, meetings, onsiteWork, holidays]);
+    const leaveItems: CalendarItem[] = [];
+    leaves.forEach(l => {
+      if (l.status !== "Approved") return;
+      const start = new Date(l.leave_start);
+      const end = new Date(l.leave_end || l.leave_start);
+      if (isNaN(start.getTime())) return;
+      const endDate = isNaN(end.getTime()) ? start : end;
+      const current = new Date(start);
+      while (current <= endDate) {
+        const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
+        leaveItems.push({
+          id: `${l.id}-${dateStr}`,
+          name: `${l.requested_by} ลา${l.leave_type}`,
+          type: "leave" as const,
+          date: dateStr,
+          leaveType: l.leave_type,
+          leaveStatus: l.status,
+          requestedBy: l.requested_by,
+          note: l.leave_reason,
+          participants: [l.requested_by],
+        });
+        current.setDate(current.getDate() + 1);
+      }
+    });
+    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems, ...holidayItems, ...leaveItems];
+  }, [standaloneTasks, projects, customers, meetings, onsiteWork, holidays, leaves]);
 
   /* ── Filter ── */
   const hasActiveFilters = filterCategory !== "all";
@@ -835,6 +866,7 @@ export default function CalendarPage() {
     if (filterCategory === "meeting") return allItems.filter(i => i.type === "meeting" || (i.type === "task" && i.category === "meeting"));
     if (filterCategory === "onsite") return allItems.filter(i => i.type === "onsite" || (i.type === "task" && i.category === "onsite"));
     if (filterCategory === "holiday") return allItems.filter(i => i.type === "holiday");
+    if (filterCategory === "leave") return allItems.filter(i => i.type === "leave");
     return allItems;
   }, [allItems, filterCategory]);
 
@@ -1016,9 +1048,9 @@ export default function CalendarPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2 mb-4 animate-stagger-2">
-        {(["all", "meeting", "onsite", "holiday"] as const).map(v => (
+        {(["all", "meeting", "onsite", "holiday", "leave"] as const).map(v => (
           <button key={v} onClick={() => setFilterCategory(v)} className={chipClass(filterCategory === v)}>
-            {v === "all" ? "ทั้งหมด" : v === "meeting" ? "🗓 Meetings" : v === "onsite" ? "📍 On-site Work" : "🎉 วันหยุด"}
+            {v === "all" ? "ทั้งหมด" : v === "meeting" ? "🗓 Meetings" : v === "onsite" ? "📍 On-site Work" : v === "holiday" ? "🎉 วันหยุด" : "🌴 การลา"}
           </button>
         ))}
         {hasActiveFilters && (

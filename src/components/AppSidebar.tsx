@@ -10,7 +10,7 @@ const navItems = [
   { label: "Tasks", icon: CheckBadgeIcon, path: "/tasks" },
   { label: "Projects", icon: FolderOpenIcon, path: "/projects" },
   { label: "Customers", icon: UsersIcon, path: "/customers" },
-  { label: "CalendarIcon", icon: CalendarIcon, path: "/calendar" },
+  { label: "Calendar", icon: CalendarIcon, path: "/calendar" },
   { label: "OKRs", icon: FlagIcon, path: "/okrs" },
   { label: "Team", icon: UsersIcon, path: "/team" },
   { label: "Team Workload", icon: Squares2X2Icon, path: "/workload" },
