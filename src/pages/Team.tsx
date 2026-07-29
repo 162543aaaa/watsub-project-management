@@ -443,7 +443,7 @@ export default function Team() {
                 { label: "Position", key: "position", placeholder: "e.g. Community Support", type: "text" },
                 { label: "Email", key: "email", placeholder: "email@example.com", type: "text" },
                 { label: "PhoneIcon", key: "phone", placeholder: "e.g. 081-234-5678", type: "text" },
-                { label: "วันเริ่มงาน", key: "start_date", placeholder: "", type: "date" },
+                { label: form.role === "intern" ? "วันเริ่มฝึกงาน" : "วันเริ่มงาน", key: "start_date", placeholder: "", type: "date" },
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">{f.label}</label>
@@ -463,6 +463,22 @@ export default function Team() {
                   <option value="intern">intern</option>
                 </select>
               </div>
+
+              {form.role === "intern" && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">วันสิ้นสุดการฝึกงาน</label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                    value={form.end_date}
+                    min={form.start_date || undefined}
+                    onChange={e => setForm({ ...form, end_date: e.target.value })}
+                  />
+                  {form.start_date && form.end_date && form.end_date < form.start_date && (
+                    <p className="text-[11px] text-red-500 mt-1">วันสิ้นสุดต้องไม่ก่อนวันเริ่มฝึกงาน</p>
+                  )}
+                </div>
+              )}
 
               {/* PromptPay QR ArrowUpTrayIcon */}
               <div>
