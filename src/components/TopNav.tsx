@@ -10,7 +10,7 @@ const primaryNav = [
   { label: "Tasks", icon: CheckBadgeIcon, path: "/tasks" },
   { label: "Projects", icon: FolderOpenIcon, path: "/projects" },
   { label: "Customers", icon: UsersIcon, path: "/customers" },
-  { label: "CalendarIcon", icon: CalendarIcon, path: "/calendar" },
+  { label: "Calendar", icon: CalendarIcon, path: "/calendar" },
 ];
 
 const secondaryNav = [
