@@ -178,6 +178,7 @@ export default function Team() {
 
   const save = async () => {
     if (!form.name.trim() || !form.position.trim() || !form.email.trim()) return;
+    if (form.start_date && form.end_date && form.end_date < form.start_date) return;
     const payload = {
       ...form,
       start_date: form.start_date || undefined,
