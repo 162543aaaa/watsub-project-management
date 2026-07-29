@@ -746,7 +746,7 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
 export default function CalendarPage() {
   const today = new Date();
   const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [filterCategory, setFilterCategory] = useState<"all" | "meeting" | "onsite" | "holiday">("all");
+  const [filterCategory, setFilterCategory] = useState<"all" | "meeting" | "onsite" | "holiday" | "leave">("all");
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -765,6 +765,7 @@ export default function CalendarPage() {
   const { meetings, addMeeting, updateMeeting } = useMeetings();
   const { onsiteWork, addOnsiteWork, updateOnsiteWork } = useOnsiteWork();
   const { holidays, addHoliday, updateHoliday, deleteHoliday } = useHolidays();
+  const { leaves } = useLeave();
   const { employees } = useEmployees();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -828,8 +829,32 @@ export default function CalendarPage() {
         current.setDate(current.getDate() + 1);
       }
     });
-    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems, ...holidayItems];
-  }, [standaloneTasks, projects, customers, meetings, onsiteWork, holidays]);
+    const leaveItems: CalendarItem[] = [];
+    leaves.forEach(l => {
+      if (l.status !== "Approved") return;
+      const start = new Date(l.leave_start);
+      const end = new Date(l.leave_end || l.leave_start);
+      if (isNaN(start.getTime())) return;
+      const endDate = isNaN(end.getTime()) ? start : end;
+      const current = new Date(start);
+      while (current <= endDate) {
+        const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
+        leaveItems.push({
+          id: `${l.id}-${dateStr}`,
+          name: `${l.requested_by} ลา${l.leave_type}`,
+          type: "leave" as const,
+          date: dateStr,
+          leaveType: l.leave_type,
+          leaveStatus: l.status,
+          requestedBy: l.requested_by,
+          note: l.leave_reason,
+          participants: [l.requested_by],
+        });
+        current.setDate(current.getDate() + 1);
+      }
+    });
+    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems, ...holidayItems, ...leaveItems];
+  }, [standaloneTasks, projects, customers, meetings, onsiteWork, holidays, leaves]);
 
   /* ── Filter ── */
   const hasActiveFilters = filterCategory !== "all";
@@ -841,6 +866,7 @@ export default function CalendarPage() {
     if (filterCategory === "meeting") return allItems.filter(i => i.type === "meeting" || (i.type === "task" && i.category === "meeting"));
     if (filterCategory === "onsite") return allItems.filter(i => i.type === "onsite" || (i.type === "task" && i.category === "onsite"));
     if (filterCategory === "holiday") return allItems.filter(i => i.type === "holiday");
+    if (filterCategory === "leave") return allItems.filter(i => i.type === "leave");
     return allItems;
   }, [allItems, filterCategory]);
 
@@ -1022,9 +1048,9 @@ export default function CalendarPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2 mb-4 animate-stagger-2">
-        {(["all", "meeting", "onsite", "holiday"] as const).map(v => (
+        {(["all", "meeting", "onsite", "holiday", "leave"] as const).map(v => (
           <button key={v} onClick={() => setFilterCategory(v)} className={chipClass(filterCategory === v)}>
-            {v === "all" ? "ทั้งหมด" : v === "meeting" ? "🗓 Meetings" : v === "onsite" ? "📍 On-site Work" : "🎉 วันหยุด"}
+            {v === "all" ? "ทั้งหมด" : v === "meeting" ? "🗓 Meetings" : v === "onsite" ? "📍 On-site Work" : v === "holiday" ? "🎉 วันหยุด" : "🌴 การลา"}
           </button>
         ))}
         {hasActiveFilters && (
