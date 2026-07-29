@@ -178,7 +178,11 @@ export default function Team() {
 
   const save = async () => {
     if (!form.name.trim() || !form.position.trim() || !form.email.trim()) return;
-    const payload = { ...form, start_date: form.start_date || undefined };
+    const payload = {
+      ...form,
+      start_date: form.start_date || undefined,
+      end_date: form.end_date || null,
+    } as typeof form & { end_date: string | null };
     if (editing) {
       await updateEmployee(editing.id, payload);
     } else {
