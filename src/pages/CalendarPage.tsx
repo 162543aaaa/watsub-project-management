@@ -13,6 +13,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { useMeetings, type Meeting } from "@/hooks/useMeetings";
 import { useOnsiteWork, type OnsiteWork } from "@/hooks/useOnsiteWork";
 import { useHolidays } from "@/hooks/useHolidays";
+import { useLeave } from "@/hooks/useLeave";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type TaskStatus = "To Do" | "In Progress" | "Done";
-type CalendarItemType = "task" | "meeting" | "onsite" | "holiday";
+type CalendarItemType = "task" | "meeting" | "onsite" | "holiday" | "leave";
 type TaskSource = "standalone" | "project" | "customer";
 
 interface CalendarItem {
@@ -50,6 +51,9 @@ interface CalendarItem {
   holidayStartDate?: string;
   holidayEndDate?: string;
   start_date?: string;
+  leaveType?: string;
+  leaveStatus?: string;
+  requestedBy?: string;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -64,6 +68,7 @@ const getItemStyle = (item: CalendarItem) => {
   if (item.type === "holiday") return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
   if (item.type === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
   if (item.type === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
+  if (item.type === "leave") return "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400";
   if (item.category === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
   if (item.category === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
   if (item.status === "Done") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
@@ -75,6 +80,7 @@ const getItemIcon = (item: CalendarItem) => {
   if (item.type === "holiday") return "🎉 ";
   if (item.type === "meeting" || item.category === "meeting") return "🗓 ";
   if (item.type === "onsite" || item.category === "onsite") return "📍 ";
+  if (item.type === "leave") return "🌴 ";
   return "";
 };
 
