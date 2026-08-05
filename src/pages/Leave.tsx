@@ -97,9 +97,9 @@ export default function Leave() {
 
       <div className="grid grid-cols-3 gap-4 mb-6 animate-stagger-2">
         {([
-          { label: "Pending", count: leaves.filter(l => l.status === "Pending").length, icon: ClockIcon, color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Approved", count: leaves.filter(l => l.status === "Approved").length, icon: CheckCircleIcon, color: "text-green-600", bg: "bg-green-50" },
-          { label: "Rejected", count: leaves.filter(l => l.status === "Rejected").length, icon: XCircleIcon, color: "text-red-500", bg: "bg-red-50" },
+          { label: "Pending", count: leavesInMonth.filter(l => l.status === "Pending").length, icon: ClockIcon, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Approved", count: leavesInMonth.filter(l => l.status === "Approved").length, icon: CheckCircleIcon, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Rejected", count: leavesInMonth.filter(l => l.status === "Rejected").length, icon: XCircleIcon, color: "text-red-500", bg: "bg-red-50" },
         ] as const).map(s => (
           <div key={s.label} className={`rounded-xl p-4 ${s.bg} border border-border/50`}>
             <div className="flex items-center gap-2">
