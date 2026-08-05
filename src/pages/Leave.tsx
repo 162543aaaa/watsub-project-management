@@ -1,5 +1,6 @@
 import { CheckCircleIcon, CheckIcon, ClockIcon, PencilSquareIcon, PlusIcon, TrashIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
+import { parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { useLeave, LeaveRequest } from "@/hooks/useLeave";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
@@ -22,8 +23,21 @@ export default function Leave() {
   const [filter, setFilter] = useState<LeaveStatus | "all">("all");
   const [form, setForm] = useState({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
 
-  const filtered = filter === "all" ? leaves : leaves.filter(l => l.status === filter);
-  const pending = leaves.filter(l => l.status === "Pending").length;
+  const currentYear = new Date().getFullYear();
+  const [filterYear, setFilterYear] = useState(currentYear);
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+
+  const leavesInMonth = leaves.filter(l => {
+    if (!l.leave_start || !l.leave_end) return false;
+    const start = parseISO(l.leave_start);
+    const end = parseISO(l.leave_end);
+    const monthStart = startOfMonth(new Date(filterYear, filterMonth - 1));
+    const monthEnd = endOfMonth(monthStart);
+    return start <= monthEnd && end >= monthStart;
+  });
+
+  const filtered = filter === "all" ? leavesInMonth : leavesInMonth.filter(l => l.status === filter);
+  const pending = leavesInMonth.filter(l => l.status === "Pending").length;
 
   const resetForm = () => {
     setForm({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
@@ -83,9 +97,9 @@ export default function Leave() {
 
       <div className="grid grid-cols-3 gap-4 mb-6 animate-stagger-2">
         {([
-          { label: "Pending", count: leaves.filter(l => l.status === "Pending").length, icon: ClockIcon, color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Approved", count: leaves.filter(l => l.status === "Approved").length, icon: CheckCircleIcon, color: "text-green-600", bg: "bg-green-50" },
-          { label: "Rejected", count: leaves.filter(l => l.status === "Rejected").length, icon: XCircleIcon, color: "text-red-500", bg: "bg-red-50" },
+          { label: "Pending", count: leavesInMonth.filter(l => l.status === "Pending").length, icon: ClockIcon, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Approved", count: leavesInMonth.filter(l => l.status === "Approved").length, icon: CheckCircleIcon, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Rejected", count: leavesInMonth.filter(l => l.status === "Rejected").length, icon: XCircleIcon, color: "text-red-500", bg: "bg-red-50" },
         ] as const).map(s => (
           <div key={s.label} className={`rounded-xl p-4 ${s.bg} border border-border/50`}>
             <div className="flex items-center gap-2">
@@ -97,13 +111,38 @@ export default function Leave() {
         ))}
       </div>
 
-      <div className="flex gap-2 mb-4 animate-stagger-3 flex-wrap">
-        {(["all", "Pending", "Approved", "Rejected"] as const).map(f => (
+      <div className="flex flex-wrap items-center gap-3 mb-4 animate-stagger-3">
+        <div className="flex items-center gap-2">
+          <select
+            className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm outline-none"
+            value={filterMonth}
+            onChange={e => setFilterMonth(Number(e.target.value))}
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+              <option key={m} value={m}>
+                {new Date(2026, m - 1).toLocaleString("en", { month: "long" })}
+              </option>
+            ))}
+          </select>
+          <select
+            className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm outline-none"
+            value={filterYear}
+            onChange={e => setFilterYear(Number(e.target.value))}
+          >
+            {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+        <div className="h-6 w-px bg-border hidden sm:block" />
+        <div className="flex gap-2 flex-wrap">
+          {(["all", "Pending", "Approved", "Rejected"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filter === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
             {f === "all" ? "All" : f}
           </button>
         ))}
+        </div>
       </div>
 
       {showAdd && (
