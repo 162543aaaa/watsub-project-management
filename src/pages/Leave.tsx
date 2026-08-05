@@ -23,8 +23,21 @@ export default function Leave() {
   const [filter, setFilter] = useState<LeaveStatus | "all">("all");
   const [form, setForm] = useState({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
 
-  const filtered = filter === "all" ? leaves : leaves.filter(l => l.status === filter);
-  const pending = leaves.filter(l => l.status === "Pending").length;
+  const currentYear = new Date().getFullYear();
+  const [filterYear, setFilterYear] = useState(currentYear);
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+
+  const leavesInMonth = leaves.filter(l => {
+    if (!l.leave_start || !l.leave_end) return false;
+    const start = parseISO(l.leave_start);
+    const end = parseISO(l.leave_end);
+    const monthStart = startOfMonth(new Date(filterYear, filterMonth - 1));
+    const monthEnd = endOfMonth(monthStart);
+    return start <= monthEnd && end >= monthStart;
+  });
+
+  const filtered = filter === "all" ? leavesInMonth : leavesInMonth.filter(l => l.status === filter);
+  const pending = leavesInMonth.filter(l => l.status === "Pending").length;
 
   const resetForm = () => {
     setForm({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
