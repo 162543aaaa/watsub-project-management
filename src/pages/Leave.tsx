@@ -142,6 +142,7 @@ export default function Leave() {
             {f === "all" ? "All" : f}
           </button>
         ))}
+        </div>
       </div>
 
       {showAdd && (
