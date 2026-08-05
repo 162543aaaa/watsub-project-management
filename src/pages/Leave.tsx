@@ -1,34 +1,61 @@
-import { CheckCircleIcon, CheckIcon, ClockIcon, PlusIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, CheckIcon, ClockIcon, PencilSquareIcon, PlusIcon, TrashIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { useLeave, LeaveRequest } from "@/hooks/useLeave";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 
 type LeaveStatus = "Pending" | "Approved" | "Rejected";
 const leaveTypes = ["Annual", "Sick", "Personal", "Unpaid", "Maternity"];
 
 export default function Leave() {
-  const { leaves, loading, addLeave, updateStatus } = useLeave();
+  const { leaves, loading, addLeave, updateStatus, updateLeave, deleteLeave } = useLeave();
   const { employees } = useEmployees();
   const { profile, isAdmin } = useAuthContext() as any;
   const currentName = profile?.display_name ?? "";
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editStatus, setEditStatus] = useState<LeaveStatus>("Pending");
   const [filter, setFilter] = useState<LeaveStatus | "all">("all");
   const [form, setForm] = useState({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
 
   const filtered = filter === "all" ? leaves : leaves.filter(l => l.status === filter);
   const pending = leaves.filter(l => l.status === "Pending").length;
 
+  const resetForm = () => {
+    setForm({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
+    setEditingId(null);
+    setEditStatus("Pending");
+  };
+
+  const openEdit = (leave: LeaveRequest) => {
+    setForm({
+      requested_by: leave.requested_by,
+      leave_type: leave.leave_type,
+      leave_start: leave.leave_start,
+      leave_end: leave.leave_end,
+      leave_reason: leave.leave_reason,
+    });
+    setEditStatus(leave.status);
+    setEditingId(leave.id);
+    setShowAdd(true);
+  };
+
   const handleAdd = async () => {
     const requestedBy = currentName || form.requested_by;
     if (!requestedBy || !form.leave_start || !form.leave_end || !form.leave_reason) {
       toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" }); return;
     }
-    await addLeave({ ...form, requested_by: requestedBy, status: "Pending", requested_date: new Date().toISOString() });
+    if (editingId) {
+      await updateLeave(editingId, { ...form, requested_by: form.requested_by || requestedBy, status: editStatus });
+    } else {
+      await addLeave({ ...form, requested_by: requestedBy, status: "Pending", requested_date: new Date().toISOString() });
+    }
     setShowAdd(false);
-    setForm({ requested_by: "", leave_type: "Annual", leave_start: "", leave_end: "", leave_reason: "" });
+    resetForm();
   };
 
   const statusStyle = (status: LeaveStatus) => {
@@ -49,7 +76,7 @@ export default function Leave() {
             {leaves.length} total requests
           </p>
         </div>
-        <button onClick={() => setShowAdd(true)} className="btn-primary flex items-center gap-2">
+        <button onClick={() => { resetForm(); setShowAdd(true); }} className="btn-primary flex items-center gap-2">
           <PlusIcon className="w-4 h-4" /> Request Leave
         </button>
       </div>
@@ -83,8 +110,8 @@ export default function Leave() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }}>
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold">Request Leave</h3>
-              <button onClick={() => setShowAdd(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><XMarkIcon className="w-4 h-4" /></button>
+              <h3 className="text-lg font-bold">{editingId ? "Edit Leave" : "Request Leave"}</h3>
+              <button onClick={() => { setShowAdd(false); resetForm(); }} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted"><XMarkIcon className="w-4 h-4" /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -100,6 +127,15 @@ export default function Leave() {
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted text-sm outline-none" />
                 )}
               </div>
+              {isAdmin && editingId && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Status</label>
+                  <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
+                    value={editStatus} onChange={e => setEditStatus(e.target.value as LeaveStatus)}>
+                    {(["Pending", "Approved", "Rejected"] as const).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Leave Type</label>
                 <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none"
@@ -126,8 +162,8 @@ export default function Leave() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowAdd(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={handleAdd} className="flex-1 btn-primary flex items-center justify-center gap-2"><CheckIcon className="w-4 h-4" /> Submit</button>
+              <button onClick={() => { setShowAdd(false); resetForm(); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+              <button onClick={handleAdd} className="flex-1 btn-primary flex items-center justify-center gap-2"><CheckIcon className="w-4 h-4" /> {editingId ? "Save" : "Submit"}</button>
             </div>
           </div>
         </div>
@@ -165,18 +201,32 @@ export default function Leave() {
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusStyle(leave.status)}`}>{leave.status}</span>
                   </td>
                   <td className="px-4 py-3">
-                    {leave.status === "Pending" && (
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => updateStatus(leave.id, "Approved")}
+                    <div className="flex items-center gap-1.5">
+                      {leave.status === "Pending" && (
+                        <>
+                          <button onClick={() => updateStatus(leave.id, "Approved")}
                           className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
-                          <CheckIcon className="w-3 h-3" /> Approve
-                        </button>
-                        <button onClick={() => updateStatus(leave.id, "Rejected")}
+                            <CheckIcon className="w-3 h-3" /> Approve
+                          </button>
+                          <button onClick={() => updateStatus(leave.id, "Rejected")}
                           className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
-                          <XMarkIcon className="w-3 h-3" /> Reject
-                        </button>
-                      </div>
-                    )}
+                            <XMarkIcon className="w-3 h-3" /> Reject
+                          </button>
+                        </>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <button onClick={() => openEdit(leave)} title="แก้ไข / ย้ายวัน"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteId(leave.id)} title="ลบ"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -187,6 +237,14 @@ export default function Leave() {
           )}
         </div>
       </div>
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onOpenChange={(open) => { if (!open) setDeleteId(null); }}
+        onConfirm={async () => { if (deleteId) await deleteLeave(deleteId); setDeleteId(null); }}
+        title="ยืนยันการลบคำขอลา"
+        description="ต้องการลบคำขอลานี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้"
+      />
     </div>
   );
 }

@@ -66,5 +66,21 @@ export function useLeave() {
     toast({ title: status === "Approved" ? "อนุมัติการลาสำเร็จ!" : "ปฏิเสธการลาแล้ว" });
   };
 
-  return { leaves, loading, addLeave, updateStatus, refetch: fetchLeaves };
+  const updateLeave = async (id: string, updates: Partial<Omit<LeaveRequest, "id" | "created_at">>) => {
+    const { data, error } = await supabase.from("leave_requests").update(updates).eq("id", id).select().single();
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+    setLeaves(prev => prev.map(l => l.id === id ? data as LeaveRequest : l));
+    void autoSyncToGoogleSheets("leave_requests", data);
+    toast({ title: "แก้ไขข้อมูลการลาสำเร็จ!" });
+    return data;
+  };
+
+  const deleteLeave = async (id: string) => {
+    const { error } = await supabase.from("leave_requests").delete().eq("id", id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setLeaves(prev => prev.filter(l => l.id !== id));
+    toast({ title: "ลบคำขอลาแล้ว" });
+  };
+
+  return { leaves, loading, addLeave, updateStatus, updateLeave, deleteLeave, refetch: fetchLeaves };
 }
