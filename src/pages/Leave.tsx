@@ -111,8 +111,32 @@ export default function Leave() {
         ))}
       </div>
 
-      <div className="flex gap-2 mb-4 animate-stagger-3 flex-wrap">
-        {(["all", "Pending", "Approved", "Rejected"] as const).map(f => (
+      <div className="flex flex-wrap items-center gap-3 mb-4 animate-stagger-3">
+        <div className="flex items-center gap-2">
+          <select
+            className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm outline-none"
+            value={filterMonth}
+            onChange={e => setFilterMonth(Number(e.target.value))}
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+              <option key={m} value={m}>
+                {new Date(2026, m - 1).toLocaleString("en", { month: "long" })}
+              </option>
+            ))}
+          </select>
+          <select
+            className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm outline-none"
+            value={filterYear}
+            onChange={e => setFilterYear(Number(e.target.value))}
+          >
+            {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+        <div className="h-6 w-px bg-border hidden sm:block" />
+        <div className="flex gap-2 flex-wrap">
+          {(["all", "Pending", "Approved", "Rejected"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filter === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-secondary"}`}>
             {f === "all" ? "All" : f}
