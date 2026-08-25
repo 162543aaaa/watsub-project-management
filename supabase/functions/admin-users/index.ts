@@ -125,12 +125,12 @@ serve(async (req) => {
     }
 
     if (action === 'delete-user') {
-      // 1. Soft delete / archive profile
+      // 1. Revoke access on the profile (no is_archived/status columns exist)
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ is_archived: true, status: 'inactive', is_approved: false })
+        .update({ is_approved: false, allowed_pages: [] })
         .eq('user_id', user_id);
-      
+
       if (profileError) {
         return new Response(JSON.stringify({ error: profileError.message }), {
           status: 400,
@@ -138,14 +138,17 @@ serve(async (req) => {
         });
       }
 
-      // 2. Soft delete / archive employee
-      const { error: employeeError } = await supabase
-        .from('employees')
-        .update({ is_archived: true, status: 'inactive' })
-        .eq('user_id', user_id);
-      
-      if (employeeError) {
-        console.error("Employee update error:", employeeError);
+      // 2. Archive the matching employee record (matched by email)
+      const { data: targetUser } = await supabase.auth.admin.getUserById(user_id);
+      const targetEmail = targetUser?.user?.email;
+      if (targetEmail) {
+        const { error: employeeError } = await supabase
+          .from('employees')
+          .update({ is_archived: true, active: false })
+          .ilike('email', targetEmail);
+        if (employeeError) {
+          console.error('Employee archive error:', employeeError.message);
+        }
       }
 
       // 3. Delete user roles (optional but recommended to revoke access)
