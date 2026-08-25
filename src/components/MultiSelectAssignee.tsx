@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 interface Employee {
   name: string;
   avatar?: string;
+  is_archived?: boolean;
+  active?: boolean;
+  end_date?: string | null;
 }
 
 interface MultiSelectAssigneeProps {
@@ -54,7 +57,12 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = employees.filter(e =>
+  // Hide former employees (archived / inactive) unless they are already assigned
+  const selectable = employees.filter(e =>
+    selected.includes(e.name) || (!e.is_archived && e.active !== false)
+  );
+
+  const filtered = selectable.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase())
   );
 

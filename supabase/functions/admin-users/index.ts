@@ -124,6 +124,31 @@ serve(async (req) => {
       });
     }
 
+    // Hard delete: fully remove the account (used for pending/unapproved signups)
+    if (action === 'purge-user') {
+      if (user_id === callerId) {
+        return new Response(JSON.stringify({ error: 'Cannot delete your own account' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      await supabase.from('user_roles').delete().eq('user_id', user_id);
+      await supabase.from('profiles').delete().eq('user_id', user_id);
+
+      const { error: delError } = await supabase.auth.admin.deleteUser(user_id);
+      if (delError) {
+        return new Response(JSON.stringify({ error: delError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'delete-user') {
       // 1. Revoke access on the profile (no is_archived/status columns exist)
       const { error: profileError } = await supabase

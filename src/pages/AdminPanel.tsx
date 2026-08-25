@@ -52,11 +52,11 @@ export default function AdminPanel() {
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserInfo | null>(null);
   const { isSyncing, handleSyncAll } = useSyncData();
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async (userId: string, purge = false) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("admin-users", {
-        body: { action: "delete-user", user_id: userId },
+        body: { action: purge ? "purge-user" : "delete-user", user_id: userId },
       });
       if (error) {
         console.error("Supabase function delete-user error:", error);
@@ -65,7 +65,7 @@ export default function AdminPanel() {
         console.error("Supabase function delete-user data error:", data.error);
         toast({ title: "เกิดข้อผิดพลาดในการระงับ/เก็บข้อมูลผู้ใช้", description: data.error, variant: "destructive" });
       } else {
-        toast({ title: "เก็บถาวรและระงับสิทธิ์การใช้งานผู้ใช้สำเร็จ!" });
+        toast({ title: purge ? "ลบบัญชีผู้ใช้ออกจากระบบสำเร็จ!" : "เก็บถาวรและระงับสิทธิ์การใช้งานผู้ใช้สำเร็จ!" });
         fetchUsers();
       }
     } catch (err) {
@@ -426,11 +426,14 @@ export default function AdminPanel() {
         onOpenChange={(open) => { if (!open) setConfirmDeleteUser(null); }}
         onConfirm={() => {
           if (!confirmDeleteUser) return;
-          handleDeleteUser(confirmDeleteUser.profile.user_id);
+          // Pending (unapproved) accounts are removed permanently; approved members are archived.
+          handleDeleteUser(confirmDeleteUser.profile.user_id, !confirmDeleteUser.profile.is_approved);
           setConfirmDeleteUser(null);
         }}
-        title="ยืนยันการเก็บถาวรและระงับสิทธิ์ผู้ใช้"
-        description={`คุณแน่ใจหรือไม่ว่าต้องการเก็บถาวรและระงับสิทธิ์การใช้งานผู้ใช้ "${confirmDeleteUser?.profile.display_name}"? บัญชีนี้จะถูกระงับสิทธิ์เข้าใช้งานและข้อมูลจะถูกเก็บถาวรในระบบ`}
+        title={confirmDeleteUser && !confirmDeleteUser.profile.is_approved ? "ยืนยันการลบบัญชีผู้ใช้" : "ยืนยันการเก็บถาวรและระงับสิทธิ์ผู้ใช้"}
+        description={confirmDeleteUser && !confirmDeleteUser.profile.is_approved
+          ? `ต้องการลบบัญชี "${confirmDeleteUser?.profile.display_name}" ออกจากระบบถาวรหรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`
+          : `คุณแน่ใจหรือไม่ว่าต้องการเก็บถาวรและระงับสิทธิ์การใช้งานผู้ใช้ "${confirmDeleteUser?.profile.display_name}"? บัญชีนี้จะถูกระงับสิทธิ์เข้าใช้งานและข้อมูลจะถูกเก็บถาวรในระบบ`}
       />
     </div>
   );
