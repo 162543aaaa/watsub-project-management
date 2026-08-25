@@ -65,7 +65,7 @@ export default function AdminPanel() {
         console.error("Supabase function delete-user data error:", data.error);
         toast({ title: "เกิดข้อผิดพลาดในการระงับ/เก็บข้อมูลผู้ใช้", description: data.error, variant: "destructive" });
       } else {
-        toast({ title: "เก็บถาวรและระงับสิทธิ์การใช้งานผู้ใช้สำเร็จ!" });
+        toast({ title: purge ? "ลบบัญชีผู้ใช้ออกจากระบบสำเร็จ!" : "เก็บถาวรและระงับสิทธิ์การใช้งานผู้ใช้สำเร็จ!" });
         fetchUsers();
       }
     } catch (err) {
