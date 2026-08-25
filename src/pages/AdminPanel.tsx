@@ -52,11 +52,11 @@ export default function AdminPanel() {
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserInfo | null>(null);
   const { isSyncing, handleSyncAll } = useSyncData();
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async (userId: string, purge = false) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("admin-users", {
-        body: { action: "delete-user", user_id: userId },
+        body: { action: purge ? "purge-user" : "delete-user", user_id: userId },
       });
       if (error) {
         console.error("Supabase function delete-user error:", error);
