@@ -8,6 +8,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { getEligiblePeerReviewers, getSelfEvaluationType, resolveRoleKey } from "@/config/kpiQuestions";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
+import { resolveKpiEmployee } from "@/lib/kpiEmployeeResolver";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
@@ -36,7 +37,7 @@ function Badge({ done, label }: { done: boolean; label: string }) {
 }
 
 export default function KpiOverview() {
-  const { isAdmin, user } = useAuthContext();
+  const { isAdmin, user, profile } = useAuthContext();
   const { periods, loading } = useKpiPeriods();
   const { evaluations, refetch } = useKpiEvaluations();
   const { employees } = useEmployees();
@@ -45,17 +46,16 @@ export default function KpiOverview() {
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Resolve current user → employee record
+  // Resolve legacy KPI accounts by display name when their login email differs
+  // from the employee roster. KPI RLS applies the same fallback.
   useEffect(() => {
     if (!user || !employees.length) return;
-    supabase.from("employees").select("*").eq("email", user.email ?? "").maybeSingle()
-      .then(({ data }) => {
-        if (data) { setMe(data as Employee); return; }
-        const dn = (user.user_metadata?.display_name ?? "").toLowerCase();
-        const match = employees.find(e => e.name.toLowerCase() === dn);
-        if (match) setMe(match);
-      });
-  }, [user, employees]);
+    setMe(resolveKpiEmployee({
+      email: user.email,
+      profileDisplayName: profile?.display_name,
+      userMetadataDisplayName: user.user_metadata?.display_name,
+    }, employees));
+  }, [user, profile?.display_name, employees]);
 
   const openPeriods = useMemo(() => periods.filter(p => p.status === "open"), [periods]);
 
