@@ -21,6 +21,7 @@ import {
   type AutoValueId,
   type KPISection,
 } from "@/config/kpiQuestions";
+import { resolveKpiEmployee } from "@/lib/kpiEmployeeResolver";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const avatarUrl = (p?: string) =>
@@ -270,7 +271,7 @@ export default function KpiEvaluate() {
   const { periods } = useKpiPeriods();
   const { evaluations, upsertEvaluation } = useKpiEvaluations(periodId);
   const { employees } = useEmployees();
-  const { user } = useAuthContext();
+  const { user, profile } = useAuthContext();
 
   const [scores, setScores] = useState<KpiSubScores>({});
   const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
@@ -286,15 +287,14 @@ export default function KpiEvaluate() {
 
   useEffect(() => {
     if (!user || !employees.length) return;
-    supabase.from("employees").select("*").eq("email", user.email ?? "").maybeSingle()
-      .then(({ data }) => {
-        if (data) { setEvaluator(data as Employee); return; }
-        const dn = (user.user_metadata?.display_name ?? "").toLowerCase();
-        const match = employees.find((e) => e.name.toLowerCase() === dn);
-        if (match) setEvaluator(match);
-        else setNeedPicker(true);
-      });
-  }, [user, employees]);
+    const matchedEmployee = resolveKpiEmployee({
+      email: user.email,
+      profileDisplayName: profile?.display_name,
+      userMetadataDisplayName: user.user_metadata?.display_name,
+    }, employees);
+    setEvaluator(matchedEmployee);
+    setNeedPicker(!matchedEmployee);
+  }, [user, profile?.display_name, employees]);
 
   useEffect(() => {
     if (evaluateeId && periodId) computeAutoValues(evaluateeId, periodId).then(setAutoValues);
