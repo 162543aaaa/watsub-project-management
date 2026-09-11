@@ -1,4 +1,4 @@
-import { ArrowPathIcon, ArrowRightIcon, ArrowTrendingDownIcon, ArrowTrendingUpIcon, BookOpenIcon, ClockIcon, ExclamationCircleIcon, MapPinIcon, MinusIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, VideoCameraIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { ArrowPathIcon, ArrowRightIcon, ArrowTrendingUpIcon, BookOpenIcon, ClockIcon, ExclamationCircleIcon, MapPinIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
@@ -15,19 +15,10 @@ import EmployeeAvatar from "@/components/EmployeeAvatar";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import { WikiEditor, WikiViewer } from "@/components/WikiEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
 import LoadingScreen from "@/components/LoadingScreen";
-import eyeAnimationWebm from "@/assets/eye-animation.webm";
 
 const today = new Date();
 const YEARS = [2025, 2026, 2027];
-
-const greeting = (() => {
-  const h = today.getHours();
-  if (h < 12) return "อรุณสวัสดิ์ 🌅";
-  if (h < 17) return "สวัสดีตอนบ่าย ☀️";
-  return "สวัสดีตอนเย็น 🌙";
-})();
 
 const thaiDate = today.toLocaleDateString("th-TH", {
   weekday: "long",
@@ -39,37 +30,32 @@ const thaiDate = today.toLocaleDateString("th-TH", {
 type StatusFilter = "All" | "Done" | "In Progress" | "To Do";
 
 const STATUS_CONFIG = {
-  Done: { color: "hsl(142 71% 45%)", icon: "✓", bg: "hsl(142 71% 45% / 0.12)" },
-  "In Progress": { color: "hsl(225 86% 44%)", icon: "▶", bg: "hsl(225 86% 44% / 0.12)" },
-  "To Do": { color: "hsl(215 14% 60%)", icon: "○", bg: "hsl(215 14% 60% / 0.12)" },
+  Done: { color: "hsl(var(--success))", bg: "hsl(var(--success) / 0.12)" },
+  "In Progress": { color: "hsl(var(--info))", bg: "hsl(var(--info) / 0.12)" },
+  "To Do": { color: "hsl(var(--status-todo))", bg: "hsl(var(--status-todo) / 0.12)" },
 } as const;
 
-function StatCard({ label, value, sub, icon: Icon, gradient, trend, trendLabel }: {
+function MetricCard({ label, value, sub, icon: Icon, tone = "neutral" }: {
   label: string;
   value: string | number;
   sub?: string;
   icon: React.ComponentType<{ className?: string }>;
-  gradient: string;
-  trend: "up" | "down" | "neutral";
-  trendLabel?: string;
+  tone?: "neutral" | "info" | "success" | "danger" | "accent";
 }) {
+  const toneClass = {
+    neutral: "bg-muted text-foreground",
+    info: "bg-info/10 text-info",
+    success: "bg-success/10 text-success",
+    danger: "bg-destructive/10 text-destructive",
+    accent: "bg-secondary text-secondary-foreground",
+  }[tone];
+
   return (
-    <div className="stat-card">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${gradient}`}>
-          <Icon className="w-5 h-5 text-white" />
-        </div>
-        <div className="flex items-center gap-1">
-          {trend === "up" && <ArrowTrendingUpIcon className="w-3 h-3 text-green-500" />}
-          {trend === "down" && <ArrowTrendingDownIcon className="w-3 h-3 text-red-400" />}
-          {trend === "neutral" && <MinusIcon className="w-3 h-3 text-muted-foreground" />}
-        </div>
-      </div>
-      <div className="text-2xl font-bold text-foreground">{value}</div>
-      <div className="text-sm text-muted-foreground mt-0.5">{label}</div>
-      {(sub || trendLabel) && (
-        <div className="text-[11px] text-muted-foreground/70 mt-1">{trendLabel || sub}</div>
-      )}
+    <div className="ops-metric-card">
+      <div className={`ops-metric-icon ${toneClass}`}><Icon className="h-4 w-4" /></div>
+      <div className="mt-5 text-3xl font-bold tracking-tight text-foreground tabular-nums">{value}</div>
+      <div className="mt-1 text-sm font-semibold text-foreground">{label}</div>
+      {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
     </div>
   );
 }
@@ -165,9 +151,9 @@ export default function Dashboard() {
   }, [employees, allTasks, currentEmployee]);
 
   const donutData = [
-    { name: "Done", value: stats.completed, color: "hsl(142 71% 45%)" },
-    { name: "In Progress", value: stats.inProgress, color: "hsl(225 86% 44%)" },
-    { name: "To Do", value: stats.todo, color: "hsl(215 14% 65%)" },
+    { name: "Done", value: stats.completed, color: "hsl(var(--success))" },
+    { name: "In Progress", value: stats.inProgress, color: "hsl(var(--info))" },
+    { name: "To Do", value: stats.todo, color: "hsl(var(--status-todo))" },
   ].filter(d => d.value > 0);
 
   const handleSaveTask = async (task: Task, updates: Partial<Task>) => {
@@ -187,66 +173,59 @@ export default function Dashboard() {
   return (
     <div className="p-4 sm:p-6 page-enter">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-7 animate-stagger-1">
-        <div className="flex items-center gap-3.5">
-          <div className="flex-shrink-0">
-            <video 
-              autoPlay 
-              loop 
-              muted 
-              playsInline 
-              className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
-              style={{ imageRendering: "-webkit-optimize-contrast", transform: "translateZ(0)" }}
-            >
-              <source src={eyeAnimationWebm} type="video/webm" />
-            </video>
-          </div>
-          <div className="h-8 w-[2px] bg-border/80" />
-          <div>
-            <span className="text-[10px] font-semibold tracking-[0.25em] text-primary uppercase block mb-0.5 animate-pulse">
-              Workspace Dashboard
-            </span>
-            <h1 className="text-sm sm:text-base font-black tracking-[0.15em] text-foreground/85 uppercase leading-none">
-              CONNECT. CREATE. INSPIRE.
-            </h1>
-            <p className="text-[11px] text-muted-foreground mt-1.5">{thaiDate}</p>
-          </div>
+      <section className="ops-dashboard-hero animate-stagger-1">
+        <div className="min-w-0">
+          <p className="ops-kicker">Creative operations</p>
+          <h1 className="ops-display">CONNECT. CREATE. INSPIRE.</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{thaiDate}</p>
         </div>
-        <div className="flex gap-2">
-          <div className="flex gap-1 mr-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <div className="ops-year-switcher" aria-label="Filter dashboard by year">
             {YEARS.map(y => (
               <button key={y} onClick={() => setFilterYear(y)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${filterYear === y ? "bg-foreground text-background scale-105" : "bg-muted text-muted-foreground hover:bg-secondary hover:scale-105"}`}>
+                className={filterYear === y ? "is-active" : ""} aria-pressed={filterYear === y}>
                 {y}
               </button>
             ))}
           </div>
           {unreadCount > 0 && (
-            <Link to="/notifications" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all hover:scale-105"
-              style={{ borderColor: "hsl(0 84% 60% / 0.3)", background: "hsl(0 84% 60% / 0.06)", color: "hsl(0 84% 55%)" }}>
-              <ExclamationCircleIcon className="w-4 h-4" />
+            <Link to="/notifications" className="ops-alert-link">
+              <ExclamationCircleIcon className="h-4 w-4" />
               {unreadCount} unread
             </Link>
           )}
-          <Link to="/tasks">
-            <button className="btn-primary flex items-center gap-2">
-              <PlusIcon className="w-4 h-4" /> New Task
-            </button>
+          <Link to="/tasks" className="btn-primary flex items-center gap-2">
+            <PlusIcon className="h-4 w-4" /> New Task
           </Link>
         </div>
-      </div>
+      </section>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-5 sm:mb-7 animate-stagger-2">
-        <StatCard label="Completion Rate" value={`${stats.rate}%`} sub={`${stats.completed}/${stats.total} tasks`} icon={ArrowTrendingUpIcon} gradient="bg-gradient-primary" trend={stats.rate >= 50 ? "up" : "down"} />
-        <StatCard label="Active Tasks" value={stats.inProgress} sub="In Progress" icon={ClockIcon} gradient="bg-gradient-success" trend="neutral" />
-        <StatCard label="Overdue Tasks" value={stats.overdue} sub="Past due date" icon={ExclamationCircleIcon} gradient="bg-gradient-danger" trend={stats.overdue > 0 ? "down" : "up"} trendLabel={stats.overdue > 0 ? "Needs attention" : "All on track"} />
-        <StatCard label="Team Size" value={employees.length} sub={`${filteredProjects.length} active projects`} icon={UsersIcon} gradient="bg-gradient-warning" trend="neutral" />
-        <StatCard label="Meetings" value={meetings.length + allTasks.filter(t => t.category === "meeting").length} sub="การประชุมทั้งหมด" icon={VideoCameraIcon} gradient="bg-gradient-to-br from-violet-500 to-purple-600" trend="neutral" />
-        <StatCard label="On-site Work" value={onsiteWork.length + allTasks.filter(t => t.category === "onsite").length} sub="งานออกกองทั้งหมด" icon={MapPinIcon} gradient="bg-gradient-to-br from-rose-500 to-pink-600" trend="neutral" />
-      </div>
+      {/* Operational snapshot */}
+      <section className="ops-snapshot animate-stagger-2" aria-label="Operational snapshot">
+        <div className="ops-lead-metric">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="ops-kicker">Completion rate</p>
+              <div className="mt-4 text-6xl font-bold tracking-[-0.06em] text-foreground tabular-nums sm:text-7xl">{stats.rate}%</div>
+              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+                {stats.completed} of {stats.total} tasks completed in {filterYear}.
+              </p>
+            </div>
+            <ArrowTrendingUpIcon className="h-6 w-6 text-primary" />
+          </div>
+          <div className="mt-8 h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${stats.rate}%` }} />
+          </div>
+        </div>
+        <div className="ops-metric-grid">
+          <MetricCard label="Active tasks" value={stats.inProgress} sub="Currently in progress" icon={ClockIcon} tone="info" />
+          <MetricCard label="Overdue" value={stats.overdue} sub={stats.overdue > 0 ? "Needs attention" : "All on track"} icon={ExclamationCircleIcon} tone={stats.overdue > 0 ? "danger" : "success"} />
+          <MetricCard label="Team" value={employees.length} sub={`${filteredProjects.length} active projects`} icon={UsersIcon} tone="accent" />
+          <MetricCard label="Field activity" value={meetings.length + onsiteWork.length + allTasks.filter(t => t.category === "meeting" || t.category === "onsite").length} sub="Meetings and on-site work" icon={MapPinIcon} />
+        </div>
+      </section>
 
-      {/* Team Progress — Full Width */}
+      {/* Team Progress - Full Width */}
       <div className="animate-stagger-3">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -276,13 +255,12 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground truncate">{emp.name}</div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] font-medium" style={{ color: STATUS_CONFIG.Done.color }}>✓ {emp.done}</span>
-                        <span className="text-[11px] font-medium" style={{ color: STATUS_CONFIG["In Progress"].color }}>▶ {emp.inProgress}</span>
-                        <span className="text-[11px]" style={{ color: STATUS_CONFIG["To Do"].color }}>○ {emp.todo}</span>
+                        <span className="text-[11px] font-medium" style={{ color: STATUS_CONFIG.Done.color }}>Done {emp.done}</span>
+                        <span className="text-[11px] font-medium" style={{ color: STATUS_CONFIG["In Progress"].color }}>Active {emp.inProgress}</span>
+                        <span className="text-[11px]" style={{ color: STATUS_CONFIG["To Do"].color }}>To do {emp.todo}</span>
                       </div>
                     </div>
-                    <span className="text-sm font-bold flex-shrink-0"
-                      style={{ color: emp.progress >= 70 ? "hsl(142 71% 40%)" : emp.progress >= 40 ? "hsl(225 86% 44%)" : "hsl(38 92% 45%)" }}>
+                    <span className={`text-sm font-bold flex-shrink-0 ${emp.progress >= 70 ? "text-success" : emp.progress >= 40 ? "text-info" : "text-warning-foreground"}`}>
                       {emp.progress}%
                     </span>
                   </div>
@@ -310,7 +288,7 @@ export default function Dashboard() {
                             border: `1px solid ${isActive ? (cfg?.color ?? "hsl(var(--primary))") + "50" : "transparent"}`,
                           }}
                         >
-                          {f === "All" ? `All (${count})` : `${cfg!.icon} ${f === "In Progress" ? "In Prog." : f} (${count})`}
+                          {f === "All" ? `All (${count})` : `${f === "In Progress" ? "In Prog." : f} (${count})`}
                         </button>
                       );
                     })}
@@ -351,7 +329,7 @@ export default function Dashboard() {
                             className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/60 cursor-pointer group transition-colors"
                             onClick={() => setSelectedTask(task)}
                           >
-                            <span className="text-[11px] flex-shrink-0 mt-0.5 self-start" style={{ color: cfg.color }}>{cfg.icon}</span>
+                            <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: cfg.color }} aria-hidden="true" />
                             <div className="flex-1 min-w-0 flex flex-col">
                               <span className="text-xs text-foreground truncate group-hover:text-primary transition-colors">{task.name}</span>
                               {contextName && <span className="text-[9px] text-muted-foreground truncate">{contextName}</span>}
@@ -372,7 +350,7 @@ export default function Dashboard() {
           )}
         </div>
 
-      {/* Task Status — Full Width Bottom */}
+      {/* Task Status - Full Width Bottom */}
       <div className="mt-5 bg-card rounded-2xl border border-border/50 p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
         {stats.total === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-4">No data yet</p>
@@ -415,15 +393,15 @@ export default function Dashboard() {
               </div>
               <div className="space-y-2.5">
                 {[
-                  { name: "Done", value: stats.completed, color: STATUS_CONFIG.Done.color, icon: STATUS_CONFIG.Done.icon },
-                  { name: "In Progress", value: stats.inProgress, color: STATUS_CONFIG["In Progress"].color, icon: STATUS_CONFIG["In Progress"].icon },
-                  { name: "To Do", value: stats.todo, color: STATUS_CONFIG["To Do"].color, icon: STATUS_CONFIG["To Do"].icon },
+                  { name: "Done", value: stats.completed, color: STATUS_CONFIG.Done.color },
+                  { name: "In Progress", value: stats.inProgress, color: STATUS_CONFIG["In Progress"].color },
+                  { name: "To Do", value: stats.todo, color: STATUS_CONFIG["To Do"].color },
                 ].map(d => {
                   const pct = stats.total ? Math.round((d.value / stats.total) * 100) : 0;
                   return (
                     <div key={d.name} className="flex items-center gap-3">
                       <div className="w-24 flex items-center gap-1.5 flex-shrink-0">
-                        <span className="text-[11px]" style={{ color: d.color }}>{d.icon}</span>
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: d.color }} aria-hidden="true" />
                         <span className="text-xs text-muted-foreground">{d.name}</span>
                       </div>
                       <div className="progress-bar flex-1">
@@ -492,10 +470,10 @@ export default function Dashboard() {
                   const pct = Math.round((w.active_tasks_count / maxTasks) * 100);
                   const isHeavy = w.active_tasks_count > 3;
                   const barColor = isHeavy
-                    ? "hsl(0 84% 60%)"
+                    ? "hsl(var(--destructive))"
                     : w.active_tasks_count > 0
-                    ? "hsl(225 86% 44%)"
-                    : "hsl(215 14% 60%)";
+                    ? "hsl(var(--info))"
+                    : "hsl(var(--status-todo))";
                   return (
                     <div key={w.employee_id} className="flex items-center gap-3">
                       <div className="w-28 sm:w-36 text-xs text-foreground truncate flex-shrink-0 font-medium">
@@ -517,7 +495,7 @@ export default function Dashboard() {
                         <span className="text-[10px] text-muted-foreground">tasks</span>
                         {isHeavy && (
                           <span className="text-[9px] font-semibold px-1 py-0.5 rounded"
-                            style={{ background: "hsl(0 84% 60% / 0.12)", color: "hsl(0 84% 55%)" }}>
+                            style={{ background: "hsl(0 84% 60% / 0.12)", color: "hsl(var(--destructive))" }}>
                             HEAVY
                           </span>
                         )}
@@ -590,8 +568,8 @@ export default function Dashboard() {
                   <span
                     className="text-[10px] px-1.5 py-0.5 rounded-md flex-shrink-0"
                     style={{
-                      background: "hsl(215 20% 45% / 0.12)",
-                      color: "hsl(215 20% 65%)",
+                      background: "hsl(var(--muted))",
+                      color: "hsl(var(--muted-foreground))",
                     }}
                   >
                     {page.category}
