@@ -33,6 +33,11 @@
     --input: 32 16% 79%;
     --ring: 267 44% 44%;
     --radius: 0.75rem;
+    --motion-ambient-xl: 10s;
+    --motion-ambient-lg: 9s;
+    --motion-ambient-md: 8s;
+    --motion-ambient-sm: 7s;
+    --motion-ambient-xs: 6s;
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 37 24% 76%;
     --sidebar-primary: 70 100% 49%;
