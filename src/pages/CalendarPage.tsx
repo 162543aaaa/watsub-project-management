@@ -15,6 +15,7 @@ import { useOnsiteWork, type OnsiteWork } from "@/hooks/useOnsiteWork";
 import { useHolidays } from "@/hooks/useHolidays";
 import { useLeave } from "@/hooks/useLeave";
 import { toast } from "@/hooks/use-toast";
+import { DEFAULT_CALENDAR_VISIBILITY, filterVisibleCalendarItems, hasHiddenCalendarTypes, type CalendarVisibilityType } from "@/lib/calendarVisibility";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type TaskStatus = "To Do" | "In Progress" | "Done";
-type CalendarItemType = "task" | "meeting" | "onsite" | "holiday" | "leave";
+type CalendarItemType = CalendarVisibilityType;
 type TaskSource = "standalone" | "project" | "customer";
 
 interface CalendarItem {
@@ -65,6 +66,7 @@ function getFirstDayOfMonth(year: number, month: number) {
 }
 
 const getItemStyle = (item: CalendarItem) => {
+  if (item.type === "project") return "bg-secondary/40 text-foreground";
   if (item.type === "holiday") return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
   if (item.type === "meeting") return "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400";
   if (item.type === "onsite") return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
@@ -77,6 +79,7 @@ const getItemStyle = (item: CalendarItem) => {
 };
 
 const getItemIcon = (item: CalendarItem) => {
+  if (item.type === "project") return "[P] ";
   if (item.type === "holiday") return "🎉 ";
   if (item.type === "meeting" || item.category === "meeting") return "🗓 ";
   if (item.type === "onsite" || item.category === "onsite") return "📍 ";
@@ -89,7 +92,7 @@ function DraggableItem({ item, onClick, onDoubleClick }: { item: CalendarItem; o
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `${item.type}-${item.id}`,
     data: item,
-    disabled: item.type === "holiday",
+    disabled: item.type === "holiday" || item.type === "project",
   });
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -113,7 +116,7 @@ function DraggableItem({ item, onClick, onDoubleClick }: { item: CalendarItem; o
         touchAction: "none",
       }}
       title={item.name}
-      className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${item.type !== "holiday" ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} hover:brightness-95 transition-all ${getItemStyle(item)}`}
+      className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${!(["holiday", "project"] as CalendarItemType[]).includes(item.type) ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} hover:brightness-95 transition-all ${getItemStyle(item)}`}
     >
       {getItemIcon(item)}{item.name}
     </div>
@@ -148,7 +151,7 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getItemStyle(item)}`}>
-              {item.type === "holiday" ? "🎉 วันหยุด" : item.type === "meeting" ? "🗓 Meeting" : item.type === "onsite" ? "📍 On-site" : item.type === "leave" ? `🌴 ลา${item.leaveType || ""}` : item.status || "Task"}
+              {item.type === "project" ? "Project deadline" : item.type === "holiday" ? "🎉 วันหยุด" : item.type === "meeting" ? "🗓 Meeting" : item.type === "onsite" ? "📍 On-site" : item.type === "leave" ? `🌴 ลา${item.leaveType || ""}` : item.status || "Task"}
             </span>
             {item.holidayType && (
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
@@ -746,7 +749,7 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
 export default function CalendarPage() {
   const today = new Date();
   const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [filterCategory, setFilterCategory] = useState<"all" | "meeting" | "onsite" | "holiday" | "leave">("all");
+  const [visibleTypes, setVisibleTypes] = useState<Record<CalendarItemType, boolean>>(() => ({ ...DEFAULT_CALENDAR_VISIBILITY }));
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [selectedDay, setSelectedDay] = useState<{ dateStr: string; items: CalendarItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -797,6 +800,15 @@ export default function CalendarPage() {
         start_date: t.start_date,
       }))
     );
+    const projectItems = projects.filter(p => p.deadline).map(p => ({
+      id: p.id,
+      name: `${p.name} deadline`,
+      type: "project" as const,
+      date: p.deadline!,
+      sourceName: p.name,
+      note: p.note || null,
+      link: p.link,
+    }));
     const meetingItems = meetings.map(m => ({
       id: m.id, name: m.title, type: "meeting" as const, date: m.meeting_date,
       startTime: m.start_time, endTime: m.end_time, location: m.location,
@@ -853,24 +865,17 @@ export default function CalendarPage() {
         current.setDate(current.getDate() + 1);
       }
     });
-    return [...standalone, ...projectTasks, ...customerTasks, ...meetingItems, ...onsiteItems, ...holidayItems, ...leaveItems];
+    return [...standalone, ...projectTasks, ...customerTasks, ...projectItems, ...meetingItems, ...onsiteItems, ...holidayItems, ...leaveItems];
   }, [standaloneTasks, projects, customers, meetings, onsiteWork, holidays, leaves]);
 
   /* ── Filter ── */
-  const hasActiveFilters = filterCategory !== "all";
-
-  const filteredItems = useMemo(() => {
-    if (filterCategory === "all") {
-      return allItems.filter(i => i.type !== "meeting" && i.type !== "onsite" && i.category !== "meeting" && i.category !== "onsite");
-    }
-    if (filterCategory === "meeting") return allItems.filter(i => i.type === "meeting" || (i.type === "task" && i.category === "meeting"));
-    if (filterCategory === "onsite") return allItems.filter(i => i.type === "onsite" || (i.type === "task" && i.category === "onsite"));
-    if (filterCategory === "holiday") return allItems.filter(i => i.type === "holiday");
-    if (filterCategory === "leave") return allItems.filter(i => i.type === "leave");
-    return allItems;
-  }, [allItems, filterCategory]);
-
-  const resetFilters = () => setFilterCategory("all");
+  const hasActiveFilters = hasHiddenCalendarTypes(visibleTypes);
+  const filteredItems = useMemo(
+    () => filterVisibleCalendarItems(allItems, visibleTypes),
+    [allItems, visibleTypes],
+  );
+  const resetFilters = () => setVisibleTypes({ ...DEFAULT_CALENDAR_VISIBILITY });
+  const toggleType = (type: CalendarItemType) => setVisibleTypes(prev => ({ ...prev, [type]: !prev[type] }));
 
   /* ── Calendar helpers ── */
   const daysInMonth = getDaysInMonth(current.year, current.month);
@@ -897,7 +902,7 @@ export default function CalendarPage() {
     if (!over) return;
 
     const item = findItemByDndId(active.id as string);
-    if (!item || item.type === "holiday") return;
+    if (!item || item.type === "holiday" || item.type === "project") return;
 
     const newDate = over.id as string;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return;
@@ -1048,9 +1053,17 @@ export default function CalendarPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2 mb-4 animate-stagger-2">
-        {(["all", "meeting", "onsite", "holiday", "leave"] as const).map(v => (
-          <button key={v} onClick={() => setFilterCategory(v)} className={chipClass(filterCategory === v)}>
-            {v === "all" ? "ทั้งหมด" : v === "meeting" ? "🗓 Meetings" : v === "onsite" ? "📍 On-site Work" : v === "holiday" ? "🎉 วันหยุด" : "🌴 การลา"}
+        <button onClick={resetFilters} className={chipClass(!hasActiveFilters)}>All</button>
+        {([
+          ["task", "Tasks"],
+          ["project", "Projects"],
+          ["meeting", "Meetings"],
+          ["onsite", "On-site"],
+          ["leave", "Leave"],
+          ["holiday", "Holidays"],
+        ] as const).map(([type, label]) => (
+          <button key={type} onClick={() => toggleType(type)} className={chipClass(visibleTypes[type])} aria-pressed={visibleTypes[type]}>
+            {label}
           </button>
         ))}
         {hasActiveFilters && (

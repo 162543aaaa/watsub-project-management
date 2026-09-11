@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
 import { Task } from "./useProjects";
-import { logAudit, getCurrentUserId, taskUpdateAction } from "@/lib/auditLog";
+import { logAudit, getCurrentUserId } from "@/lib/auditLog";
 
 function isMissingArchivedColumnError(error: { message?: string } | null): boolean {
   if (!error?.message) return false;
@@ -180,7 +180,6 @@ export function useCustomers(filterType: "active" | "archived" | "all" = "active
   };
 
   const addTask = async (task: Omit<Task, "id" | "created_at">) => {
-    const userId = await getCurrentUserId();
     const { data, error } = await supabase.from("tasks").insert(task).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
     setCustomers(prev => prev.map(c =>
@@ -188,23 +187,10 @@ export function useCustomers(filterType: "active" | "archived" | "all" = "active
     ));
     void autoSyncToGoogleSheets("tasks", data);
     toast({ title: "เพิ่มงานสำเร็จ!" });
-    await logAudit({
-      userId,
-      action: "created",
-      entityType: "task",
-      entityId: (data as Task).id,
-      newValues: data as Record<string, unknown>,
-    });
     return data;
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
-    const userId = await getCurrentUserId();
-    let currentTask: Task | undefined;
-    for (const c of customers) {
-      const t = c.tasks.find(x => x.id === id);
-      if (t) { currentTask = t; break; }
-    }
     const { data, error } = await supabase.from("tasks").update(updates).eq("id", id).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setCustomers(prev => prev.map(c => ({
@@ -212,20 +198,10 @@ export function useCustomers(filterType: "active" | "archived" | "all" = "active
       tasks: c.tasks.map(t => t.id === id ? data as Task : t)
     })));
     void autoSyncToGoogleSheets("tasks", data);
-    await logAudit({
-      userId,
-      action: taskUpdateAction(currentTask?.status, updates.status),
-      entityType: "task",
-      entityId: id,
-      oldValues: currentTask as unknown as Record<string, unknown>,
-      newValues: updates as Record<string, unknown>,
-    });
     return data as Task;
   };
 
   const deleteTask = async (id: string, customerId: string) => {
-    const userId = await getCurrentUserId();
-    const currentTask = customers.find(c => c.id === customerId)?.tasks.find(t => t.id === id);
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     void autoSyncToGoogleSheets("tasks", { id }, "delete");
@@ -233,13 +209,6 @@ export function useCustomers(filterType: "active" | "archived" | "all" = "active
       c.id === customerId ? { ...c, tasks: c.tasks.filter(t => t.id !== id) } : c
     ));
     toast({ title: "ลบงานสำเร็จ!" });
-    await logAudit({
-      userId,
-      action: "deleted",
-      entityType: "task",
-      entityId: id,
-      oldValues: currentTask as unknown as Record<string, unknown>,
-    });
   };
 
   // Persist reordered customers — assigns new sort_order values and updates local state immediately

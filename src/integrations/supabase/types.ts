@@ -742,6 +742,7 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
+          deadline: string | null
           embedding: string | null
           id: string
           is_archived: boolean
@@ -752,11 +753,13 @@ export type Database = {
           note: string | null
           pillar: string
           sort_order: number | null
+          start_date: string | null
           updated_at: string
           year: number
         }
         Insert: {
           created_at?: string
+          deadline?: string | null
           embedding?: string | null
           id?: string
           is_archived?: boolean
@@ -767,11 +770,13 @@ export type Database = {
           note?: string | null
           pillar?: string
           sort_order?: number | null
+          start_date?: string | null
           updated_at?: string
           year?: number
         }
         Update: {
           created_at?: string
+          deadline?: string | null
           embedding?: string | null
           id?: string
           is_archived?: boolean
@@ -782,6 +787,7 @@ export type Database = {
           note?: string | null
           pillar?: string
           sort_order?: number | null
+          start_date?: string | null
           updated_at?: string
           year?: number
         }
