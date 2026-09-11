@@ -69,12 +69,12 @@ export default function Signup() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/10 to-background p-4 relative overflow-hidden">
         {/* Glow Effects */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse duration-[8000ms]" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse duration-[6000ms]" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-md)]" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-xs)]" />
 
         <div className="w-full max-w-md bg-card/60 backdrop-blur-xl rounded-2xl border border-border/80 p-8 text-center shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-500">
-          <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <CheckCircleIcon className="w-8 h-8 text-green-500" />
+          <div className="w-16 h-16 rounded-2xl bg-success/10 border border-success/20 flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <CheckCircleIcon className="w-8 h-8 text-success" />
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-3">สมัครสมาชิกสำเร็จ!</h2>
           <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
@@ -95,14 +95,14 @@ export default function Signup() {
   return (
     <div className="min-h-screen grid lg:grid-cols-12 bg-transparent relative overflow-hidden font-sans">
       {/* Background Animated Blurs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-3xl animate-pulse duration-[10000ms]" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/15 rounded-full blur-3xl animate-pulse duration-[8000ms]" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-xl)]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/15 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-md)]" />
 
       {/* Left Column: Premium Branding Panel */}
       <div className="hidden lg:flex lg:col-span-5 relative bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-12 flex-col justify-between overflow-hidden border-r border-border/10">
         {/* Visual Gradients */}
-        <div className="absolute top-1/4 right-0 w-80 h-80 bg-primary/20 rounded-full blur-3xl animate-pulse duration-[7000ms]" />
-        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse duration-[9000ms]" />
+        <div className="absolute top-1/4 right-0 w-80 h-80 bg-primary/20 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-sm)]" />
+        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-lg)]" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
 
         <div className="relative z-10 flex items-center gap-3">

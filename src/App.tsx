@@ -3,43 +3,45 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import FlowingRibbons from "@/components/FlowingRibbons";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "./components/Layout";
-import Dashboard from "./pages/Dashboard";
-import Tasks from "./pages/Tasks";
-import Projects from "./pages/Projects";
-import Customers from "./pages/Customers";
-import CalendarPage from "./pages/CalendarPage";
-import OKRs from "./pages/OKRs";
-import Team from "./pages/Team";
-import Leave from "./pages/Leave";
-import Meetings from "./pages/Meetings";
-import OnsiteWorkPage from "./pages/OnsiteWork";
-import Budget from "./pages/Budget";
-import Reports from "./pages/Reports";
-import Notifications from "./pages/Notifications";
-import ImportExport from "./pages/ImportExport";
-import { Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import WaitingApproval from "./pages/WaitingApproval";
-import AdminPanel from "./pages/AdminPanel";
-import KpiOverview from "./pages/kpi/KpiOverview";
-import KpiEvaluate from "./pages/kpi/KpiEvaluate";
-import KpiReport from "./pages/kpi/KpiReport";
-import KpiAdmin from "./pages/kpi/KpiAdmin";
-import KpiDashboard from "./pages/kpi/KpiDashboard";
-import KpiPeriodSummary from "./pages/kpi/KpiPeriodSummary";
-import Wiki from "./pages/Wiki";
-import WikiArticle from "./pages/WikiArticle";
-import Workload from "./pages/Workload";
-import Organization from "./pages/Organization";
-import NotFound from "./pages/NotFound";
-import MyWork from "./pages/MyWork";
-import ManagerDashboard from "./pages/ManagerDashboard";
+import LoadingScreen from "@/components/LoadingScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Projects = lazy(() => import("./pages/Projects"));
+const Customers = lazy(() => import("./pages/Customers"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
+const OKRs = lazy(() => import("./pages/OKRs"));
+const Team = lazy(() => import("./pages/Team"));
+const Leave = lazy(() => import("./pages/Leave"));
+const Meetings = lazy(() => import("./pages/Meetings"));
+const OnsiteWorkPage = lazy(() => import("./pages/OnsiteWork"));
+const Budget = lazy(() => import("./pages/Budget"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const ImportExport = lazy(() => import("./pages/ImportExport"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const WaitingApproval = lazy(() => import("./pages/WaitingApproval"));
+const AdminPanel = lazy(() => import("./pages/AdminPanel"));
+const KpiOverview = lazy(() => import("./pages/kpi/KpiOverview"));
+const KpiEvaluate = lazy(() => import("./pages/kpi/KpiEvaluate"));
+const KpiReport = lazy(() => import("./pages/kpi/KpiReport"));
+const KpiAdmin = lazy(() => import("./pages/kpi/KpiAdmin"));
+const KpiDashboard = lazy(() => import("./pages/kpi/KpiDashboard"));
+const KpiPeriodSummary = lazy(() => import("./pages/kpi/KpiPeriodSummary"));
+const Wiki = lazy(() => import("./pages/Wiki"));
+const WikiArticle = lazy(() => import("./pages/WikiArticle"));
+const Workload = lazy(() => import("./pages/Workload"));
+const Organization = lazy(() => import("./pages/Organization"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const MyWork = lazy(() => import("./pages/MyWork"));
+const ManagerDashboard = lazy(() => import("./pages/ManagerDashboard"));
 
 // staleTime prevents refetchOnWindowFocus from hitting the network when the
 // user quickly switches tabs — data fetched within the last 5 minutes is
@@ -63,7 +65,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -104,7 +107,8 @@ const App = () => (
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
-          </Routes>
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
