@@ -1,5 +1,4 @@
 import {
-  ArrowTopRightOnSquareIcon,
   BookOpenIcon,
   BuildingOffice2Icon,
   ClockIcon,
@@ -25,7 +24,6 @@ import {
   projectFolderStandard,
   studioDna,
   teamLayers,
-  vaultSources,
 } from "@/data/organizationVault";
 
 function SectionHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description?: string }) {
@@ -150,7 +148,7 @@ export default function Organization() {
         <SectionHeading
           eyebrow="Team Structure"
           title="A small core with an expandable specialist network"
-          description="โครงสร้างทีมตาม Knowledge Vault แบ่งบทบาทเป็น Leadership, Core Operations และ Specialist Network เพื่อให้ทีมเล็กเคลื่อนตัวได้เร็วและขยายกำลังตามโปรเจกต์"
+          description="โครงสร้างทีมตาม Knowledge Vault แบ่งบทบาทเป็น Leadership & Strategic Advisory, Core Operations และ Specialist Network เพื่อให้ทีมเล็กเคลื่อนตัวได้เร็วและขยายกำลังตามโปรเจกต์"
         />
         <div className="grid gap-4 xl:grid-cols-3">
           {teamLayers.map((layer, layerIndex) => (
@@ -177,44 +175,43 @@ export default function Organization() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-        <div className="space-y-4">
+      <section className="grid gap-x-6 gap-y-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <div className="order-1">
           <SectionHeading eyebrow="Operating Rhythm" title="How the studio moves through a working day" />
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <div className="space-y-0">
-              {operatingRhythm.map((item, index) => (
-                <div key={item.step} className="grid grid-cols-[72px_minmax(0,1fr)] gap-4">
-                  <div className="relative pb-6 text-xs font-black text-primary">
-                    {item.step}
-                    {index < operatingRhythm.length - 1 && <span className="absolute left-0 top-6 h-[calc(100%-1.1rem)] w-px bg-border" />}
-                  </div>
-                  <div className="pb-6">
-                    <h3 className="text-sm font-bold text-foreground">{item.title}</h3>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
-                  </div>
+        </div>
+        <div className="order-3 xl:order-2">
+          <SectionHeading eyebrow="Delivery Discipline" title="Deadline countdown" />
+        </div>
+        <div className="order-2 h-full rounded-2xl border border-border bg-card p-5 sm:p-6 xl:order-3">
+          <div className="space-y-0">
+            {operatingRhythm.map((item, index) => (
+              <div key={item.step} className="grid grid-cols-[72px_minmax(0,1fr)] gap-4">
+                <div className="relative pb-6 text-xs font-black text-primary">
+                  {item.step}
+                  {index < operatingRhythm.length - 1 && <span className="absolute left-0 top-6 h-[calc(100%-1.1rem)] w-px bg-border" />}
                 </div>
-              ))}
-            </div>
+                <div className="pb-6">
+                  <h3 className="text-sm font-bold text-foreground">{item.title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="space-y-4">
-          <SectionHeading eyebrow="Delivery Discipline" title="Deadline countdown" />
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <div className="space-y-3">
-              {deliveryCountdown.map((item) => (
-                <div key={item.day} className="grid grid-cols-[54px_minmax(0,1fr)] gap-3 rounded-xl bg-muted/30 p-3">
-                  <span className="text-sm font-black text-primary">{item.day}</span>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">{item.action}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
-                  </div>
+        <div className="order-4 h-full rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="space-y-3">
+            {deliveryCountdown.map((item) => (
+              <div key={item.day} className="grid grid-cols-[54px_minmax(0,1fr)] gap-3 rounded-xl bg-muted/30 p-3">
+                <span className="text-sm font-black text-primary">{item.day}</span>
+                <div>
+                  <p className="text-sm font-bold text-foreground">{item.action}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
-
       <section className="space-y-4">
         <SectionHeading
           eyebrow="Ground Rules"
@@ -320,30 +317,6 @@ export default function Organization() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Knowledge source</p>
-            <h2 className="mt-2 text-lg font-bold text-foreground">Built from the WatSUB Obsidian Vault</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              หน้านี้สร้างใหม่จากข้อมูลใน M:\Obsidian\TARMISI WANI โดยคัดจาก entity, brand guideline, SOP, content architecture, drive architecture และ operating-system synthesis ของ WatSUB
-            </p>
-          </div>
-          <Link
-            to="/wiki?category=Organization"
-            className="inline-flex flex-shrink-0 items-center gap-2 text-sm font-semibold text-primary hover:underline"
-          >
-            Explore Organization Wiki <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-          </Link>
-        </div>
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {vaultSources.map((source) => (
-            <code key={source} className="truncate rounded-lg border border-border bg-card px-3 py-2 text-[10px] text-muted-foreground" title={source}>
-              {source}
-            </code>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }

@@ -70,16 +70,16 @@ export const brandVoice = [
 
 export const teamLayers = [
   {
-    title: "Leadership & Creative Direction",
+    title: "Leadership & Strategic Advisory",
     members: [
-      { name: "Tarmisi Wani (คุณต้า)", role: "Founding Partner & Creative Lead" },
+      { name: "Tarmisi Wani", role: "Founding Partner & Creative Lead" },
+      { name: "นครา ยะโกะ", role: "Business Strategy Advisor" },
+      { name: "สุกรี เจะปูเตะ", role: "Funding Strategy Advisor" },
     ],
   },
   {
-    title: "Strategic Advisory & Core Operations",
+    title: "Core Operations",
     members: [
-      { name: "นครา ยะโกะ", role: "Business Strategy Advisor" },
-      { name: "สุกรี เจะปูเตะ", role: "Funding Strategy Advisor" },
       { name: "สุไมยนา หวังเบ็ญหมัด", role: "Content Strategist & Client Coordinator" },
       { name: "ฮาฟีซ ดอเลาะ", role: "Videographer & Graphic Designer" },
     ],
@@ -137,15 +137,4 @@ export const digitalOperatingSystem = [
   { title: "Workload & KPI", detail: "Resource balancing, team workload and performance review workflows" },
   { title: "Company Wiki", detail: "Internal knowledge, handbook, systems and reusable studio references" },
   { title: "Creative Knowledge Engine", detail: "เปลี่ยนประสบการณ์ งานทดลอง และวิธีทำงานให้เป็นความรู้ที่ทีมและ AI นำกลับมาใช้ซ้ำได้" },
-];
-
-export const vaultSources = [
-  "wiki/entities/WatSUB! Studio.md",
-  "raw/WatSUB_Brand_Guidelines_and_Content_Pillars_2026.md",
-  "raw/ops_internal/WatSUB_Daily_Flow_SOP.md",
-  "wiki/concepts/WatSUB Content Pillars.md",
-  "wiki/concepts/WatSUB Drive & Folder Architecture.md",
-  "wiki/concepts/WatSUB Digital Operating Infrastructure.md",
-  "wiki/synthesis/WatSUB Creative Operating System.md",
-  "wiki/synthesis/WatSUB Studio Operational Blueprint.md",
 ];
