@@ -281,7 +281,7 @@ export default function OKRs() {
         <div className="text-center py-16">
           <FlagIcon className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-muted-foreground">No OKRs found for {filterYear}{filterQuarter !== "All" ? ` ${filterQuarter}` : ""}</p>
-          <button onClick={openAddObj} className="mt-3 text-sm text-primary hover:underline">+ Add your first Objective</button>
+          <button onClick={openAddObj} className="mt-3 text-sm text-primary-readable hover:underline">+ Add your first Objective</button>
         </div>
       )}
 
@@ -296,9 +296,9 @@ export default function OKRs() {
           return (
             <div key={obj.id} className={`bg-card rounded-2xl border border-border/60 overflow-hidden card-hover animate-stagger-${Math.min(i + 1, 5)}`}>
               {/* Objective Header */}
-              <div className="p-5 cursor-pointer group" onClick={() => toggle(obj.id)}>
+              <div className="p-5 group">
                 <div className="flex items-start gap-3">
-                  <button className="mt-0.5 flex-shrink-0 text-muted-foreground">
+                  <button type="button" onClick={() => toggle(obj.id)} aria-expanded={isExpanded} aria-label={`${isExpanded ? "Collapse" : "Expand"} ${obj.title}`} className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
                     {isExpanded ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
                   </button>
                   <div className="flex-1 min-w-0">
@@ -326,7 +326,7 @@ export default function OKRs() {
                         <>
                           <div className="flex items-center gap-3">
                             <Progress value={pct} className="h-2 flex-1" />
-                            <span className={`text-xs font-bold w-12 text-right ${pct >= 100 ? "text-emerald-600" : "text-primary"}`}>{pct}%</span>
+                            <span className={`text-xs font-bold w-12 text-right ${pct >= 100 ? "text-emerald-600" : "text-primary-readable"}`}>{pct}%</span>
                             {conf && (
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${
                                 conf.isAtRisk
@@ -341,11 +341,11 @@ export default function OKRs() {
                       );
                     })()}
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => openEditObj(obj)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex-shrink-0">
+                    <button type="button" onClick={() => openEditObj(obj)} aria-label={`Edit objective ${obj.title}`} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
                       <PencilIcon className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => setConfirmDeleteObj(obj.id)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-500 transition-colors">
+                    <button type="button" onClick={() => setConfirmDeleteObj(obj.id)} aria-label={`Delete objective ${obj.title}`} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-500 transition-colors">
                       <TrashIcon className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -369,7 +369,7 @@ export default function OKRs() {
                             <span className="text-xs font-medium text-foreground truncate">{kr.title}</span>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <span className="text-[11px] text-muted-foreground">{kr.current_value} / {kr.target_value} {kr.unit}</span>
-                              <span className={`text-[11px] font-bold ${krPct >= 100 ? "text-emerald-600" : "text-primary"}`}>{krPct}%</span>
+                              <span className={`text-[11px] font-bold ${krPct >= 100 ? "text-emerald-600" : "text-primary-readable"}`}>{krPct}%</span>
                             </div>
                           </div>
                           <Progress value={krPct} className="h-1.5" />
@@ -399,7 +399,7 @@ export default function OKRs() {
                     );
                   })}
                   <div className="px-12 py-3">
-                    <button onClick={() => openAddKR(obj.id)} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                    <button onClick={() => openAddKR(obj.id)} className="flex items-center gap-1.5 text-xs text-primary-readable hover:text-primary-readable/80 font-medium transition-colors">
                       <PlusIcon className="w-3.5 h-3.5" /> Add Key Result
                     </button>
                   </div>

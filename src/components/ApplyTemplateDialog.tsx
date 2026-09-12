@@ -55,7 +55,7 @@ export default function ApplyTemplateDialog({
       <div className="relative w-full max-w-lg bg-card rounded-2xl border border-border flex flex-col" style={{ maxHeight: "90vh" }}>
         <div className="flex items-center justify-between p-6 pb-4 shrink-0">
           <h3 className="text-lg font-bold flex items-center gap-2">
-            <SparklesIcon className="w-4 h-4 text-primary" /> Apply Task Template
+            <SparklesIcon className="w-4 h-4 text-primary-readable" /> Apply Task Template
           </h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted">
             <XMarkIcon className="w-4 h-4" />

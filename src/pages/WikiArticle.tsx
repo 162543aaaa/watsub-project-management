@@ -148,7 +148,7 @@ export default function WikiArticle() {
         <article className="prose prose-invert prose-sm max-w-none
           prose-headings:font-bold prose-headings:text-foreground
           prose-p:text-foreground/80 prose-p:leading-relaxed
-          prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+          prose-a:text-primary-readable prose-a:no-underline hover:prose-a:underline
           prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono
           prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-xl
           prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground

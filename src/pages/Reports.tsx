@@ -309,7 +309,7 @@ export default function Reports() {
                       <div className="text-sm font-medium text-foreground truncate">{emp.name}</div>
                       <div className="text-xs text-muted-foreground">{emp.done}/{emp.total} tasks done</div>
                     </div>
-                    <span className="text-sm font-bold text-primary">{emp.pct}%</span>
+                    <span className="text-sm font-bold text-primary-readable">{emp.pct}%</span>
                   </div>
                   <div className="progress-bar ml-7"><div className="progress-fill" style={{ width: `${emp.pct}%` }} /></div>
                 </div>
@@ -321,7 +321,7 @@ export default function Reports() {
         {/* Task Distribution */}
         <div className="bg-card rounded-2xl border border-border/60 p-5 animate-stagger-5" style={{ boxShadow: "var(--shadow-sm)" }}>
           <div className="flex items-center gap-2 mb-4">
-            <ArrowTrendingUpIcon className="w-5 h-5 text-primary" />
+            <ArrowTrendingUpIcon className="w-5 h-5 text-primary-readable" />
             <h2 className="font-bold text-foreground">Task Distribution</h2>
           </div>
           <div className="space-y-4">
@@ -395,7 +395,7 @@ export default function Reports() {
                   {t.link && (
                     <div className="flex gap-2">
                       <span className="text-muted-foreground w-20 flex-shrink-0">Link:</span>
-                      <a href={t.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 truncate">
+                      <a href={t.link} target="_blank" rel="noopener noreferrer" className="text-primary-readable hover:underline flex items-center gap-1 truncate">
                         <ArrowTopRightOnSquareIcon className="w-3 h-3" /> {t.link.length > 50 ? t.link.slice(0, 50) + "..." : t.link}
                       </a>
                     </div>
@@ -409,7 +409,7 @@ export default function Reports() {
           )}
           {overdueTasks.length > 5 && (
             <button onClick={() => setShowAllOverdue(!showAllOverdue)}
-              className="w-full text-center text-xs text-primary hover:text-primary/80 font-medium py-2 transition-colors">
+              className="w-full text-center text-xs text-primary-readable hover:text-primary-readable/80 font-medium py-2 transition-colors">
               {showAllOverdue ? "Show less" : `Show all ${overdueTasks.length} overdue tasks`}
             </button>
           )}

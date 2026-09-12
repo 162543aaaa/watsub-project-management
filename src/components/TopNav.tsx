@@ -105,8 +105,8 @@ export default function TopNav() {
   return (
     <>
       <header className="app-topnav">
-        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline-none">
-          <img src="/logo_watsub.png" alt="WatSUB" className="h-8 w-8 flex-shrink-0 object-contain" />
+        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-lg" aria-label="WatSUB Studio OS home">
+          <img src="/logo_watsub-192.webp" alt="WatSUB" className="h-8 w-8 flex-shrink-0 object-contain" />
           <div className="hidden min-w-0 sm:block">
             <div className="truncate text-sm font-bold tracking-tight text-sidebar-accent-foreground">WatSUB</div>
             <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground">Studio OS</div>
@@ -130,7 +130,7 @@ export default function TopNav() {
               onClick={() => setMoreOpen((open) => !open)}
               className={`top-nav-item ${moreActive || moreOpen ? "top-nav-item-active" : ""}`}
               aria-expanded={moreOpen}
-              aria-haspopup="menu"
+              aria-controls="more-navigation"
             >
               <Bars3Icon className="h-4 w-4" />
               <span>More</span>
@@ -139,7 +139,7 @@ export default function TopNav() {
             </button>
 
             {moreOpen && (
-              <div className="top-nav-panel" role="menu">
+              <div id="more-navigation" className="top-nav-panel" aria-label="More navigation">
                 {moreGroups.map((group) => (
                   <div key={group.label} className="min-w-0">
                     <p className="top-nav-group-label">{group.label}</p>

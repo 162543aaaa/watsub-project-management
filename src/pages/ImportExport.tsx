@@ -13,7 +13,7 @@ export default function ImportExport() {
           onClick={() => setTab("import")}
           className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${
             tab === "import"
-              ? "bg-primary/10 text-primary border border-primary/20"
+              ? "bg-primary/10 text-primary-readable border border-primary/20"
               : "hover:bg-muted text-muted-foreground border border-transparent"
           }`}
         >
@@ -23,7 +23,7 @@ export default function ImportExport() {
           onClick={() => setTab("export")}
           className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${
             tab === "export"
-              ? "bg-primary/10 text-primary border border-primary/20"
+              ? "bg-primary/10 text-primary-readable border border-primary/20"
               : "hover:bg-muted text-muted-foreground border border-transparent"
           }`}
         >

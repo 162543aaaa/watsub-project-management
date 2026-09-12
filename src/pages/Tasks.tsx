@@ -759,7 +759,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
           </span>
           <button
             onClick={(e) => { e.stopPropagation(); onNavigate(); }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[10px] text-primary font-medium hover:underline"
+            className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[10px] text-primary-readable font-medium hover:underline"
             title={`Go to ${task._source === "project" ? "Projects" : "Customers"}`}
           >
             View <ArrowUpRightIcon className="w-2.5 h-2.5" />
@@ -772,7 +772,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
           {task.link && (
             <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
               className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-              <ArrowTopRightOnSquareIcon className="w-3 h-3 text-primary" />
+              <ArrowTopRightOnSquareIcon className="w-3 h-3 text-primary-readable" />
             </a>
           )}
           <button onClick={(e) => { e.stopPropagation(); onEdit(); }}
@@ -788,7 +788,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
       {/* Link preview */}
       {task.link && (
         <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-          className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary mb-1.5 truncate max-w-full transition-colors">
+          className="flex items-center gap-1 text-[10px] text-primary-readable/70 hover:text-primary-readable mb-1.5 truncate max-w-full transition-colors">
           <ArrowTopRightOnSquareIcon className="w-2.5 h-2.5 flex-shrink-0" />
           <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
         </a>

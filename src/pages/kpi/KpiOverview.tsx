@@ -22,7 +22,7 @@ function Avatar({ emp }: { emp: Employee }) {
     <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
       {url
         ? <img src={url} alt={emp.name} className="w-full h-full object-cover" />
-        : <span className="text-xs font-bold text-primary">{emp.name.charAt(0)}</span>}
+        : <span className="text-xs font-bold text-primary-readable">{emp.name.charAt(0)}</span>}
     </div>
   );
 }
@@ -161,7 +161,7 @@ export default function KpiOverview() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <ArrowTrendingUpIcon className="w-5 h-5 text-primary" />
+            <ArrowTrendingUpIcon className="w-5 h-5 text-primary-readable" />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold">KPI Overview</h1>

@@ -1,290 +1,120 @@
-'use client';
-
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from "react";
 
 interface FlowingRibbonsProps {
   backgroundColor?: string;
   lineColor?: string;
   animationSpeed?: number;
-  removeWaveLine?: boolean;
   className?: string;
 }
 
-const FlowingRibbons = ({
-  backgroundColor = 'transparent',
-  lineColor = 'rgba(15, 23, 42, 0.08)', // Beautiful subtle slate-900 lines for elegant light theme!
+export default function FlowingRibbons({
+  backgroundColor = "transparent",
+  lineColor = "rgba(15, 23, 42, 0.08)",
   animationSpeed = 0.3,
-  removeWaveLine = true,
-  className = 'fixed inset-0 w-full h-full -z-10 overflow-hidden pointer-events-none',
-}: FlowingRibbonsProps) => {
+  className = "fixed inset-0 -z-10 h-full w-full overflow-hidden pointer-events-none",
+}: FlowingRibbonsProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timeRef = useRef<number>(0);
-  const animationFrameId = useRef<number | null>(null);
-  const mouseRef = useRef({ x: -1000, y: -1000, isDown: false });
-  const waveDisturbances = useRef<
-    Array<{ x: number; y: number; time: number; intensity: number }>
-  >([]);
-  const dprRef = useRef<number>(1);
-
-  const getMouseInfluence = (x: number, y: number): number => {
-    const dx = x - mouseRef.current.x;
-    const dy = y - mouseRef.current.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = 200;
-    return Math.max(0, 1 - distance / maxDistance);
-  };
-
-  const getWaveDisturbance = (
-    x: number,
-    y: number,
-    currentTime: number
-  ): number => {
-    let totalDisturbance = 0;
-
-    waveDisturbances.current.forEach((disturbance) => {
-      const age = currentTime - disturbance.time;
-      const maxAge = 3000;
-      if (age < maxAge) {
-        const dx = x - disturbance.x;
-        const dy = y - disturbance.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const waveRadius = (age / maxAge) * 400;
-        const waveWidth = 80;
-        if (Math.abs(distance - waveRadius) < waveWidth) {
-          const waveStrength = (1 - age / maxAge) * disturbance.intensity;
-          const proximityToWave =
-            1 - Math.abs(distance - waveRadius) / waveWidth;
-          totalDisturbance +=
-            waveStrength *
-            proximityToWave *
-            Math.sin((distance - waveRadius) * 0.1);
-        }
-      }
-    });
-
-    return totalDisturbance;
-  };
-
-  const deform = (
-    x: number,
-    y: number,
-    t: number,
-    progress: number
-  ): { offsetX: number; offsetY: number } => {
-    const mouseInfluence = getMouseInfluence(x, y);
-    const disturbance = getWaveDisturbance(x, y, Date.now());
-
-    const wave1 = Math.sin(progress * Math.PI * 4 + t * 0.01) * 30;
-    const wave2 = Math.sin(progress * Math.PI * 7 - t * 0.008) * 15;
-    const harmonic = Math.sin(x * 0.02 + y * 0.015 + t * 0.005) * 10;
-
-    const mouseWave =
-      mouseInfluence * Math.sin(t * 0.02 + progress * Math.PI * 2) * 20;
-    const disturbanceWave =
-      disturbance * Math.sin(t * 0.015 + progress * Math.PI * 3) * 25;
-
-    return {
-      offsetX: wave1 + harmonic + mouseWave + disturbanceWave,
-      offsetY: wave2 + mouseWave * 0.5 + disturbanceWave * 0.7,
-    };
-  };
-
-  const resizeCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    dprRef.current = dpr;
-
-    const rect = canvas.parentElement?.getBoundingClientRect();
-    const displayWidth = rect?.width || window.innerWidth;
-    const displayHeight = rect?.height || window.innerHeight;
-
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-
-    canvas.style.width = `${displayWidth}px`;
-    canvas.style.height = `${displayHeight}px`;
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-      ctx.scale(dpr, dpr);
-    }
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    mouseRef.current.x = e.clientX - rect.left;
-    mouseRef.current.y = e.clientY - rect.top;
-  }, []);
-
-  const handleMouseDown = useCallback((e: MouseEvent) => {
-    mouseRef.current.isDown = true;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    waveDisturbances.current.push({
-      x,
-      y,
-      time: Date.now(),
-      intensity: 2,
-    });
-
-    const now = Date.now();
-    waveDisturbances.current = waveDisturbances.current.filter(
-      (disturbance) => now - disturbance.time < 3000
-    );
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    mouseRef.current.isDown = false;
-  }, []);
-
-  const animate = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const currentTime = Date.now();
-    timeRef.current += animationSpeed;
-
-    // Use CSS pixel dimensions for calculations
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-
-    const gridDensity = 80;
-    const ribbonWidth = width * 0.85;
-    const ribbonOffset = (width - ribbonWidth) / 2;
-
-    if (backgroundColor === 'transparent') {
-      ctx.clearRect(0, 0, width, height);
-    } else {
-      ctx.fillStyle = backgroundColor;
-      ctx.fillRect(0, 0, width, height);
-    }
-
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 0.5;
-
-    // Draw vertical lines
-    for (let i = 0; i < gridDensity; i++) {
-      const x = ribbonOffset + (i / gridDensity) * ribbonWidth;
-
-      ctx.beginPath();
-      for (let j = 0; j <= gridDensity; j++) {
-        const progress = (j / gridDensity) * 1.2 - 0.1;
-        const y = progress * height;
-
-        const { offsetX, offsetY } = deform(x, y, timeRef.current, progress);
-
-        const finalX = x + offsetX;
-        const finalY = y + offsetY;
-
-        if (j === 0) {
-          ctx.moveTo(finalX, finalY);
-        } else {
-          ctx.lineTo(finalX, finalY);
-        }
-      }
-      ctx.stroke();
-    }
-
-    // Draw horizontal lines
-    for (let j = 0; j < gridDensity; j++) {
-      const progress = (j / gridDensity) * 1.2 - 0.1;
-      const y = progress * height;
-
-      ctx.beginPath();
-      for (let i = 0; i <= gridDensity; i++) {
-        const x = ribbonOffset + (i / gridDensity) * ribbonWidth;
-
-        const { offsetX, offsetY } = deform(x, y, timeRef.current, progress);
-
-        const finalX = x + offsetX;
-        const finalY = y + offsetY;
-
-        if (i === 0) {
-          ctx.moveTo(finalX, finalY);
-        } else {
-          ctx.lineTo(finalX, finalY);
-        }
-      }
-      ctx.stroke();
-    }
-
-    // Draw wave disturbance effects
-    if (!removeWaveLine) {
-      waveDisturbances.current.forEach((disturbance) => {
-        const age = currentTime - disturbance.time;
-        const maxAge = 3000;
-        if (age < maxAge) {
-          const progress = age / maxAge;
-          const radius = progress * 400;
-          const alpha = (1 - progress) * 0.2 * disturbance.intensity;
-
-          ctx.beginPath();
-          ctx.strokeStyle = `rgba(100, 100, 100, ${alpha})`;
-          ctx.lineWidth = 2;
-          ctx.arc(disturbance.x, disturbance.y, radius, 0, 2 * Math.PI);
-          ctx.stroke();
-
-          ctx.strokeStyle = lineColor;
-          ctx.lineWidth = 0.5;
-        }
-      });
-    }
-
-    animationFrameId.current = requestAnimationFrame(animate);
-  }, [removeWaveLine, backgroundColor, lineColor, animationSpeed]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const ctx = canvas.getContext("2d", { alpha: true });
+    if (!ctx) return;
 
-    resizeCanvas();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const reducedData = window.matchMedia("(prefers-reduced-data: reduce)");
+    let frameId: number | null = null;
 
-    const handleResize = () => resizeCanvas();
+    const resize = () => {
+      const width = canvas.parentElement?.clientWidth || window.innerWidth;
+      const height = canvas.parentElement?.clientHeight || window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.max(1, Math.floor(width * dpr));
+      canvas.height = Math.max(1, Math.floor(height * dpr));
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
 
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
+    const draw = (timestamp = 0) => {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const density = width < 640 ? 30 : width < 1200 ? 42 : 54;
+      const ribbonWidth = width * 0.85;
+      const ribbonOffset = (width - ribbonWidth) / 2;
+      const t = timestamp * 0.001 * animationSpeed;
 
-    animate();
+      if (backgroundColor === "transparent") ctx.clearRect(0, 0, width, height);
+      else {
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, width, height);
+      }
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 0.5;
+
+      const point = (x: number, y: number, progress: number) => {
+        const offsetX = Math.sin(progress * Math.PI * 4 + t * 3) * 24
+          + Math.sin(x * 0.014 + y * 0.01 + t) * 8;
+        const offsetY = Math.sin(progress * Math.PI * 7 - t * 2.2) * 12;
+        return [x + offsetX, y + offsetY] as const;
+      };
+
+      for (let i = 0; i < density; i += 1) {
+        const x = ribbonOffset + (i / density) * ribbonWidth;
+        ctx.beginPath();
+        for (let j = 0; j <= density; j += 1) {
+          const progress = (j / density) * 1.2 - 0.1;
+          const [px, py] = point(x, progress * height, progress);
+          if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+
+      for (let j = 0; j < density; j += 1) {
+        const progress = (j / density) * 1.2 - 0.1;
+        const y = progress * height;
+        ctx.beginPath();
+        for (let i = 0; i <= density; i += 1) {
+          const x = ribbonOffset + (i / density) * ribbonWidth;
+          const [px, py] = point(x, y, progress);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+    };
+
+    const shouldAnimate = () => !document.hidden && !reducedMotion.matches && !reducedData.matches;
+    const tick = (timestamp: number) => {
+      draw(timestamp);
+      frameId = shouldAnimate() ? requestAnimationFrame(tick) : null;
+    };
+    const syncAnimation = () => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      frameId = null;
+      if (shouldAnimate()) frameId = requestAnimationFrame(tick);
+      else draw(0);
+    };
+    const handleResize = () => { resize(); draw(0); };
+
+    resize();
+    syncAnimation();
+    window.addEventListener("resize", handleResize, { passive: true });
+    document.addEventListener("visibilitychange", syncAnimation);
+    reducedMotion.addEventListener("change", syncAnimation);
+    reducedData.addEventListener("change", syncAnimation);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
-
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-        animationFrameId.current = null;
-      }
-      timeRef.current = 0;
-      waveDisturbances.current = [];
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("visibilitychange", syncAnimation);
+      reducedMotion.removeEventListener("change", syncAnimation);
+      reducedData.removeEventListener("change", syncAnimation);
     };
-  }, [animate, resizeCanvas, handleMouseMove, handleMouseDown, handleMouseUp]);
+  }, [animationSpeed, backgroundColor, lineColor]);
 
   return (
-    <div
-      className={className}
-      style={{ backgroundColor }}
-    >
-      <canvas ref={canvasRef} className='block w-full h-full opacity-70' />
+    <div className={className} style={{ backgroundColor }} aria-hidden="true">
+      <canvas ref={canvasRef} className="block h-full w-full opacity-70" />
     </div>
   );
-};
-
-export default FlowingRibbons;
+}

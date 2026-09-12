@@ -51,7 +51,7 @@ export default function OnsiteWorkPage() {
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <MapPinIcon className="w-12 h-12 mb-3 opacity-30" />
           <p className="text-sm">ยังไม่มีงานออกกอง</p>
-          <button onClick={openAdd} className="mt-3 text-xs text-primary font-medium hover:underline">เพิ่มงานออกกองแรก →</button>
+          <button onClick={openAdd} className="mt-3 text-xs text-primary-readable font-medium hover:underline">เพิ่มงานออกกองแรก →</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 animate-stagger-2">

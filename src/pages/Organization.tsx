@@ -59,7 +59,7 @@ export default function Organization() {
       <section className="overflow-hidden rounded-3xl border border-border bg-card">
         <div className="grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)] lg:p-9">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary-readable">
               <BuildingOffice2Icon className="h-4 w-4" /> Studio Organization
             </div>
             <h1 className="mt-4 text-4xl font-black tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl">
@@ -129,7 +129,7 @@ export default function Organization() {
         <div className="grid gap-4 lg:grid-cols-3">
           {contentPillars.map((pillar) => (
             <article key={pillar.key} className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-              <p className="text-sm font-black text-primary">{pillar.key}</p>
+              <p className="text-sm font-black text-primary-readable">{pillar.key}</p>
               <h3 className="mt-2 text-xl font-bold text-foreground">{pillar.title}</h3>
               <p className="mt-2 text-sm font-medium text-foreground/75">{pillar.promise}</p>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">{pillar.description}</p>
@@ -154,7 +154,7 @@ export default function Organization() {
           {teamLayers.map((layer, layerIndex) => (
             <article key={layer.title} className="rounded-2xl border border-border bg-card p-5 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary-readable">
                   <UsersIcon className="h-4 w-4" />
                 </div>
                 <div>
@@ -186,7 +186,7 @@ export default function Organization() {
           <div className="space-y-0">
             {operatingRhythm.map((item, index) => (
               <div key={item.step} className="grid grid-cols-[72px_minmax(0,1fr)] gap-4">
-                <div className="relative pb-6 text-xs font-black text-primary">
+                <div className="relative pb-6 text-xs font-black text-primary-readable">
                   {item.step}
                   {index < operatingRhythm.length - 1 && <span className="absolute left-0 top-6 h-[calc(100%-1.1rem)] w-px bg-border" />}
                 </div>
@@ -202,7 +202,7 @@ export default function Organization() {
           <div className="space-y-3">
             {deliveryCountdown.map((item) => (
               <div key={item.day} className="grid grid-cols-[54px_minmax(0,1fr)] gap-3 rounded-xl bg-muted/30 p-3">
-                <span className="text-sm font-black text-primary">{item.day}</span>
+                <span className="text-sm font-black text-primary-readable">{item.day}</span>
                 <div>
                   <p className="text-sm font-bold text-foreground">{item.action}</p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
@@ -221,7 +221,7 @@ export default function Organization() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           {groundRules.map((rule, index) => (
             <div key={rule} className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-xs font-black text-primary">0{index + 1}</p>
+              <p className="text-xs font-black text-primary-readable">0{index + 1}</p>
               <p className="mt-3 text-sm leading-6 text-foreground/80">{rule}</p>
             </div>
           ))}
@@ -236,7 +236,7 @@ export default function Organization() {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
           <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
             <div className="flex items-center gap-2">
-              <SwatchIcon className="h-5 w-5 text-primary" />
+              <SwatchIcon className="h-5 w-5 text-primary-readable" />
               <h3 className="text-sm font-bold text-foreground">Brand palette</h3>
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -256,7 +256,7 @@ export default function Organization() {
             <div className="mt-5 space-y-4">
               {brandVoice.map((item) => (
                 <div key={item.key} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
-                  <span className="text-xs font-black text-primary">{item.key}</span>
+                  <span className="text-xs font-black text-primary-readable">{item.key}</span>
                   <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
                 </div>
               ))}
@@ -273,7 +273,7 @@ export default function Organization() {
         <div className="grid gap-4 lg:grid-cols-2">
           <article className="rounded-2xl border border-border bg-card p-5 sm:p-6">
             <div className="flex items-center gap-2">
-              <FolderOpenIcon className="h-5 w-5 text-primary" />
+              <FolderOpenIcon className="h-5 w-5 text-primary-readable" />
               <h3 className="text-sm font-bold text-foreground">Drive architecture</h3>
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -288,7 +288,7 @@ export default function Organization() {
 
           <article className="rounded-2xl border border-border bg-card p-5 sm:p-6">
             <div className="flex items-center gap-2">
-              <RectangleStackIcon className="h-5 w-5 text-primary" />
+              <RectangleStackIcon className="h-5 w-5 text-primary-readable" />
               <h3 className="text-sm font-bold text-foreground">Project folder standard</h3>
             </div>
             <div className="mt-5 space-y-3">
@@ -307,7 +307,7 @@ export default function Organization() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           {digitalOperatingSystem.map((item) => (
             <article key={item.title} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary-readable">
                 <ClockIcon className="h-4 w-4" />
               </div>
               <h3 className="mt-4 text-sm font-bold text-foreground">{item.title}</h3>

@@ -69,7 +69,7 @@ export default function Workload() {
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-primary/10 border border-primary/20 shadow-inner">
-            <UsersIcon className="w-6 h-6 text-primary" />
+            <UsersIcon className="w-6 h-6 text-primary-readable" />
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Team Workload</h1>
@@ -132,7 +132,7 @@ export default function Workload() {
             disabled={isLoading}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card text-sm font-medium hover:bg-muted hover:text-foreground transition-all disabled:opacity-50 shadow-sm active:scale-95"
           >
-            <ArrowPathIcon className={cn("w-4 h-4 text-muted-foreground", isLoading && "animate-spin text-primary")} />
+            <ArrowPathIcon className={cn("w-4 h-4 text-muted-foreground", isLoading && "animate-spin text-primary-readable")} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>

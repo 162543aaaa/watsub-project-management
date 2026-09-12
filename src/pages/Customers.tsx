@@ -28,7 +28,7 @@ function ProgressBar({ tasks }: { tasks: Task[] }) {
   return (
     <div className="flex items-center gap-3">
       <div className="progress-bar flex-1"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
-      <span className="text-xs font-semibold text-primary w-8 text-right">{pct}%</span>
+      <span className="text-xs font-semibold text-primary-readable w-8 text-right">{pct}%</span>
     </div>
   );
 }
@@ -453,15 +453,14 @@ function CustomerCardComponent({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group cursor-pointer"
-      onDoubleClick={() => openEditCustomer(cust)}>
-      <div className="flex items-start justify-between mb-3" onClick={() => setIsExpanded(prev => !prev)}>
+    <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group">
+      <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-bold text-foreground">{cust.name}</h3>
             {cust.link && (
               <a href={cust.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                className="text-primary hover:text-primary/80 transition-all hover:scale-110 flex-shrink-0"
+                className="text-primary-readable hover:text-primary-readable/80 transition-all hover:scale-110 flex-shrink-0"
                 title={cust.link}>
                 <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
               </a>
@@ -476,35 +475,35 @@ function CustomerCardComponent({
           {cust.project_title && <p className="text-xs text-muted-foreground mt-0.5">{cust.project_title}</p>}
           {cust.detail && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cust.detail}</p>}
         </div>
-        <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <button onClick={(e) => { e.stopPropagation(); openEditCustomer(cust); }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
+            aria-label={`Edit customer ${cust.name}`} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary-readable transition-all hover:scale-110 active:scale-95">
             <PencilIcon className="w-3.5 h-3.5" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openAddTask(cust.id); }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-all hover:scale-110 active:scale-95">
+            aria-label={`Add task to ${cust.name}`} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary-readable transition-all hover:scale-110 active:scale-95">
             <PlusIcon className="w-3.5 h-3.5" />
           </button>
           {!showArchived ? (
             <button onClick={(e) => { e.stopPropagation(); archiveCustomer(cust.id); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-amber-500/10 text-amber-600 transition-all hover:scale-110 active:scale-95"
-              title="ArchiveBoxIcon customer">
+              aria-label={`Archive customer ${cust.name}`} title="Archive customer">
               <ArchiveBoxIcon className="w-3.5 h-3.5" />
             </button>
           ) : (
             <button onClick={(e) => { e.stopPropagation(); unarchiveCustomer(cust.id); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-green-500/10 text-green-600 transition-all hover:scale-110 active:scale-95"
-              title="Unarchive customer">
+              aria-label={`Unarchive customer ${cust.name}`} title="Unarchive customer">
               <ArrowPathIcon className="w-3.5 h-3.5" />
             </button>
           )}
           <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "customer", id: cust.id, name: cust.name }); }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
+            aria-label={`Delete customer ${cust.name}`} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-all hover:scale-110 active:scale-95">
             <TrashIcon className="w-3.5 h-3.5 text-destructive" />
           </button>
         </div>
       </div>
-      <div className="flex items-start gap-2 mb-3" onClick={() => setIsExpanded(prev => !prev)}>
+      <div className="flex items-start gap-2 mb-3">
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{cust.tasks.length} tasks</span>
           {cust.tasks.length > 0 && cust.tasks.every((t: any) => t.status === "Done") && (
@@ -517,27 +516,27 @@ function CustomerCardComponent({
       </div>
       {cust.tasks.length > 0 && <ProgressBar tasks={cust.tasks} />}
       <div className="flex items-center gap-3 mt-3 flex-wrap">
-        <span onClick={() => setIsExpanded(prev => !prev)}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground select-none hover:text-foreground transition-all cursor-pointer">
+        <button type="button" onClick={() => setIsExpanded(prev => !prev)} aria-expanded={isExpanded}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground select-none hover:text-foreground transition-colors">
           {isExpanded ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />}
           {isExpanded ? "Hide" : "Show"} tasks
-        </span>
+        </button>
         <button onClick={(e) => { e.stopPropagation(); openAddTask(cust.id); }}
-          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-all hover:scale-105">
+          className="flex items-center gap-1 text-xs text-primary-readable hover:text-primary-readable/80 font-medium transition-all hover:scale-105">
           <PlusIcon className="w-3.5 h-3.5" /> Add task
         </button>
       </div>
       {isExpanded && (
-        <div className="mt-3 space-y-2" onClick={e => e.stopPropagation()}>
+        <div className="mt-3 space-y-2">
           {cust.tasks.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-3">No tasks yet</p>
           ) : filterDoneTasks(cust.tasks, showDone).map(task => (
-            <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-all cursor-pointer" onClick={() => openEditTask(cust.id, task)}>
+            <div key={task.id} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/50 hover:bg-muted/80 group/task transition-colors">
                <div className="flex items-center gap-3">
                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "Done" ? "bg-green-500" : task.status === "In Progress" ? "bg-cyan-500" : "bg-gray-400"}`} />
                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-medium text-foreground truncate">{task.name}</span>
+                      <button type="button" onClick={() => openEditTask(cust.id, task)} className="block max-w-full truncate text-left text-xs font-medium text-foreground hover:text-primary-readable">{task.name}</button>
                       {task.category && task.category !== "none" && (
                         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${task.category === "meeting" ? "bg-violet-100 text-violet-700" : "bg-rose-100 text-rose-700"}`}>
                           {task.category === "meeting" ? "🗓" : "📍"}
@@ -561,7 +560,7 @@ function CustomerCardComponent({
                  )}
                  <div className="flex items-center gap-1.5 flex-shrink-0">
                    {task.link && (
-                     <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:text-primary/80 hover:scale-110 transition-all">
+                     <a href={task.link} target="_blank" rel="noopener noreferrer" aria-label={`Open task link for ${task.name}`} className="text-primary-readable hover:text-primary-readable/80 hover:scale-110 transition-all">
                        <ArrowTopRightOnSquareIcon className="w-3 h-3" />
                      </a>
                    )}
@@ -569,18 +568,18 @@ function CustomerCardComponent({
                      {task.status}
                    </span>
                     <button onClick={(e) => { e.stopPropagation(); openEditTask(cust.id, task); }}
-                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
-                      <PencilIcon className="w-3 h-3 text-primary" />
+                      aria-label={`Edit task ${task.name}`} className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 group-focus-within/task:opacity-100 hover:bg-primary/10 transition-all hover:scale-110">
+                      <PencilIcon className="w-3 h-3 text-primary-readable" />
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteItem({ type: "task", id: task.id, name: task.name, parentId: cust.id }); }}
-                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
+                      aria-label={`Delete task ${task.name}`} className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover/task:opacity-100 group-focus-within/task:opacity-100 hover:bg-destructive/10 transition-all hover:scale-110">
                       <TrashIcon className="w-3 h-3 text-destructive" />
                    </button>
                  </div>
                </div>
                {task.link && (
                   <a href={task.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                    className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary pl-5 truncate transition-colors">
+                    className="flex items-center gap-1 text-[10px] text-primary-readable/70 hover:text-primary-readable pl-5 truncate transition-colors">
                    <ArrowTopRightOnSquareIcon className="w-2.5 h-2.5 flex-shrink-0" />
                    <span className="truncate">{task.link.replace(/^https?:\/\//, "")}</span>
                  </a>
@@ -625,7 +624,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
         {/* --- Scrollable Body --- */}
         <div className="p-6 pt-4 overflow-y-auto flex-1 overscroll-contain space-y-5">
           {/* === Basic Information === */}
-          <div className="text-xs font-bold text-primary uppercase tracking-wider">ข้อมูลพื้นฐาน</div>
+          <div className="text-xs font-bold text-primary-readable uppercase tracking-wider">ข้อมูลพื้นฐาน</div>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Customer Name</label>
@@ -670,7 +669,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
             </div>
           </div>
           {/* === Job Information === */}
-          <div className="text-xs font-bold text-primary uppercase tracking-wider pt-2">ข้อมูลงาน</div>
+          <div className="text-xs font-bold text-primary-readable uppercase tracking-wider pt-2">ข้อมูลงาน</div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Job Description / Deliverables</label>
             <textarea rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none resize-none"
@@ -698,7 +697,7 @@ function CustomerModal({ title, form, setForm, onSave, onClose, monthNames, empl
           </div>
 
           {/* === Client Contact === */}
-          <div className="text-xs font-bold text-primary uppercase tracking-wider pt-2">ข้อมูลติดต่อลูกค้า</div>
+          <div className="text-xs font-bold text-primary-readable uppercase tracking-wider pt-2">ข้อมูลติดต่อลูกค้า</div>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Contact Name</label>

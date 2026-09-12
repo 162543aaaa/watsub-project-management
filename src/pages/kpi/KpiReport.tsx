@@ -179,11 +179,11 @@ export default function KpiReport() {
         <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
           {url
             ? <img src={url} alt={member.name} className="w-full h-full object-cover" />
-            : <span className="text-xl font-bold text-primary">{member.name.charAt(0)}</span>}
+            : <span className="text-xl font-bold text-primary-readable">{member.name.charAt(0)}</span>}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <ChartBarIcon className="w-4 h-4 text-primary flex-shrink-0" />
+            <ChartBarIcon className="w-4 h-4 text-primary-readable flex-shrink-0" />
             <h1 className="text-xl font-bold truncate">{member.name}</h1>
           </div>
           <p className="text-sm text-muted-foreground">{member.position}</p>
@@ -307,7 +307,7 @@ export default function KpiReport() {
           {trendData.length >= 2 && (
             <div className="bg-card border border-border/60 rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-1">
-                <ArrowTrendingUpIcon className="w-4 h-4 text-primary" />
+                <ArrowTrendingUpIcon className="w-4 h-4 text-primary-readable" />
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">แนวโน้มคะแนน</h2>
               </div>
               <p className="text-xs text-muted-foreground mb-4">เปรียบเทียบรอบที่ผ่านมา</p>
@@ -329,7 +329,7 @@ export default function KpiReport() {
           {/* Action plan */}
           <div className="bg-card border border-border/60 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
-              <StarIcon className="w-4 h-4 text-primary" />
+              <StarIcon className="w-4 h-4 text-primary-readable" />
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Action Plan</h2>
             </div>
             <p className="text-xs text-muted-foreground mb-3">เป้าหมายที่ต้องการพัฒนาในโปรเจกต์ถัดไป</p>

@@ -90,7 +90,7 @@ export function EmployeeCard({ item, index, onOpenDetails }: EmployeeCardProps) 
             index={index}
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate leading-tight group-hover:text-primary transition-colors">
+            <p className="text-sm font-semibold text-foreground truncate leading-tight group-hover:text-primary-readable transition-colors">
               {item.display_name}
             </p>
             <p className="text-xs text-muted-foreground truncate mt-1">

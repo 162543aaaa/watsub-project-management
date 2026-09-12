@@ -1,5 +1,5 @@
 import { ArrowPathIcon, ArrowRightIcon, ArrowTrendingUpIcon, BookOpenIcon, ClockIcon, ExclamationCircleIcon, MapPinIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects, Task } from "@/hooks/useProjects";
@@ -10,15 +10,17 @@ import { useMeetings } from "@/hooks/useMeetings";
 import { useOnsiteWork } from "@/hooks/useOnsiteWork";
 import { useResourceWorkload } from "@/hooks/useResourceWorkload";
 import { useWiki } from "@/hooks/useWiki";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
 import EditTaskModal from "@/components/EditTaskModal";
-import { WikiEditor, WikiViewer } from "@/components/WikiEditor";
+import WikiViewer from "@/components/WikiViewer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import LoadingScreen from "@/components/LoadingScreen";
 
 const today = new Date();
 const YEARS = [2025, 2026, 2027];
+
+const WikiEditor = lazy(() => import("@/components/WikiEditor"));
+const TaskStatusDonut = lazy(() => import("@/components/TaskStatusDonut"));
 
 const thaiDate = today.toLocaleDateString("th-TH", {
   weekday: "long",
@@ -211,7 +213,7 @@ export default function Dashboard() {
                 {stats.completed} of {stats.total} tasks completed in {filterYear}.
               </p>
             </div>
-            <ArrowTrendingUpIcon className="h-6 w-6 text-primary" />
+            <ArrowTrendingUpIcon className="h-6 w-6 text-primary-readable" />
           </div>
           <div className="mt-8 h-2 overflow-hidden rounded-full bg-muted">
             <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${stats.rate}%` }} />
@@ -232,7 +234,7 @@ export default function Dashboard() {
             <h2 className="text-base font-semibold text-foreground">Team Progress</h2>
             <p className="text-xs text-muted-foreground mt-0.5">{employees.length} members · คลิกงานเพื่อดูรายละเอียด</p>
           </div>
-          <Link to="/team" className="flex items-center gap-1 text-xs font-medium text-primary hover:gap-2 transition-all">
+          <Link to="/team" className="flex items-center gap-1 text-xs font-medium text-primary-readable hover:gap-2 transition-all">
             View all <ArrowRightIcon className="w-3 h-3" />
           </Link>
         </div>
@@ -328,10 +330,19 @@ export default function Dashboard() {
                             key={task.id}
                             className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/60 cursor-pointer group transition-colors"
                             onClick={() => setSelectedTask(task)}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`เปิดงาน ${task.name}`}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setSelectedTask(task);
+                              }
+                            }}
                           >
                             <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: cfg.color }} aria-hidden="true" />
                             <div className="flex-1 min-w-0 flex flex-col">
-                              <span className="text-xs text-foreground truncate group-hover:text-primary transition-colors">{task.name}</span>
+                              <span className="text-xs text-foreground truncate group-hover:text-primary-readable transition-colors">{task.name}</span>
                               {contextName && <span className="text-[9px] text-muted-foreground truncate">{contextName}</span>}
                             </div>
                             <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -357,22 +368,9 @@ export default function Dashboard() {
         ) : (
           <div className="flex flex-col sm:flex-row items-start gap-6">
             {/* Donut chart */}
-            <div className="flex flex-col items-center gap-1 flex-shrink-0 mx-auto sm:mx-0">
-              <div className="relative w-28 h-28">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={donutData} cx="50%" cy="50%" innerRadius={36} outerRadius={54} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                      {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-bold text-foreground leading-none">{stats.rate}%</span>
-                  <span className="text-[10px] text-muted-foreground mt-0.5">เสร็จแล้ว</span>
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground">{stats.total} tasks ทั้งหมด</p>
-            </div>
+            <Suspense fallback={<div role="status" aria-label="กำลังโหลดกราฟสถานะงาน" className="mx-auto h-28 w-28 flex-shrink-0 rounded-full bg-muted/50 sm:mx-0" />}>
+              <TaskStatusDonut data={donutData} rate={stats.rate} total={stats.total} />
+            </Suspense>
 
             {/* Status bars + mini counts */}
             <div className="flex-1 w-full min-w-0">
@@ -522,7 +520,7 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-0.5">Knowledge base articles</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/wiki" className="flex items-center gap-1 text-xs font-medium text-primary hover:gap-2 transition-all">
+            <Link to="/wiki" className="flex items-center gap-1 text-xs font-medium text-primary-readable hover:gap-2 transition-all">
               View all <ArrowRightIcon className="w-3 h-3" />
             </Link>
             <button
@@ -558,10 +556,20 @@ export default function Dashboard() {
                   key={page.id}
                   className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted/60 cursor-pointer group transition-colors"
                   onClick={() => setSelectedWikiPage(selectedWikiPage === page.id ? null : page.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={selectedWikiPage === page.id}
+                  aria-label={`${selectedWikiPage === page.id ? "ปิด" : "เปิด"}บทความ ${page.title}`}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedWikiPage(selectedWikiPage === page.id ? null : page.id);
+                    }
+                  }}
                 >
                   <BookOpenIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors truncate block">
+                    <span className="text-xs font-medium text-foreground group-hover:text-primary-readable transition-colors truncate block">
                       {page.title}
                     </span>
                   </div>
@@ -585,8 +593,10 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-semibold text-foreground">{page.title}</span>
                       <button
+                        type="button"
                         onClick={() => setSelectedWikiPage(null)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        aria-label="ปิดตัวอย่างบทความ"
                       >
                         <XMarkIcon className="w-3.5 h-3.5" />
                       </button>
@@ -597,7 +607,7 @@ export default function Dashboard() {
                     />
                     <Link
                       to={`/wiki/${page.slug}`}
-                      className="text-[11px] text-primary hover:underline mt-1.5 block"
+                      className="text-[11px] text-primary-readable hover:underline mt-1.5 block"
                     >
                       Read full article →
                     </Link>
@@ -623,22 +633,24 @@ export default function Dashboard() {
           <div className="space-y-4 mt-2">
             {/* Title */}
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Title *</label>
+              <label htmlFor="wiki-title" className="text-xs font-medium text-muted-foreground mb-1 block">Title *</label>
               <input
+                id="wiki-title"
                 type="text"
                 value={wikiTitle}
                 onChange={e => setWikiTitle(e.target.value)}
                 placeholder="Article title…"
-                className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring transition-colors"
               />
             </div>
             {/* Category */}
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Category</label>
+              <label htmlFor="wiki-category" className="text-xs font-medium text-muted-foreground mb-1 block">Category</label>
               <select
+                id="wiki-category"
                 value={wikiCategory}
                 onChange={e => setWikiCategory(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring transition-colors"
               >
                 {["General", "HR", "IT", "Operations", "Finance"].map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -648,11 +660,13 @@ export default function Dashboard() {
             {/* Rich text editor */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Content</label>
-              <WikiEditor
-                initialContent=""
-                onChange={setWikiContent}
-                className="min-h-[200px]"
-              />
+              <Suspense fallback={<div role="status" className="min-h-48 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">กำลังโหลดตัวแก้ไข...</div>}>
+                <WikiEditor
+                  initialContent=""
+                  onChange={setWikiContent}
+                  className="min-h-[200px]"
+                />
+              </Suspense>
             </div>
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-1">

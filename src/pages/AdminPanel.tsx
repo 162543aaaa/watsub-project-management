@@ -239,7 +239,7 @@ export default function AdminPanel() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <ShieldCheckIcon className="w-5 h-5 text-primary" />
+            <ShieldCheckIcon className="w-5 h-5 text-primary-readable" />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold">Admin Panel</h1>
@@ -321,7 +321,7 @@ export default function AdminPanel() {
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm truncate">{u.profile.display_name}</p>
                       {userIsAdmin && (
-                        <span className="text-[10px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-md">
+                        <span className="text-[10px] font-bold bg-primary/15 text-primary-readable px-1.5 py-0.5 rounded-md">
                           ADMIN
                         </span>
                       )}
@@ -404,7 +404,7 @@ export default function AdminPanel() {
                             onClick={() => handleTogglePage(u.profile.user_id, pages, page.path)}
                             className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ease-out active:scale-95 ${
                               active
-                                ? "bg-primary/10 border-primary/30 text-primary shadow-sm"
+                                ? "bg-primary/10 border-primary/30 text-primary-readable shadow-sm"
                                 : "bg-muted/50 border-border/40 text-muted-foreground hover:bg-muted"
                             }`}
                           >

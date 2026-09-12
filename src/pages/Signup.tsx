@@ -67,7 +67,7 @@ export default function Signup() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/10 to-background p-4 relative overflow-hidden">
+      <div role="main" className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/10 to-background p-4 relative overflow-hidden">
         {/* Glow Effects */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-md)]" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-xs)]" />
@@ -93,7 +93,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-12 bg-transparent relative overflow-hidden font-sans">
+    <div role="main" className="min-h-screen grid lg:grid-cols-12 bg-transparent relative overflow-hidden font-sans">
       {/* Background Animated Blurs */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-xl)]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/15 rounded-full blur-3xl animate-pulse [animation-duration:var(--motion-ambient-md)]" />
@@ -106,7 +106,7 @@ export default function Signup() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
 
         <div className="relative z-10 flex items-center gap-3">
-          <img src="/logo_watsub.png" alt="WatSUB Logo" className="w-10 h-10 object-contain filter drop-shadow-md" />
+          <img src="/logo_watsub-192.webp" alt="WatSUB Logo" className="w-10 h-10 object-contain filter drop-shadow-md" />
           <span className="text-xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-primary">WatSUB</span>
         </div>
 
@@ -146,7 +146,7 @@ export default function Signup() {
           {/* Header */}
           <div className="text-center lg:text-left">
             <div className="lg:hidden flex justify-center mb-4">
-              <img src="/logo_watsub.png" alt="WatSUB" className="w-16 h-16 object-contain" />
+              <img src="/logo_watsub-192.webp" alt="WatSUB" className="w-16 h-16 object-contain" />
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-foreground">สมัครสมาชิก</h1>
             <p className="text-sm text-muted-foreground mt-2">สร้างบัญชีผู้ใช้ใหม่และเริ่มต้นจัดการงานของคุณได้ทันที</p>
@@ -156,19 +156,20 @@ export default function Signup() {
           <div className="bg-card/40 backdrop-blur-xl border border-border/80 rounded-2xl p-8 shadow-2xl transition-all duration-300 hover:shadow-primary/5 hover:border-border">
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
-                <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 animate-in fade-in duration-200">
+                <div role="alert" className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 animate-in fade-in duration-200">
                   {error}
                 </div>
               )}
 
               {/* Display Name */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground block">ชื่อที่แสดง</label>
+                <label htmlFor="signup-name" className="text-sm font-medium text-foreground block">ชื่อที่แสดง</label>
                 <div className="relative group">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary-readable transition-colors">
                     <UserIcon className="w-4 h-4" />
                   </span>
                   <Input 
+                    id="signup-name"
                     value={displayName} 
                     onChange={e => setDisplayName(e.target.value)} 
                     placeholder="สมชาย ใจดี" 
@@ -181,12 +182,13 @@ export default function Signup() {
 
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground block">อีเมล</label>
+                <label htmlFor="signup-email" className="text-sm font-medium text-foreground block">อีเมล</label>
                 <div className="relative group">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary-readable transition-colors">
                     <EnvelopeIcon className="w-4 h-4" />
                   </span>
                   <Input 
+                    id="signup-email"
                     type="email" 
                     value={email} 
                     onChange={e => setEmail(e.target.value)} 
@@ -200,12 +202,13 @@ export default function Signup() {
 
               {/* Password */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground block">รหัสผ่าน</label>
+                <label htmlFor="signup-password" className="text-sm font-medium text-foreground block">รหัสผ่าน</label>
                 <div className="relative group">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary-readable transition-colors">
                     <LockClosedIcon className="w-4 h-4" />
                   </span>
                   <Input 
+                    id="signup-password"
                     type={showPw ? "text" : "password"} 
                     value={password} 
                     onChange={e => setPassword(e.target.value)} 
@@ -217,7 +220,7 @@ export default function Signup() {
                   <button 
                     type="button" 
                     onClick={() => setShowPw(!showPw)} 
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" 
+                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                   >
                     {showPw ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
@@ -242,7 +245,7 @@ export default function Signup() {
               <div className="text-center pt-2">
                 <p className="text-sm text-muted-foreground">
                   มีบัญชีอยู่แล้ว?{" "}
-                  <Link to="/login" className="text-primary font-semibold hover:underline transition-all">
+                  <Link to="/login" className="text-primary-readable font-semibold hover:underline transition-all">
                     เข้าสู่ระบบ
                   </Link>
                 </p>

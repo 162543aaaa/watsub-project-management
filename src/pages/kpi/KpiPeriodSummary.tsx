@@ -293,7 +293,7 @@ function EvaluateeCard({
         <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
           {url
             ? <img src={url} alt={evaluatee.name} className="w-full h-full object-cover" />
-            : <span className="text-sm font-bold text-primary">{evaluatee.name.charAt(0)}</span>}
+            : <span className="text-sm font-bold text-primary-readable">{evaluatee.name.charAt(0)}</span>}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm">{evaluatee.name}</p>

@@ -82,7 +82,7 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
           {selected.map(name => {
             const emp = employees.find(e => e.name === name);
             return (
-              <span key={name} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary">
+              <span key={name} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary-readable">
                 <Avatar avatar={emp?.avatar} name={name} size="sm" />
                 {name}
                 <button onClick={() => onChange(selected.filter(s => s !== name))} className="hover:text-destructive transition-colors">
@@ -135,7 +135,7 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-muted/80 transition-colors text-left ${isSelected ? "bg-primary/5" : ""}`}
                   >
                     {isSelected ? (
-                      <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0" />
+                      <CheckCircleIcon className="w-5 h-5 text-primary-readable flex-shrink-0" />
                     ) : (
                       <div className="w-5 h-5 rounded-full border-2 border-border flex-shrink-0" />
                     )}
