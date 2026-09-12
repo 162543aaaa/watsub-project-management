@@ -2,7 +2,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import FlowingRibbons from "@/components/FlowingRibbons";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -10,7 +9,9 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "./components/Layout";
 import LoadingScreen from "@/components/LoadingScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import RouteAnnouncer from "@/components/RouteAnnouncer";
 
+const FlowingRibbons = lazy(() => import("@/components/FlowingRibbons"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Tasks = lazy(() => import("./pages/Tasks"));
 const Projects = lazy(() => import("./pages/Projects"));
@@ -60,10 +61,13 @@ const App = () => (
   <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <FlowingRibbons />
+      <Suspense fallback={null}>
+        <FlowingRibbons />
+      </Suspense>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <RouteAnnouncer />
         <AuthProvider>
           <Suspense fallback={<LoadingScreen />}>
             <Routes>

@@ -477,11 +477,11 @@ export default function KpiEvaluate() {
           <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
             {empUrl
               ? <img src={empUrl} alt={evaluatee.name} className="w-full h-full object-cover" />
-              : <span className="text-xl font-bold text-primary">{evaluatee.name.charAt(0)}</span>}
+              : <span className="text-xl font-bold text-primary-readable">{evaluatee.name.charAt(0)}</span>}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <ClipboardDocumentCheckIcon className="w-4 h-4 text-primary" />
+              <ClipboardDocumentCheckIcon className="w-4 h-4 text-primary-readable" />
               <h1 className="text-lg font-bold">{evaluatee.name}</h1>
             </div>
             <p className="text-sm text-muted-foreground">{evaluatee.position}</p>

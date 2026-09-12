@@ -24,7 +24,7 @@ export default function Notifications() {
         <div>
           <h1 className="text-2xl font-bold">Notifications</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {unreadCount > 0 ? <span className="text-primary font-semibold">{unreadCount} unread</span> : "All caught up!"} · {notifications.length} total
+            {unreadCount > 0 ? <span className="text-primary-readable font-semibold">{unreadCount} unread</span> : "All caught up!"} · {notifications.length} total
           </p>
         </div>
         {unreadCount > 0 && (

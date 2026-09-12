@@ -45,16 +45,16 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
+    <main className="min-h-screen flex items-center justify-center bg-transparent p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/logo_watsub.png" alt="WatSUB" className="w-20 h-20 object-contain mx-auto mb-2" />
+          <img src="/logo_watsub-192.webp" alt="WatSUB" className="w-20 h-20 object-contain mx-auto mb-2" />
           <h1 className="text-2xl font-bold text-foreground">WatSUB-Project Management</h1>
           <p className="text-sm text-muted-foreground mt-1">เข้าสู่ระบบ</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border/60 p-6 space-y-4" style={{ boxShadow: "0 10px 30px -10px hsl(var(--primary) / 0.15)" }}>
-          {error && <div className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</div>}
+          {error && <div role="alert" className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</div>}
           {needsEmailConfirm && (
             <button
               type="button"
@@ -66,15 +66,15 @@ export default function Login() {
           )}
 
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
-            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" required autoComplete="email" />
+            <label htmlFor="login-email" className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+            <Input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" required autoComplete="email" />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">รหัสผ่าน</label>
+            <label htmlFor="login-password" className="text-sm font-medium text-foreground mb-1.5 block">รหัสผ่าน</label>
             <div className="relative">
-              <Input type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" className="pr-10" />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
+              <Input id="login-password" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" className="pr-10" />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
                 {showPw ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
               </button>
             </div>
@@ -85,10 +85,10 @@ export default function Login() {
           </Button>
 
           <p className="text-sm text-center text-muted-foreground">
-            ยังไม่มีบัญชี? <Link to="/signup" className="text-primary font-medium hover:underline">สมัครสมาชิก</Link>
+            ยังไม่มีบัญชี? <Link to="/signup" className="text-primary-readable font-medium hover:underline">สมัครสมาชิก</Link>
           </p>
         </form>
       </div>
-    </div>
+    </main>
   );
 }

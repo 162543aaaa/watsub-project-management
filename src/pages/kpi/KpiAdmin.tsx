@@ -137,7 +137,7 @@ export default function KpiAdmin() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <ShieldCheckIcon className="w-5 h-5 text-primary" />
+            <ShieldCheckIcon className="w-5 h-5 text-primary-readable" />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold">KPI Admin</h1>
@@ -257,7 +257,7 @@ export default function KpiAdmin() {
                     <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
                       {avatarUrl(emp.avatar)
                         ? <img src={avatarUrl(emp.avatar)!} alt={emp.name} className="w-full h-full object-cover" />
-                        : <span className="text-[10px] font-bold text-primary">{emp.name.charAt(0)}</span>}
+                        : <span className="text-[10px] font-bold text-primary-readable">{emp.name.charAt(0)}</span>}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{emp.name}</p>

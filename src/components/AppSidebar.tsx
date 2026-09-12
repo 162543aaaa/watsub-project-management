@@ -44,7 +44,7 @@ export default function AppSidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b" style={{ borderColor: "hsl(222 47% 15%)" }}>
-        <img src="/logo_watsub.png" alt="WatSUB" className="w-9 h-9 object-contain flex-shrink-0" />
+        <img src="/logo_watsub-192.webp" alt="WatSUB" className="w-9 h-9 object-contain flex-shrink-0" />
         {!collapsed && (
           <div className="overflow-hidden">
             <div className="text-sm font-bold text-white leading-tight">WatSUB</div>

@@ -115,13 +115,13 @@ export function HeatmapView({ onEmployeeClick }: HeatmapViewProps = {}) {
                     isToday ? "bg-primary/5" : isWeekend ? "bg-muted/50" : ""
                   )}
                 >
-                  <div className={cn("text-[10px] font-medium", isToday ? "text-primary" : "text-muted-foreground")}>
+                  <div className={cn("text-[10px] font-medium", isToday ? "text-primary-readable" : "text-muted-foreground")}>
                     {format(d, "EEE")}
                   </div>
-                  <div className={cn("text-xs font-bold my-0.5", isToday ? "text-primary" : isWeekend ? "text-muted-foreground/70" : "text-foreground")}>
+                  <div className={cn("text-xs font-bold my-0.5", isToday ? "text-primary-readable" : isWeekend ? "text-muted-foreground/70" : "text-foreground")}>
                     {format(d, "d")}
                   </div>
-                  <div className={cn("text-[9px] font-medium uppercase tracking-wider", isToday ? "text-primary/70" : "text-muted-foreground/60")}>
+                  <div className={cn("text-[9px] font-medium uppercase tracking-wider", isToday ? "text-primary-readable/70" : "text-muted-foreground/60")}>
                     {format(d, "MMM")}
                   </div>
                 </th>
@@ -137,7 +137,7 @@ export function HeatmapView({ onEmployeeClick }: HeatmapViewProps = {}) {
                   <button
                     type="button"
                     onClick={() => onEmployeeClick(row.employee_id, row.employee_name)}
-                    className="text-left hover:text-primary hover:underline transition-colors cursor-pointer"
+                    className="text-left hover:text-primary-readable hover:underline transition-colors cursor-pointer"
                     title="View task details"
                   >
                     {row.employee_name}

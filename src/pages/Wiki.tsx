@@ -85,10 +85,10 @@ function ArticleCard({
       )}
       <Link to={`/wiki/${page.slug}`} className="block p-5">
         <div className="flex items-start justify-between gap-3 mb-2 pr-14">
-          <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors leading-snug">
+          <h3 className="text-sm font-semibold text-foreground group-hover:text-primary-readable transition-colors leading-snug">
             {page.title}
           </h3>
-          <ChevronRightIcon className="w-4 h-4 text-muted-foreground flex-shrink-0 group-hover:text-primary transition-colors mt-0.5" />
+          <ChevronRightIcon className="w-4 h-4 text-muted-foreground flex-shrink-0 group-hover:text-primary-readable transition-colors mt-0.5" />
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">
           {snippet}
@@ -194,7 +194,7 @@ function ArticleModal({
               placeholder="url-friendly-slug"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              ใช้สำหรับ URL: /wiki/<span className="text-primary">{form.slug || "slug"}</span>
+              ใช้สำหรับ URL: /wiki/<span className="text-primary-readable">{form.slug || "slug"}</span>
             </p>
           </div>
 
@@ -374,7 +374,7 @@ export default function Wiki() {
           </p>
           <button
             onClick={() => setShowSQL(!showSQL)}
-            className="text-xs font-medium text-primary underline"
+            className="text-xs font-medium text-primary-readable underline"
           >
             {showSQL ? "ซ่อน SQL" : "แสดง SQL สำหรับสร้างตาราง"}
           </button>

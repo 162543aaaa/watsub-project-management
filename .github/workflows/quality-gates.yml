@@ -1,0 +1,60 @@
+name: Quality Gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Design hardcode regression
+        run: npm run qa:design
+
+      - name: Build
+        run: npm run build
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4177 > /tmp/watsub-preview.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4177/login >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/watsub-preview.log
+          exit 1
+
+      - name: Accessibility browser audit
+        run: npm run qa:a11y

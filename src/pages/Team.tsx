@@ -266,9 +266,9 @@ export default function Team() {
                 <div className="flex-1 min-w-0 sm:hidden">
                   <h1 className="text-lg font-bold text-foreground truncate">{detail.name}</h1>
                   <p className="text-sm text-muted-foreground mt-0.5">{detail.position}</p>
-                  <span className="inline-block mt-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{detail.role}</span>
+                  <span className="inline-block mt-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary-readable capitalize">{detail.role}</span>
                 {getWorkTenure(detail.start_date, detail.end_date) && (
-                    <p className="text-xs text-primary mt-1 flex items-center gap-1">
+                    <p className="text-xs text-primary-readable mt-1 flex items-center gap-1">
                       <BriefcaseIcon className="w-3 h-3" /> {getWorkTenure(detail.start_date, detail.end_date)}
                     </p>
                   )}
@@ -277,9 +277,9 @@ export default function Team() {
               <div className="hidden sm:block flex-1 min-w-0">
                 <h1 className="text-xl font-bold text-foreground">{detail.name}</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">{detail.position}</p>
-                <span className="inline-block mt-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{detail.role}</span>
+                <span className="inline-block mt-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary-readable capitalize">{detail.role}</span>
                 {getWorkTenure(detail.start_date, detail.end_date) && (
-                  <p className="text-sm text-primary mt-1 flex items-center gap-1.5">
+                  <p className="text-sm text-primary-readable mt-1 flex items-center gap-1.5">
                     <BriefcaseIcon className="w-4 h-4" /> อายุงาน: {getWorkTenure(detail.start_date, detail.end_date)}
                   </p>
                 )}
@@ -295,11 +295,11 @@ export default function Team() {
               </button>
             </div>
             <div className="mt-4 sm:mt-5 space-y-3 border-t border-border/50 pt-4">
-              <a href={`mailto:${detail.email}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary transition-colors">
+              <a href={`mailto:${detail.email}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary-readable transition-colors">
                 <EnvelopeIcon className="w-4 h-4 flex-shrink-0" /> <span className="truncate">{detail.email}</span>
               </a>
               {detail.phone && (
-                <a href={`tel:${detail.phone}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary transition-colors">
+                <a href={`tel:${detail.phone}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary-readable transition-colors">
                   <PhoneIcon className="w-4 h-4 flex-shrink-0" /> {detail.phone}
                 </a>
               )}
@@ -313,7 +313,7 @@ export default function Team() {
           {detail.promptpay_qr && (
             <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 text-center" style={{ boxShadow: "var(--shadow-sm)" }}>
               <div className="flex items-center justify-center gap-2 mb-4">
-                <QrCodeIcon className="w-5 h-5 text-primary" />
+                <QrCodeIcon className="w-5 h-5 text-primary-readable" />
                 <h2 className="font-bold text-foreground">PromptPay QR</h2>
               </div>
               <img src={getPublicUrl(detail.promptpay_qr)} alt="PromptPay QR" className="w-44 h-44 sm:w-56 sm:h-56 object-contain mx-auto rounded-xl border border-border bg-white p-2" />
@@ -331,7 +331,7 @@ export default function Team() {
               {[
                 { label: "ทั้งหมด", value: monthlyStats.total, color: "text-foreground" },
                 { label: "เสร็จแล้ว", value: monthlyStats.done, color: "text-green-600" },
-                { label: "กำลังทำ", value: monthlyStats.inProgress, color: "text-primary" },
+                { label: "กำลังทำ", value: monthlyStats.inProgress, color: "text-primary-readable" },
                 { label: "ค้างอยู่", value: monthlyStats.todo, color: "text-amber-500" },
                 { label: "ประชุม", value: extra.meetingCount, color: "text-violet-500" },
                 { label: "ออกกอง", value: extra.onsiteCount, color: "text-rose-500" },
@@ -343,7 +343,7 @@ export default function Team() {
               ))}
             </div>
             <div className="progress-bar mb-1"><div className="progress-fill" style={{ width: `${monthlyStats.pct}%` }} /></div>
-            <div className="text-right text-xs font-bold text-primary">{monthlyStats.pct}% complete</div>
+            <div className="text-right text-xs font-bold text-primary-readable">{monthlyStats.pct}% complete</div>
 
             {/* Overall stats */}
             <div className="mt-4 pt-3 border-t border-border/40">
@@ -354,7 +354,7 @@ export default function Team() {
                 <span className="text-amber-500">{stats.todo} ค้าง</span>
                 <span className="text-violet-500">{extra.allMeetings} ประชุม</span>
                 <span className="text-rose-500">{extra.allOnsite} ออกกอง</span>
-                <span className="text-primary font-bold">{stats.pct}%</span>
+                <span className="text-primary-readable font-bold">{stats.pct}%</span>
               </div>
             </div>
           </div>
@@ -582,15 +582,15 @@ export default function Team() {
 
               {/* Contact & Tenure */}
               <div className="space-y-1.5 mb-3">
-                <a href={`mailto:${emp.email}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors truncate">
+                <a href={`mailto:${emp.email}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary-readable transition-colors truncate">
                   <EnvelopeIcon className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{emp.email}</span>
                 </a>
                 {emp.phone && (
-                  <a href={`tel:${emp.phone}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                  <a href={`tel:${emp.phone}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary-readable transition-colors">
                     <PhoneIcon className="w-3.5 h-3.5 flex-shrink-0" /> {emp.phone}
                   </a>
                 )}
-                <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-primary-readable">
                   <BriefcaseIcon className="w-3.5 h-3.5 flex-shrink-0" />
                   {emp.start_date && getWorkTenure(emp.start_date, emp.end_date)
                     ? `อายุงาน: ${getWorkTenure(emp.start_date, emp.end_date)}${emp.is_archived ? " (สิ้นสุดแล้ว)" : ""}`
@@ -651,13 +651,13 @@ export default function Team() {
                 <div className="progress-bar"><div className="progress-fill" style={{ width: `${stats.pct}%` }} /></div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>รวมทุกปี: {overallStats.total} งาน</span>
-                  <span className="font-bold text-primary">{stats.pct}%</span>
+                  <span className="font-bold text-primary-readable">{stats.pct}%</span>
                 </div>
               </div>
 
               {/* View detail link */}
               <button onClick={() => setDetail(emp)}
-                className="mt-3 w-full text-xs text-center text-muted-foreground hover:text-primary transition-colors py-1.5 rounded-lg hover:bg-muted/50">
+                className="mt-3 w-full text-xs text-center text-muted-foreground hover:text-primary-readable transition-colors py-1.5 rounded-lg hover:bg-muted/50">
                 View details →
               </button>
             </div>

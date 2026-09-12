@@ -147,7 +147,7 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
   const isHoliday = item.type === "holiday" && item.holidayOriginalId;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="calendar-item-detail-title" className="bg-card rounded-2xl border border-border p-6 w-full max-w-md animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getItemStyle(item)}`}>
@@ -168,7 +168,7 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
             <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
-        <h3 className="text-lg font-bold mb-1">{item.name}</h3>
+        <h3 id="calendar-item-detail-title" className="text-lg font-bold mb-1">{item.name}</h3>
         {item.sourceName && item.sourceName !== "Standalone" && (
           <p className="text-xs text-muted-foreground mb-3">
             {item.taskType === "project" ? "🚀" : "💼"} {item.sourceName}
@@ -203,7 +203,7 @@ function ItemDetailModal({ item, onClose, onEditHoliday, onDeleteHoliday }: {
             </div>
           )}
           {item.link && (
-            <a href={item.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline" onClick={e => e.stopPropagation()}>
+            <a href={item.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary-readable hover:underline" onClick={e => e.stopPropagation()}>
               <ArrowTopRightOnSquareIcon className="w-4 h-4 flex-shrink-0" />
               <span className="truncate">{item.link.replace(/^https?:\/\//, "")}</span>
             </a>
@@ -242,9 +242,9 @@ function DayDetailModal({ dateStr, items, onClose, onSelectItem, onDoubleClickIt
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm animate-scale-in max-h-[80vh] overflow-y-auto" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="calendar-day-detail-title" className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm animate-scale-in max-h-[80vh] overflow-y-auto" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">
+          <h3 id="calendar-day-detail-title" className="text-lg font-bold">
             {new Date(dateStr).toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long" })}
           </h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors" aria-label="Close">
@@ -289,10 +289,10 @@ function HolidayFormModal({ onClose, onSubmit, initial }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="holiday-form-title" className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm animate-scale-in" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">{initial ? "แก้ไขวันหยุด" : "เพิ่มวันหยุด"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
+          <h3 id="holiday-form-title" className="text-lg font-bold">{initial ? "แก้ไขวันหยุด" : "เพิ่มวันหยุด"}</h3>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
         </div>
         <div className="space-y-3">
           <div>
@@ -384,40 +384,40 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overscroll-contain" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="meeting-form-title" className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
-          <h3 className="text-lg font-bold">{isEdit ? "Edit Meeting" : "เพิ่ม Meeting"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
+          <h3 id="meeting-form-title" className="text-lg font-bold">{isEdit ? "Edit Meeting" : "เพิ่ม Meeting"}</h3>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
         </div>
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 p-6 overscroll-contain">
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Meeting Title</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+              <label htmlFor="meeting-title" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Meeting Title</label>
+              <input id="meeting-title" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
                 value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} autoFocus />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Date</label>
-              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              <label htmlFor="meeting-date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Date</label>
+              <input id="meeting-date" type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                 value={form.meeting_date} onChange={e => setForm({ ...form, meeting_date: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start Time</label>
-                <input type="time" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                <label htmlFor="meeting-start" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start Time</label>
+                <input id="meeting-start" type="time" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                   value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">End Time</label>
-                <input type="time" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                <label htmlFor="meeting-end" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">End Time</label>
+                <input id="meeting-end" type="time" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                   value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} />
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Location</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              <label htmlFor="meeting-location" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Location</label>
+              <input id="meeting-location" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                 value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Meeting room, Zoom, etc." />
             </div>
             <div>
@@ -429,15 +429,15 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
-              <textarea rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
+              <label htmlFor="meeting-notes" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
+              <textarea id="meeting-notes" rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
                 value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Meeting agenda or notes..." />
             </div>
 
             {/* Link to Project/Customer */}
             <div className="border-t border-border pt-4 space-y-3">
               <div className="flex items-center gap-2 mb-2">
-                <LinkIcon className="w-4 h-4 text-primary" />
+                <LinkIcon className="w-4 h-4 text-primary-readable" />
                 <label className="text-xs font-semibold text-foreground uppercase tracking-wide">เชื่อมโยงกับ Project / Customer</label>
               </div>
               <div className="bg-muted/40 rounded-xl p-3 space-y-3">
@@ -462,7 +462,7 @@ function MeetingFormModal({ item, employees, projects, customers, onSave, onAdd,
                   </select>
                 )}
                 {linkType !== "none" && linkId && (
-                  <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs text-primary-readable bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
                     <span>💡</span>
                     <span>จะสร้าง Task หมวด Meeting ในหน้า {linkType === "project" ? "Projects" : "Customers"} ด้วย</span>
                   </div>
@@ -537,28 +537,28 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overscroll-contain" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="onsite-form-title" className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
-          <h3 className="text-lg font-bold">{isEdit ? "Edit On-site Work" : "เพิ่ม On-site Work"}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
+          <h3 id="onsite-form-title" className="text-lg font-bold">{isEdit ? "Edit On-site Work" : "เพิ่ม On-site Work"}</h3>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
         </div>
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 p-6 overscroll-contain">
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Title</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+              <label htmlFor="onsite-title" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Title</label>
+              <input id="onsite-title" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
                 value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} autoFocus />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Date</label>
-              <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              <label htmlFor="onsite-date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Date</label>
+              <input id="onsite-date" type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                 value={form.work_date} onChange={e => setForm({ ...form, work_date: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Location</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              <label htmlFor="onsite-location" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Location</label>
+              <input id="onsite-location" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                 value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Customer site, branch, etc." />
             </div>
             <div>
@@ -570,15 +570,15 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
-              <textarea rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
+              <label htmlFor="onsite-notes" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notes</label>
+              <textarea id="onsite-notes" rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none resize-none"
                 value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Work details or notes..." />
             </div>
 
             {/* Link to Project/Customer */}
             <div className="border-t border-border pt-4 space-y-3">
               <div className="flex items-center gap-2 mb-2">
-                <LinkIcon className="w-4 h-4 text-primary" />
+                <LinkIcon className="w-4 h-4 text-primary-readable" />
                 <label className="text-xs font-semibold text-foreground uppercase tracking-wide">เชื่อมโยงกับ Project / Customer</label>
               </div>
               <div className="bg-muted/40 rounded-xl p-3 space-y-3">
@@ -603,7 +603,7 @@ function OnsiteFormModal({ item, employees, projects, customers, onSave, onAdd, 
                   </select>
                 )}
                 {linkType !== "none" && linkId && (
-                  <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs text-primary-readable bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
                     <span>💡</span>
                     <span>จะสร้าง Task หมวด On-site ในหน้า {linkType === "project" ? "Projects" : "Customers"} ด้วย</span>
                   </div>
@@ -661,39 +661,39 @@ function TaskEditModal({ item, employees, onSave, onClose }: {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overscroll-contain" style={{ background: "hsl(222 47% 9% / 0.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="task-edit-title" className="bg-card rounded-2xl border border-border w-full max-w-lg animate-scale-in flex flex-col max-h-[90vh]" style={{ boxShadow: "var(--shadow-lg)" }} onClick={e => e.stopPropagation()}>
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
-          <h3 className="text-lg font-bold">Edit Task</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
+          <h3 id="task-edit-title" className="text-lg font-bold">Edit Task</h3>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"><XMarkIcon className="w-4 h-4" /></button>
         </div>
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 p-6 overscroll-contain">
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
-              <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+              <label htmlFor="task-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Task Name</label>
+              <input id="task-name" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
                 value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Status</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                <label htmlFor="task-status" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Status</label>
+                <select id="task-status" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                   value={form.status} onChange={e => setForm({ ...form, status: e.target.value as TaskStatus_ })}>
                   {COLUMNS_.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Priority</label>
-                <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                <label htmlFor="task-priority" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Priority</label>
+                <select id="task-priority" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                   value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value as TaskPriority_ })}>
                   <option>High</option><option>Medium</option><option>Low</option>
                 </select>
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              <label htmlFor="task-category" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
+              <select id="task-category" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/30 outline-none"
                 value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
                 <option value="none">— ไม่ระบุ —</option>
                 <option value="meeting">🗓 Meetings</option>
@@ -1102,7 +1102,7 @@ export default function CalendarPage() {
                     {dayItems.length > 3 && (
                       <button
                         onClick={() => setSelectedDay({ dateStr, items: dayItems })}
-                        className="text-[10px] text-primary font-medium px-1 hover:underline cursor-pointer"
+                        className="text-[10px] text-primary-readable font-medium px-1 hover:underline cursor-pointer"
                       >
                         +{dayItems.length - 3} more
                       </button>

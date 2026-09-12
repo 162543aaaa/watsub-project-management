@@ -46,7 +46,7 @@ export default function Import() {
             <div className="space-y-1.5">
               {importTypes.map(t => (
                 <button key={t} onClick={() => setSelected(t)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${selected === t ? "bg-primary/10 text-primary border border-primary/20" : "hover:bg-muted text-muted-foreground"}`}>
+                  className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${selected === t ? "bg-primary/10 text-primary-readable border border-primary/20" : "hover:bg-muted text-muted-foreground"}`}>
                   {t}
                 </button>
               ))}
@@ -76,7 +76,7 @@ export default function Import() {
             <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              {file ? <DocumentTextIcon className="w-7 h-7 text-primary" /> : <ArrowUpTrayIcon className="w-7 h-7 text-primary" />}
+              {file ? <DocumentTextIcon className="w-7 h-7 text-primary-readable" /> : <ArrowUpTrayIcon className="w-7 h-7 text-primary-readable" />}
             </div>
             {file ? (
               <div>
