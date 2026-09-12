@@ -2,267 +2,348 @@ import {
   ArrowTopRightOnSquareIcon,
   BookOpenIcon,
   BuildingOffice2Icon,
+  ClockIcon,
   EnvelopeIcon,
+  FolderOpenIcon,
   MapPinIcon,
-  PencilIcon,
+  PhoneIcon,
+  RectangleStackIcon,
+  SwatchIcon,
   UsersIcon,
 } from "@heroicons/react/24/solid";
-import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
-import { formatDistanceToNow } from "date-fns";
-import { useAuthContext } from "@/contexts/AuthContext";
-import { useCompanyInfo } from "@/hooks/useCompanyInfo";
-import { useWiki, type WikiPage } from "@/hooks/useWiki";
-import { InteractiveOrgChart } from "@/components/InteractiveOrgChart";
-
-const OrgAdminEditor = lazy(() => import("@/components/OrgAdminEditor").then((module) => ({ default: module.OrgAdminEditor })));
-import { Button } from "@/components/ui/button";
 import {
-  markdownExcerpt,
-  organizationSectionPage,
-  organizationWikiPages,
-} from "@/lib/organizationKnowledge";
+  brandPalette,
+  brandVoice,
+  contentPillars,
+  deliveryCountdown,
+  digitalOperatingSystem,
+  driveArchitecture,
+  groundRules,
+  operatingRhythm,
+  organizationProfile,
+  projectFolderStandard,
+  studioDna,
+  teamLayers,
+  vaultSources,
+} from "@/data/organizationVault";
 
-const FALLBACK = {
-  name: "WatSUB! Studio",
-  tagline: "Connect. Create. Inspire.",
-  vision: "เชื่อมผู้คน ไอเดีย และโอกาส เพื่อสร้างระบบนิเวศสร้างสรรค์ที่เติบโตไปพร้อมกับเมือง",
-  mission: "ทำหน้าที่เป็น Connector ระหว่างคนสร้างสรรค์ เมือง และโอกาสทางธุรกิจผ่านงานที่มีความหมาย",
-  history: "WatSUB! Studio เติบโตจาก creative production studio สู่พื้นที่เชื่อมโยงคน ความรู้ และโอกาสในปัตตานี",
-};
-
-function KnowledgeCard({
-  title,
-  page,
-  fallback,
-}: {
-  title: string;
-  page?: WikiPage;
-  fallback: string;
-}) {
-  const content = page ? markdownExcerpt(page.content) : fallback;
+function SectionHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{title}</p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            {page ? "Source: Company Wiki" : "Source: Legacy organization profile"}
-          </p>
-        </div>
-        {page && (
-          <Link
-            to={`/wiki/${page.slug}`}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-          >
-            Open <ArrowTopRightOnSquareIcon className="h-3 w-3" />
-          </Link>
-        )}
-      </div>
-      <p className="text-sm leading-relaxed text-foreground/80">{content}</p>
+    <div className="max-w-3xl">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{eyebrow}</p>
+      <h2 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{title}</h2>
+      {description && <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>}
     </div>
   );
 }
-function WikiLinkCard({ page }: { page: WikiPage }) {
+function ContactItem({ icon: Icon, children }: { icon: typeof MapPinIcon; children: React.ReactNode }) {
   return (
-    <Link
-      to={`/wiki/${page.slug}`}
-      className="group rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/20"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-foreground group-hover:text-primary">{page.title}</h3>
-          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-            {markdownExcerpt(page.content, 120) || "No content yet."}
-          </p>
-        </div>
-        <ArrowTopRightOnSquareIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-primary" />
-      </div>
-      <p className="mt-3 text-[11px] text-muted-foreground">
-        Updated {formatDistanceToNow(new Date(page.updated_at), { addSuffix: true })}
-      </p>
-    </Link>
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Icon className="h-3.5 w-3.5" />
+      {children}
+    </span>
+  );
+}
+
+function Metric({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+      <p className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{value}</p>
+      <p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p>
+    </div>
   );
 }
 
 export default function Organization() {
-  const { isAdmin } = useAuthContext();
-  const company = useCompanyInfo();
-  const wiki = useWiki();
-  const [editorOpen, setEditorOpen] = useState(false);
-  const organizationPages = organizationWikiPages(wiki.pages);
-  const visionPage = organizationSectionPage(wiki.pages, "vision");
-  const missionPage = organizationSectionPage(wiki.pages, "mission");
-  const historyPage = organizationSectionPage(wiki.pages, "history");
-  const featuredIds = new Set([visionPage?.id, missionPage?.id, historyPage?.id].filter(Boolean));
-  const libraryPages = organizationPages.filter((page) => !featuredIds.has(page.id));
+  return (
+    <div className="page-enter space-y-8 p-4 sm:p-6 lg:space-y-10">
+      <section className="overflow-hidden rounded-3xl border border-border bg-card">
+        <div className="grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)] lg:p-9">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              <BuildingOffice2Icon className="h-4 w-4" /> Studio Organization
+            </div>
+            <h1 className="mt-4 text-4xl font-black tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl">
+              {organizationProfile.name}
+            </h1>
+            <p className="mt-3 text-lg font-semibold text-foreground/80">{organizationProfile.tagline}</p>
+            <p className="mt-5 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+              {organizationProfile.description}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2">
+              <ContactItem icon={MapPinIcon}>{organizationProfile.location}</ContactItem>
+              <ContactItem icon={EnvelopeIcon}>{organizationProfile.email}</ContactItem>
+              <ContactItem icon={PhoneIcon}>{organizationProfile.phone}</ContactItem>
+            </div>
+            <div className="mt-7 flex flex-wrap gap-2">
+              <Link
+                to="/wiki?category=Organization"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <BookOpenIcon className="h-4 w-4" /> Open Organization Wiki
+              </Link>
+              <span className="inline-flex items-center rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground">
+                {organizationProfile.slogan}
+              </span>
+            </div>
+          </div>
 
-  const info = company.companyInfo;
-  const name = info?.name || FALLBACK.name;
-  const tagline = info?.tagline || FALLBACK.tagline;
-  const location = info?.location_links;
-  const brandColors = info?.brand_colors ?? undefined;
-
-  if (company.isLoading) {
-    return (
-      <div className="p-6 space-y-6 page-enter">
-        <div className="h-24 rounded-2xl border border-border bg-card animate-pulse" />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-28 rounded-2xl border border-border bg-card animate-pulse" />
+          <div className="rounded-2xl border border-border bg-muted/30 p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Why WatSUB exists</p>
+            <p className="mt-4 text-xl font-bold leading-snug text-foreground sm:text-2xl">
+              “เราคือ CONNECTOR ที่อยู่ตรงกลาง เพื่อทำให้เกิดการเปลี่ยนแปลง”
+            </p>
+            <p className="mt-4 text-sm leading-7 text-muted-foreground">{organizationProfile.purpose}</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <Metric value={organizationProfile.founded} label="Founded" />
+              <Metric value="Pattani" label="Home base" />
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="space-y-4">
+        <SectionHeading
+          eyebrow="Studio DNA"
+          title="Connect. Create. Inspire."
+          description="แกนคิดหลักที่กำหนดทั้งงานครีเอทีฟ การทำงานกับเมือง และวิธีที่ WatSUB สร้างโอกาสร่วมกับคนอื่น"
+        />
+        <div className="grid gap-4 md:grid-cols-3">
+          {studioDna.map((item, index) => (
+            <article key={item.key} className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs font-bold tabular-nums text-muted-foreground">0{index + 1}</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+              </div>
+              <h3 className="mt-8 text-2xl font-black tracking-tight text-foreground">{item.key}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.description}</p>
+            </article>
           ))}
         </div>
-        <div className="h-72 rounded-2xl border border-border bg-card animate-pulse" />
-      </div>
-    );
-  }
-
-  const stats = [
-    { label: "Team members", value: company.stats.totalEmployees },
-    { label: "Active", value: company.stats.activeCount },
-    { label: "Leadership", value: company.stats.leadershipCount },
-    { label: "Team models", value: company.stats.teamModels },
-  ];
-
-  return (
-    <div className="p-6 space-y-6 page-enter">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <BuildingOffice2Icon className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Studio organization</p>
-            <h1 className="mt-1 text-2xl font-bold text-foreground">{name}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{tagline}</p>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
-              {location?.label && (
-                <a href={location.map_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground">
-                  <MapPinIcon className="h-3.5 w-3.5" /> {location.label}
-                </a>
-              )}
-              {info?.contact_email && (
-                <span className="inline-flex items-center gap-1.5">
-                  <EnvelopeIcon className="h-3.5 w-3.5" /> {info.contact_email}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/wiki?category=Organization"
-            className="inline-flex items-center gap-2 rounded-xl border border-border px-3.5 py-2 text-sm font-medium hover:bg-muted"
-          >
-            <BookOpenIcon className="h-4 w-4" /> Organization Wiki
-          </Link>
-          {isAdmin && (
-            <Button onClick={() => setEditorOpen(true)} className="gap-2">
-              <PencilIcon className="h-4 w-4" /> Manage structure
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {(company.error || wiki.error) && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          Some organization data could not be loaded. {company.error || wiki.error}
-        </div>
-      )}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-3xl font-bold tracking-tight text-foreground">{item.value}</p>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">{item.label}</p>
-          </div>
-        ))}
       </section>
 
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-foreground">Organization knowledge</h2>
-            <p className="text-sm text-muted-foreground">Vision, mission and history are sourced from the Company Wiki when available.</p>
-          </div>
-          <span className="hidden text-xs text-muted-foreground sm:block">{organizationPages.length} wiki articles</span>
-        </div>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <KnowledgeCard title="Vision" page={visionPage} fallback={info?.vision || FALLBACK.vision} />
-          <KnowledgeCard title="Mission" page={missionPage} fallback={info?.mission || FALLBACK.mission} />
-          <KnowledgeCard title="History" page={historyPage} fallback={info?.history || FALLBACK.history} />
-        </div>
-      </section>
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="rounded-2xl border border-border bg-card">
-          <div className="flex items-start justify-between gap-4 border-b border-border p-5">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
-                <UsersIcon className="h-5 w-5 text-primary" /> Team structure
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">Operational reporting structure from organization data.</p>
-            </div>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setEditorOpen(true)}
-                className="text-xs font-semibold text-primary hover:underline"
-              >
-                Edit structure
-              </button>
-            )}
-          </div>
-          <div className="p-5">
-            <InteractiveOrgChart tree={company.orgTree} brandColors={brandColors} />
-          </div>
-        </div>
-
-        <aside className="rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-foreground">Organization Wiki</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Culture, handbook, benefits and studio references.</p>
-            </div>
-            <BookOpenIcon className="h-5 w-5 text-info" />
-          </div>
-          <div className="mt-4 space-y-3">
-            {wiki.loading ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="h-24 rounded-xl bg-muted animate-pulse" />
-              ))
-            ) : libraryPages.length > 0 ? (
-              libraryPages.slice(0, 5).map((page) => <WikiLinkCard key={page.id} page={page} />)
-            ) : (
-              <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-                No additional Organization articles yet.
+      <section className="space-y-4">
+        <SectionHeading
+          eyebrow="Content Architecture"
+          title="Three pillars, one creative ecosystem"
+          description="โครงสร้างคอนเทนต์ปี 2026 แยกหน้าที่ชัดเจนตั้งแต่การสร้างการรับรู้ ไปจนถึงเรื่องเล่าเชิงลึกและโอกาสทางธุรกิจ"
+        />
+        <div className="grid gap-4 lg:grid-cols-3">
+          {contentPillars.map((pillar) => (
+            <article key={pillar.key} className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <p className="text-sm font-black text-primary">{pillar.key}</p>
+              <h3 className="mt-2 text-xl font-bold text-foreground">{pillar.title}</h3>
+              <p className="mt-2 text-sm font-medium text-foreground/75">{pillar.promise}</p>
+              <p className="mt-4 text-sm leading-6 text-muted-foreground">{pillar.description}</p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {pillar.series.map((series) => (
+                  <span key={series} className="rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                    {series}
+                  </span>
+                ))}
               </div>
-            )}
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="space-y-4">
+        <SectionHeading
+          eyebrow="Team Structure"
+          title="A small core with an expandable specialist network"
+          description="โครงสร้างทีมตาม Knowledge Vault แบ่งบทบาทเป็น Leadership, Core Operations และ Specialist Network เพื่อให้ทีมเล็กเคลื่อนตัวได้เร็วและขยายกำลังตามโปรเจกต์"
+        />
+        <div className="grid gap-4 xl:grid-cols-3">
+          {teamLayers.map((layer, layerIndex) => (
+            <article key={layer.title} className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <UsersIcon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Layer {layerIndex + 1}</p>
+                  <h3 className="text-sm font-bold text-foreground">{layer.title}</h3>
+                </div>
+              </div>
+              <div className="mt-5 space-y-4">
+                {layer.members.map((member) => (
+                  <div key={member.name} className="border-l-2 border-border pl-3">
+                    <p className="text-sm font-semibold text-foreground">{member.name}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{member.role}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <div className="space-y-4">
+          <SectionHeading eyebrow="Operating Rhythm" title="How the studio moves through a working day" />
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="space-y-0">
+              {operatingRhythm.map((item, index) => (
+                <div key={item.step} className="grid grid-cols-[72px_minmax(0,1fr)] gap-4">
+                  <div className="relative pb-6 text-xs font-black text-primary">
+                    {item.step}
+                    {index < operatingRhythm.length - 1 && <span className="absolute left-0 top-6 h-[calc(100%-1.1rem)] w-px bg-border" />}
+                  </div>
+                  <div className="pb-6">
+                    <h3 className="text-sm font-bold text-foreground">{item.title}</h3>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <SectionHeading eyebrow="Delivery Discipline" title="Deadline countdown" />
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="space-y-3">
+              {deliveryCountdown.map((item) => (
+                <div key={item.day} className="grid grid-cols-[54px_minmax(0,1fr)] gap-3 rounded-xl bg-muted/30 p-3">
+                  <span className="text-sm font-black text-primary">{item.day}</span>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">{item.action}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeading
+          eyebrow="Ground Rules"
+          title="Five rules that keep the studio moving"
+          description="หลักปฏิบัติจาก Daily Flow SOP ที่ช่วยลดคอขวดและทำให้การตัดสินใจหน้างานเร็วขึ้น"
+        />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {groundRules.map((rule, index) => (
+            <div key={rule} className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs font-black text-primary">0{index + 1}</p>
+              <p className="mt-3 text-sm leading-6 text-foreground/80">{rule}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="space-y-4">
+        <SectionHeading
+          eyebrow="Brand System"
+          title="RAW / BOLD / WARM / LOCAL"
+          description="Visual identity และน้ำเสียงที่ใช้เป็นมาตรฐานร่วมกันของสตูดิโอในปี 2026"
+        />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="flex items-center gap-2">
+              <SwatchIcon className="h-5 w-5 text-primary" />
+              <h3 className="text-sm font-bold text-foreground">Brand palette</h3>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {brandPalette.map((color) => (
+                <div key={color.hex} className="rounded-xl border border-border p-3">
+                  <div className="h-16 rounded-lg border border-black/10" style={{ backgroundColor: color.hex }} />
+                  <p className="mt-3 text-sm font-bold text-foreground">{color.name}</p>
+                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">{color.hex}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{color.role}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <h3 className="text-sm font-bold text-foreground">Tone of voice</h3>
+            <div className="mt-5 space-y-4">
+              {brandVoice.map((item) => (
+                <div key={item.key} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
+                  <span className="text-xs font-black text-primary">{item.key}</span>
+                  <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="space-y-4">
+        <SectionHeading
+          eyebrow="Knowledge Infrastructure"
+          title="Files, systems and reusable knowledge"
+          description="WatSUB วางโครงสร้างไฟล์และระบบดิจิทัลให้ความรู้เดินทางต่อได้จากคนหนึ่งไปอีกคนหนึ่ง โดยไม่ต้องเริ่มใหม่ทุกครั้ง"
+        />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <article className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="flex items-center gap-2">
+              <FolderOpenIcon className="h-5 w-5 text-primary" />
+              <h3 className="text-sm font-bold text-foreground">Drive architecture</h3>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {driveArchitecture.map((item) => (
+                <div key={item.key} className="rounded-xl bg-muted/30 p-3">
+                  <p className="text-xs font-black text-foreground">{item.key}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="flex items-center gap-2">
+              <RectangleStackIcon className="h-5 w-5 text-primary" />
+              <h3 className="text-sm font-bold text-foreground">Project folder standard</h3>
+            </div>
+            <div className="mt-5 space-y-3">
+              {projectFolderStandard.map((item) => (
+                <div key={item.key} className="border-l-2 border-primary/40 pl-3">
+                  <p className="font-mono text-xs font-bold text-foreground">{item.key}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        </div>
+      </section>
+      <section className="space-y-4">
+        <SectionHeading eyebrow="Digital Operating System" title="The studio runs on one connected system" />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {digitalOperatingSystem.map((item) => (
+            <article key={item.title} className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ClockIcon className="h-4 w-4" />
+              </div>
+              <h3 className="mt-4 text-sm font-bold text-foreground">{item.title}</h3>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">{item.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Knowledge source</p>
+            <h2 className="mt-2 text-lg font-bold text-foreground">Built from the WatSUB Obsidian Vault</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              หน้านี้สร้างใหม่จากข้อมูลใน M:\Obsidian\TARMISI WANI โดยคัดจาก entity, brand guideline, SOP, content architecture, drive architecture และ operating-system synthesis ของ WatSUB
+            </p>
           </div>
           <Link
             to="/wiki?category=Organization"
-            className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+            className="inline-flex flex-shrink-0 items-center gap-2 text-sm font-semibold text-primary hover:underline"
           >
-            View all organization knowledge <ArrowTopRightOnSquareIcon className="h-3 w-3" />
+            Explore Organization Wiki <ArrowTopRightOnSquareIcon className="h-4 w-4" />
           </Link>
-        </aside>
+        </div>
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {vaultSources.map((source) => (
+            <code key={source} className="truncate rounded-lg border border-border bg-card px-3 py-2 text-[10px] text-muted-foreground" title={source}>
+              {source}
+            </code>
+          ))}
+        </div>
       </section>
-
-      {isAdmin && editorOpen && (
-        <Suspense fallback={null}>
-          <OrgAdminEditor
-          open={editorOpen}
-          onOpenChange={setEditorOpen}
-          defaultTab="orgchart"
-          companyInfo={company.companyInfo}
-          orgMembers={company.orgMembers}
-          onUpdateCompanyInfo={company.updateCompanyInfo}
-          onAddOrgMember={company.addOrgMember}
-          onUpdateOrgMember={company.updateOrgMember}
-          onDeleteOrgMember={company.deleteOrgMember}
-          onRefetch={company.refetch}
-          />
-        </Suspense>
-      )}
     </div>
   );
 }
