@@ -1,20 +1,21 @@
 import { ArrowPathIcon, BookOpenIcon, CheckIcon, ChevronRightIcon, ClockIcon, ExclamationTriangleIcon, EyeIcon, MagnifyingGlassIcon, PencilIcon, PlusIcon, TagIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useWiki, WikiPage } from "@/hooks/useWiki";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 
 // ─── Category helpers ────────────────────────────────────────────────────────
 
-const CATEGORIES = ["General", "HR", "IT", "Operations", "Finance"];
+const CATEGORIES = ["General", "Organization", "HR", "IT", "Operations", "Finance"];
 
 const CATEGORY_BG: Record<string, string> = {
   HR:         "hsl(142 76% 36% / 0.15)",
   IT:         "hsl(217 91% 60% / 0.15)",
   Operations: "hsl(38 92% 50% / 0.15)",
   Finance:    "hsl(280 65% 60% / 0.15)",
+  Organization: "hsl(72 100% 49% / 0.12)",
   General:    "hsl(215 20% 45% / 0.15)",
 };
 const CATEGORY_TEXT: Record<string, string> = {
@@ -22,6 +23,7 @@ const CATEGORY_TEXT: Record<string, string> = {
   IT:         "hsl(217 91% 70%)",
   Operations: "hsl(38 92% 60%)",
   Finance:    "hsl(280 65% 70%)",
+  Organization: "hsl(var(--primary))",
   General:    "hsl(215 20% 65%)",
 };
 
@@ -291,8 +293,16 @@ CREATE POLICY "Authors and admins can delete wiki pages"
 export default function Wiki() {
   const { pages, loading, error, fetchPages, createPage, updatePage, deletePage } = useWiki();
   const { isAdmin } = useAuthContext();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => searchParams.get("category"));
+  const chooseCategory = (category: string | null) => {
+    setSelectedCategory(category);
+    const next = new URLSearchParams(searchParams);
+    if (category) next.set("category", category);
+    else next.delete("category");
+    setSearchParams(next, { replace: true });
+  };
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<WikiPage | null>(null);
   const [saving, setSaving] = useState(false);
@@ -432,7 +442,7 @@ export default function Wiki() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <button
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => chooseCategory(null)}
             className="px-3 py-2 rounded-xl border text-xs font-medium transition-all"
             style={!selectedCategory
               ? { background: "hsl(191 91% 37% / 0.15)", color: "hsl(191 91% 55%)", borderColor: "hsl(191 91% 37% / 0.4)" }
@@ -443,7 +453,7 @@ export default function Wiki() {
           {categories.map(cat => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+              onClick={() => chooseCategory(selectedCategory === cat ? null : cat)}
               className="px-3 py-2 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5"
               style={selectedCategory === cat
                 ? { ...catStyle(cat), borderColor: "transparent" }
