@@ -14,7 +14,8 @@ import { filterDoneTasks } from "@/lib/taskFilters";
 import { toast } from "@/hooks/use-toast";
 import { exportCSV, exportPDF, escapeHtml } from "@/lib/exportUtils";
 import EditTaskModal from "@/components/EditTaskModal";
-import EditProjectModal from "@/components/EditProjectModal";
+import EditProjectModal, { type ProjectFormData } from "@/components/EditProjectModal";
+import { calculateProjectHealth, HEALTH_LABELS } from "@/lib/projectHealth";
 import { HideDoneToggle } from "@/components/HideDoneToggle";
 import { useEffect } from "react";
 
@@ -105,12 +106,12 @@ export default function Projects() {
   const { projects, loading, addProject, updateProject, deleteProject, archiveProject, unarchiveProject, addTask, updateTask, deleteTask, reorderProjects } = useProjects(showArchived ? "archived" : "active");
   const { employees } = useEmployees();
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", note: "", link: "", pillar: "SOUL" as Pillar, customName: false, month: new Date().getMonth() + 1, year: new Date().getFullYear() });
+  const [newProject, setNewProject] = useState({ name: "", note: "", link: "", start_date: "", deadline: "", pillar: "SOUL" as Pillar, customName: false, month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterYear, setFilterYear] = useState<number | "all">("all");
   const [filterPillar, setFilterPillar] = useState<Pillar | "all">("all");
   const [taskModal, setTaskModal] = useState<{ projectId: string; task?: Task } | null>(null);
-  const [editModal, setEditModal] = useState<{ id: string; name: string; month: number; year: number; note: string; link: string; pillar: Pillar } | null>(null);
+  const [editModal, setEditModal] = useState<(ProjectFormData & { id: string }) | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<{ type: "project" | "task"; id: string; name: string; parentId?: string } | null>(null);
@@ -126,23 +127,29 @@ export default function Projects() {
 
   const handleAddProject = async () => {
     if (!newProject.name.trim()) { toast({ title: "กรุณากรอกชื่อโปรเจกต์", variant: "destructive" }); return; }
+    if (newProject.start_date && newProject.deadline && newProject.deadline < newProject.start_date) {
+      toast({ title: "Deadline ต้องไม่มาก่อน Start date", variant: "destructive" });
+      return;
+    }
     await addProject({
       name: newProject.name,
       month: newProject.month,
       year: newProject.year,
       note: newProject.note,
       link: newProject.link,
+      start_date: newProject.start_date || undefined,
+      deadline: newProject.deadline || undefined,
       pillar: newProject.pillar,
     });
-    setNewProject({ name: "", note: "", link: "", pillar: "SOUL", customName: false, month: new Date().getMonth() + 1, year: new Date().getFullYear() });
+    setNewProject({ name: "", note: "", link: "", start_date: "", deadline: "", pillar: "SOUL", customName: false, month: new Date().getMonth() + 1, year: new Date().getFullYear() });
     setShowAddProject(false);
   };
 
   const openEditProject = (proj: typeof projects[0]) => {
-    setEditModal({ id: proj.id, name: proj.name, month: proj.month, year: proj.year, note: proj.note || "", link: proj.link || "", pillar: proj.pillar });
+    setEditModal({ id: proj.id, name: proj.name, month: proj.month, year: proj.year, note: proj.note || "", link: proj.link || "", start_date: proj.start_date || "", deadline: proj.deadline || "", pillar: proj.pillar });
   };
 
-  const handleEditProject = async (formData: { name: string; month: number; pillar: Pillar; link: string; note: string }) => {
+  const handleEditProject = async (formData: ProjectFormData) => {
     if (!editModal) return;
     await updateProject(editModal.id, formData);
     setEditModal(null);
@@ -392,6 +399,16 @@ export default function Projects() {
                   </select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Start date</label>
+                  <input type="date" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none" value={newProject.start_date} onChange={e => setNewProject({ ...newProject, start_date: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Deadline</label>
+                  <input type="date" min={newProject.start_date || undefined} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none" value={newProject.deadline} onChange={e => setNewProject({ ...newProject, deadline: e.target.value })} />
+                </div>
+              </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Link</label>
                 <input className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none transition-all"
@@ -551,6 +568,14 @@ function ProjectCardComponent({
 }: ProjectCardComponentProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const donePct = proj.tasks.length ? Math.round(proj.tasks.filter((t: any) => t.status === "Done").length / proj.tasks.length * 100) : 0;
+  const health = calculateProjectHealth(proj);
+  const healthClass = health.status === "complete"
+    ? "bg-success/10 text-success border-success/20"
+    : health.status === "delayed"
+      ? "bg-destructive/10 text-destructive border-destructive/20"
+      : health.status === "at-risk"
+        ? "bg-warning/15 text-foreground border-warning/30"
+        : "bg-info/10 text-info border-info/20";
 
   return (
     <div className="bg-card rounded-2xl border border-border/60 p-5 card-hover group flex flex-col cursor-pointer"
@@ -575,6 +600,12 @@ function ProjectCardComponent({
             style={{ background: PILLAR_CONFIG[proj.pillar]?.color || "#888", color: PILLAR_CONFIG[proj.pillar]?.textColor || "#fff" }}>
             {PILLAR_CONFIG[proj.pillar]?.label || `#${proj.pillar}`}
           </span>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${healthClass}`} title={health.reasons.join(" · ")}>
+              {HEALTH_LABELS[health.status]}
+            </span>
+            {proj.deadline && <span className="text-[10px] text-muted-foreground">Deadline {new Date(proj.deadline).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}</span>}
+          </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200" onClick={e => e.stopPropagation()}>
           <button onClick={(e) => { e.stopPropagation(); openEditProject(proj); }}
@@ -608,6 +639,9 @@ function ProjectCardComponent({
         <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{proj.tasks.length} tasks</span>
         {donePct === 100 && proj.tasks.length > 0 && <span className="badge-done text-xs">✓ Complete</span>}
       </div>
+      {health.status !== "complete" && health.reasons.length > 0 && (
+        <p className="mb-3 text-[11px] text-muted-foreground">{health.reasons[0]}</p>
+      )}
       {proj.tasks.length > 0 && <div className="mb-4"><ProgressBar tasks={proj.tasks} /></div>}
       <div className="flex items-center gap-3 mt-auto pt-1">
         <span onClick={() => setIsExpanded(prev => !prev)}

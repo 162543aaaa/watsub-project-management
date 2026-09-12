@@ -36,15 +36,3 @@ export async function getCurrentUserId(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
   return user?.id ?? null;
 }
-
-/**
- * Compute the action label for a task update, capturing status transitions
- * with a `status_changed:From→To` convention so the activity log can parse
- * them later.
- */
-export function taskUpdateAction(oldStatus: string | undefined, newStatus: string | undefined): string {
-  if (newStatus && oldStatus && newStatus !== oldStatus) {
-    return `status_changed:${oldStatus}→${newStatus}`;
-  }
-  return "updated";
-}

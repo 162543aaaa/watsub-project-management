@@ -12,7 +12,7 @@ import { useResourceWorkload } from "@/hooks/useResourceWorkload";
 import { useWiki } from "@/hooks/useWiki";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import EmployeeAvatar from "@/components/EmployeeAvatar";
-import TaskDetailModal from "@/components/TaskDetailModal";
+import EditTaskModal from "@/components/EditTaskModal";
 import { WikiEditor, WikiViewer } from "@/components/WikiEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -675,12 +675,14 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      <TaskDetailModal
+      <EditTaskModal
         isOpen={!!selectedTask}
         task={selectedTask}
         employees={employees}
+        projects={projects}
+        customers={customers}
         onClose={() => setSelectedTask(null)}
-        onSave={handleSaveTask}
+        onSave={async (updates) => { if (selectedTask) await handleSaveTask(selectedTask, updates); }}
       />
     </div>
   );
