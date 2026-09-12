@@ -23,10 +23,10 @@ export default function TaskStatusDonut({ data, rate, total }: {
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-2xl font-bold text-foreground leading-none">{rate}%</span>
-          <span className="text-xs text-muted-foreground mt-0.5">à¹€à¸ªà¸£à¹‡à¸ˆà¹à¸¥à¹‰à¸§</span>
+          <span className="text-xs text-muted-foreground mt-0.5">เสร็จแล้ว</span>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">{total} tasks à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”</p>
+      <p className="text-xs text-muted-foreground">{total} tasks ทั้งหมด</p>
     </div>
   );
 }

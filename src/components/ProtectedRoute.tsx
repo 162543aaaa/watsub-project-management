@@ -6,10 +6,9 @@ export default function ProtectedRoute() {
   const { user, isApproved, isAdmin, loading, canAccessPage } = useAuthContext();
   const location = useLocation();
 
-  // Show spinner only on initial load (no user yet).
-  // If user is already set, render content immediately — background auth events
-  // (e.g. sign-in from another tab) update in place without blanking the page.
-  if (loading && !user) return <GlobalLoadingScreen />;
+  // Wait for session plus profile/roles before deciding route permissions.
+  // This avoids loading an approval/denied route during session restore.
+  if (loading) return <GlobalLoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   if (!isApproved && !isAdmin) return <Navigate to="/waiting-approval" replace />;
 

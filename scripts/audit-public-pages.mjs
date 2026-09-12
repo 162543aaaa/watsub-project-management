@@ -19,7 +19,13 @@ for (const route of routes) {
   });
   if (result.violations.length) {
     for (const violation of result.violations) {
-      failures.push(`${route}: axe ${violation.id} (${violation.impact || "unknown"}) x${violation.nodes.length}`);
+      const nodeDetails = violation.nodes.map((node) => {
+        const target = node.target?.join(" > ") || "unknown target";
+        const html = node.html?.replace(/\s+/g, " ").trim() || "unknown html";
+        const summary = node.failureSummary?.replace(/\s+/g, " ").trim() || "no failure summary";
+        return `target=${target} | html=${html} | ${summary}`;
+      }).join(" || ");
+      failures.push(`${route}: axe ${violation.id} (${violation.impact || "unknown"}) x${violation.nodes.length} :: ${nodeDetails}`);
     }
   }
   const title = await page.title();
