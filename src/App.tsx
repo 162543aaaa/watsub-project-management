@@ -6,12 +6,12 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Layout from "./components/Layout";
 import LoadingScreen from "@/components/LoadingScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import RouteAnnouncer from "@/components/RouteAnnouncer";
 
 const FlowingRibbons = lazy(() => import("@/components/FlowingRibbons"));
+const Layout = lazy(() => import("./components/Layout"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Tasks = lazy(() => import("./pages/Tasks"));
 const Projects = lazy(() => import("./pages/Projects"));

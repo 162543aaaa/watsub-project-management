@@ -25,6 +25,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { prefetchRoute } from "@/lib/routePrefetch";
 
 const primaryNav = [
   { label: "Dashboard", icon: Squares2X2Icon, path: "/" },
@@ -105,7 +106,7 @@ export default function TopNav() {
   return (
     <>
       <header className="app-topnav">
-        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-lg" aria-label="WatSUB Studio OS home">
+        <Link to="/" onMouseEnter={() => prefetchRoute("/")} onFocus={() => prefetchRoute("/")} onTouchStart={() => prefetchRoute("/")} className="flex min-w-0 items-center gap-2.5 rounded-lg" aria-label="WatSUB Studio OS home">
           <img src="/logo_watsub-192.webp" alt="WatSUB" className="h-8 w-8 flex-shrink-0 object-contain" />
           <div className="hidden min-w-0 sm:block">
             <div className="truncate text-sm font-bold tracking-tight text-sidebar-accent-foreground">WatSUB</div>
@@ -151,6 +152,9 @@ export default function TopNav() {
                           <Link
                             key={item.path}
                             to={item.path}
+                            onMouseEnter={() => prefetchRoute(item.path)}
+                            onFocus={() => prefetchRoute(item.path)}
+                            onTouchStart={() => prefetchRoute(item.path)}
                             role="menuitem"
                             className={`top-nav-menu-item ${active ? "top-nav-menu-item-active" : ""}`}
                           >
@@ -254,7 +258,13 @@ function NavItem({ active, icon: Icon, label, path }: {
   path: string;
 }) {
   return (
-    <Link to={path} className={`top-nav-item ${active ? "top-nav-item-active" : ""}`}>
+    <Link
+      to={path}
+      onMouseEnter={() => prefetchRoute(path)}
+      onFocus={() => prefetchRoute(path)}
+      onTouchStart={() => prefetchRoute(path)}
+      className={`top-nav-item ${active ? "top-nav-item-active" : ""}`}
+    >
       <Icon className="h-4 w-4" />
       <span>{label}</span>
     </Link>
@@ -276,7 +286,13 @@ function MobileNavItem({ item, pathname, count }: {
 }) {
   const active = isActivePath(pathname, item.path);
   return (
-    <Link to={item.path} className={`top-nav-mobile-item ${active ? "top-nav-mobile-item-active" : ""}`}>
+    <Link
+      to={item.path}
+      onMouseEnter={() => prefetchRoute(item.path)}
+      onFocus={() => prefetchRoute(item.path)}
+      onTouchStart={() => prefetchRoute(item.path)}
+      className={`top-nav-mobile-item ${active ? "top-nav-mobile-item-active" : ""}`}
+    >
       <item.icon className="h-4 w-4" />
       <span className="truncate">{item.label}</span>
       {count ? <NotificationBadge count={count} /> : null}

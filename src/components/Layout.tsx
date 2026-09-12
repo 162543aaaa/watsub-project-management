@@ -1,7 +1,28 @@
+import { Suspense, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import TopNav from "./TopNav";
+import RouteLoadingFallback from "./RouteLoadingFallback";
+import { prefetchRoute } from "@/lib/routePrefetch";
 
 export default function Layout() {
+  useEffect(() => {
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+    if (connection?.saveData || connection?.effectiveType?.includes("2g")) return;
+
+    const warmRoutes = () => {
+      ["/", "/my-work", "/tasks", "/projects", "/customers", "/calendar"].forEach(prefetchRoute);
+    };
+
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(warmRoutes, { timeout: 2500 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    const timer = window.setTimeout(warmRoutes, 1200);
+    return () => window.clearTimeout(timer);
+  }, []);
   return (
     <div className="min-h-screen bg-transparent">
       <a
@@ -12,7 +33,9 @@ export default function Layout() {
       </a>
       <TopNav />
       <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-4rem)] scroll-mt-20 pt-16">
-        <Outlet />
+        <Suspense fallback={<RouteLoadingFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
