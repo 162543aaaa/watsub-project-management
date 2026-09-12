@@ -142,7 +142,7 @@ export default function Signup() {
 
       {/* Right Column: Form Panel */}
       <div className="lg:col-span-7 flex flex-col items-center justify-center p-6 sm:p-12 relative z-10">
-        <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+        <div className="w-full max-w-md space-y-8 animate-in slide-in-from-bottom-6 duration-700">
           {/* Header */}
           <div className="text-center lg:text-left">
             <div className="lg:hidden flex justify-center mb-4">
