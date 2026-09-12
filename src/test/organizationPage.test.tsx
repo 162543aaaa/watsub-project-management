@@ -29,12 +29,13 @@ describe("Organization page", () => {
     expect(screen.getAllByText("#JOINT").length).toBeGreaterThan(0);
   });
 
-  it("renders the team structure from the vault snapshot", () => {
+  it("renders leadership and advisors together without the old nickname", () => {
     renderPage();
-    expect(screen.getByText(/Tarmisi Wani/)).toBeInTheDocument();
-    expect(screen.getByText("Natdia Benyakat")).toBeInTheDocument();
-    expect(screen.getByText("Faheem Yusoh")).toBeInTheDocument();
-    expect(screen.getByText("Zuhariya Yato")).toBeInTheDocument();
+    expect(screen.getByText("Tarmisi Wani")).toBeInTheDocument();
+    expect(screen.getByText("นครา ยะโกะ")).toBeInTheDocument();
+    expect(screen.getByText("สุกรี เจะปูเตะ")).toBeInTheDocument();
+    expect(screen.queryByText("Tarmisi Wani (คุณต้า)")).not.toBeInTheDocument();
+    expect(screen.getByText("Leadership & Strategic Advisory")).toBeInTheDocument();
   });
 
   it("renders operating rhythm and delivery discipline", () => {
@@ -55,13 +56,13 @@ describe("Organization page", () => {
     expect(screen.getByText("LOCAL")).toBeInTheDocument();
   });
 
-  it("renders the knowledge infrastructure and source trail", () => {
+  it("renders the knowledge infrastructure without the source panel", () => {
     renderPage();
     expect(screen.getByText("Drive architecture")).toBeInTheDocument();
     expect(screen.getByText("Project folder standard")).toBeInTheDocument();
     expect(screen.getByText("Digital Operating System")).toBeInTheDocument();
-    expect(screen.getByText("Built from the WatSUB Obsidian Vault")).toBeInTheDocument();
-    expect(screen.getByText("wiki/entities/WatSUB! Studio.md")).toBeInTheDocument();
+    expect(screen.queryByText("Knowledge source")).not.toBeInTheDocument();
+    expect(screen.queryByText("Built from the WatSUB Obsidian Vault")).not.toBeInTheDocument();
   });
 
   it("keeps a direct route to the Organization Wiki", () => {
