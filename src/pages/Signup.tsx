@@ -135,7 +135,7 @@ export default function Signup() {
           </div>
         </div>
 
-        <div className="relative z-10 text-xs text-slate-400">
+        <div className="relative z-10 text-xs text-sidebar-foreground">
           © {new Date().getFullYear()} WatSUB Project Management. All rights reserved.
         </div>
       </div>
