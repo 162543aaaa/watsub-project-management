@@ -405,11 +405,11 @@ export default function Tasks() {
         name: form.name,
         status: form.status,
         priority: form.priority,
-        assigned_to: form.assigned_to,
-        due_date: form.due_date,
-        start_date: form.start_date,
-        comments: form.comments,
-        link: form.link,
+        assigned_to: Array.isArray(form.assigned_to) ? form.assigned_to : [],
+        due_date: form.due_date || null,
+        start_date: form.start_date || null,
+        comments: form.comments || null,
+        link: form.link || null,
         category: form.category || "none",
         task_type,
         project_id,
@@ -418,10 +418,13 @@ export default function Tasks() {
 
       if (form.id) {
         // Update directly on tasks table so parent re-assignment works across sources
-        const { error } = await supabase.from("tasks").update(updates).eq("id", form.id);
+        const { data, error } = await supabase.from("tasks").update(updates).eq("id", form.id).select().single();
         if (error) {
           toast({ title: "Error", description: error.message, variant: "destructive" });
           return;
+        }
+        if (data) {
+          setLocalTasks(prev => prev.map(t => t.id === form.id ? { ...t, ...data } : t));
         }
         toast({ title: "อัปเดตงานสำเร็จ!" });
       } else {

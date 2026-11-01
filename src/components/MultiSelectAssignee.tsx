@@ -113,10 +113,9 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
               <input
                 type="text"
                 className="w-full pl-8 pr-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                placeholder="MagnifyingGlassIcon team members..."
+                placeholder="Search team members..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                autoFocus
               />
             </div>
           </div>
@@ -131,6 +130,7 @@ export default function MultiSelectAssignee({ selected, onChange, employees }: M
                   <button
                     key={emp.name}
                     type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => toggle(emp.name)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-muted/80 transition-colors text-left ${isSelected ? "bg-primary/5" : ""}`}
                   >

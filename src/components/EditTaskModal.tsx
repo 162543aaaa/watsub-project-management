@@ -25,22 +25,68 @@ interface EditTaskModalProps {
   onSave: (data: Partial<Task>) => Promise<void> | void;
   projects?: ParentOption[];
   customers?: ParentOption[];
+  defaultProjectId?: string;
+  defaultCustomerId?: string;
 }
 
 type Tab = "details" | "activity";
 
-export default function EditTaskModal({ isOpen, onClose, task, employees, onSave, projects = [], customers = [] }: EditTaskModalProps) {
-  const [form, setForm] = useState<Partial<Task>>(
-    task ?? { name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", link: "", comments: "", category: "none" }
-  );
+export default function EditTaskModal({
+  isOpen,
+  onClose,
+  task,
+  employees,
+  onSave,
+  projects = [],
+  customers = [],
+  defaultProjectId,
+  defaultCustomerId,
+}: EditTaskModalProps) {
+  const getInitialForm = (t: Partial<Task> | null): Partial<Task> => {
+    if (t) {
+      return {
+        ...t,
+        assigned_to: Array.isArray(t.assigned_to) ? [...t.assigned_to] : [],
+        name: t.name || "",
+        status: t.status || "To Do",
+        priority: t.priority || "Medium",
+        category: t.category || "none",
+        link: t.link || "",
+        comments: t.comments || "",
+        start_date: t.start_date || "",
+        due_date: t.due_date || "",
+      };
+    }
+    const initialType = defaultProjectId ? "project" : defaultCustomerId ? "customer" : "standalone";
+    return {
+      name: "",
+      status: "To Do",
+      priority: "Medium",
+      assigned_to: [],
+      due_date: "",
+      start_date: "",
+      link: "",
+      comments: "",
+      category: "none",
+      task_type: initialType,
+      project_id: defaultProjectId,
+      customer_id: defaultCustomerId,
+    };
+  };
+
+  const [form, setForm] = useState<Partial<Task>>(() => getInitialForm(task));
   const [activeTab, setActiveTab] = useState<Tab>("details");
 
-  // Reset form when task prop changes (modal re-opened with different task)
+  // Reset form when task prop or open status changes
   const [prevTask, setPrevTask] = useState(task);
-  if (task !== prevTask) {
+  const [prevOpen, setPrevOpen] = useState(isOpen);
+  if (task !== prevTask || isOpen !== prevOpen) {
     setPrevTask(task);
-    setForm(task ?? { name: "", status: "To Do", priority: "Medium", assigned_to: [], due_date: "", start_date: "", link: "", comments: "", category: "none" });
-    setActiveTab("details");
+    setPrevOpen(isOpen);
+    if (isOpen) {
+      setForm(getInitialForm(task));
+      setActiveTab("details");
+    }
   }
 
   // Parent selector state derived from form
@@ -355,7 +401,7 @@ export default function EditTaskModal({ isOpen, onClose, task, employees, onSave
           </button>
           {activeTab === "details" && (
             <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
-              <CheckIcon className="w-4 h-4" /> {isExistingTask ? "CheckIcon" : "Add Task"}
+              <CheckIcon className="w-4 h-4" /> {isExistingTask ? "Save Changes" : "Add Task"}
             </button>
           )}
         </div>

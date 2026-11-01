@@ -165,10 +165,34 @@ export default function Projects() {
 
   const handleSaveTask = async (formData: Partial<Task>) => {
     if (!taskModal) return;
+    const task_type: Task["task_type"] =
+      formData.task_type === "project" ? "project" : formData.task_type === "customer" ? "customer" : "standalone";
+    const project_id = task_type === "project" ? (formData.project_id || taskModal.projectId || null) : null;
+    const customer_id = task_type === "customer" ? (formData.customer_id || null) : null;
+
+    const updates = {
+      name: formData.name || "",
+      status: formData.status || "To Do",
+      priority: formData.priority || "Medium",
+      assigned_to: Array.isArray(formData.assigned_to) ? formData.assigned_to : [],
+      due_date: formData.due_date || null,
+      start_date: formData.start_date || null,
+      comments: formData.comments || null,
+      link: formData.link || null,
+      category: formData.category || "none",
+      task_type,
+      project_id,
+      customer_id,
+    };
+
     if (taskModal.task) {
-      await updateTask(taskModal.task.id, formData);
+      await updateTask(taskModal.task.id, updates as Partial<Task>);
     } else {
-      await addTask({ ...formData, name: formData.name || "", task_type: "project", project_id: taskModal.projectId } as Omit<Task, "created_at" | "id">);
+      await addTask({
+        ...updates,
+        task_type: "project",
+        project_id: taskModal.projectId,
+      } as Omit<Task, "created_at" | "id">);
     }
     setTaskModal(null);
   };
@@ -441,6 +465,8 @@ export default function Projects() {
         employees={employees}
         onClose={() => setTaskModal(null)}
         onSave={handleSaveTask}
+        projects={projects.map(p => ({ id: p.id, name: p.name, month: p.month }))}
+        defaultProjectId={taskModal?.projectId}
       />
 
       {/* Gantt View */}
@@ -673,7 +699,14 @@ function ProjectCardComponent({
                         </span>
                       )}
                     </div>
-                    <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {task.due_date && (
+                        <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
+                          📅 {new Date(task.due_date).toLocaleDateString("th", { day: "numeric", month: "short" })}
+                        </span>
+                      )}
+                      <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+                    </div>
                  </div>
                  {task.assigned_to && task.assigned_to.length > 0 && (
                    <div className="flex -space-x-1.5 flex-shrink-0">
@@ -688,7 +721,7 @@ function ProjectCardComponent({
                      )}
                    </div>
                  )}
-                 <div className="flex items-center gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
+                 <div className="flex items-center gap-1 opacity-80 sm:opacity-0 sm:group-hover/task:opacity-100 transition-opacity">
                     {task.link && (
                       <a href={task.link} target="_blank" rel="noopener noreferrer" aria-label={`Open task link for ${task.name}`} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 transition-all hover:scale-110">
                         <ArrowTopRightOnSquareIcon className="w-3 h-3 text-primary-readable" />
