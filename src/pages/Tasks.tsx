@@ -66,11 +66,11 @@ function isOverdue(dueDate?: string, status?: string) {
   return today.getTime() > due.getTime();
 }
 
-function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate?: string; status: string }) {
+function DaysBadge({ startDate, dueDate, status, completedAt }: { startDate?: string; dueDate?: string; status: string; completedAt?: string }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const badges: React.ReactNode[] = [];
-  if (startDate) {
+  if (startDate && status !== "Done") {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
     const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
@@ -85,6 +85,26 @@ function DaysBadge({ startDate, dueDate, status }: { startDate?: string; dueDate
         <ExclamationTriangleIcon className="w-3 h-3" />เลย {diff}d
       </span>
     );
+  }
+  if (dueDate && status === "Done") {
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const finish = completedAt ? new Date(completedAt) : today;
+    finish.setHours(0, 0, 0, 0);
+    const diff = Math.floor((finish.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff > 0) {
+      badges.push(
+        <span key="dl" className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400">
+          <ExclamationTriangleIcon className="w-2.5 h-2.5" />ส่งช้า {diff} วัน
+        </span>
+      );
+    } else {
+      badges.push(
+        <span key="dot" className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+          ✓ เสร็จตรงเวลา
+        </span>
+      );
+    }
   }
   return badges.length > 0 ? <div className="flex items-center gap-1.5 mt-1">{badges}</div> : null;
 }
@@ -813,7 +833,7 @@ function TaskCard({ task, col, onEdit, onDelete, onStatusToggle, onNavigate, emp
           </span>
         )}
       </div>
-      <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} />
+      <DaysBadge startDate={task.start_date} dueDate={task.due_date} status={task.status} completedAt={task.created_at} />
       {task.assigned_to && task.assigned_to.length > 0 && (
         <div className="flex items-center mt-2 -space-x-2">
           {task.assigned_to.slice(0, 3).map((a, i) => {
