@@ -1,47 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  CaptureUpdateAction,
-  Excalidraw,
-  FONT_FAMILY,
-  convertToExcalidrawElements,
-  getSceneVersion,
-  newElementWith,
-} from "@excalidraw/excalidraw";
-import type { ExcalidrawImperativeAPI, BinaryFileData } from "@excalidraw/excalidraw/types";
-import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
-import "@excalidraw/excalidraw/index.css";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { hasNewerLocal, mergeElements } from "@/lib/whiteboardMerge";
-import { WHITEBOARD_CATEGORY, WHITEBOARD_FILE_CATEGORY } from "@/lib/whiteboardStorage";
-import pattaniSeed from "@/data/whiteboards/pattani-passport.seed.json";
+import CanvasBoard from "@/components/whiteboard/CanvasBoard";
+import { hasLocalChanges, mergeDocs, newId, parseCanvas, type CanvasDoc } from "@/lib/canvasDoc";
+import { CANVAS_CATEGORY, CANVAS_FILE_CATEGORY } from "@/lib/whiteboardStorage";
+import pattaniCanvas from "@/data/whiteboards/pattani-passport.canvas.json";
 
-// Boards and their images are stored as unlisted rows in wiki_pages, which approved users can already edit.
+// Boards are JSON Canvas documents (the Obsidian Canvas format) stored as unlisted wiki_pages rows,
+// which approved users can already create and edit.
 const DEFAULT_SLUG = "pattani-passport";
-const SEEDS: Record<string, { title: string; skeleton: unknown[] }> = {
-  [DEFAULT_SLUG]: { title: "Pattani Passport Planner", skeleton: pattaniSeed },
+const SEEDS: Record<string, { title: string; doc: unknown }> = {
+  [DEFAULT_SLUG]: { title: "Pattani Passport Planner", doc: pattaniCanvas },
 };
-const SAVE_DELAY_MS = 1200;
+const SAVE_DELAY_MS = 1000;
 const POLL_MS = 4000;
-const OPENING_VIEW_HEIGHT = 1400;
-const UI_OPTIONS = { canvasActions: { clearCanvas: false, loadScene: false, export: false as const } };
-const CLEAN_STYLE = {
-  currentItemRoughness: 0,
-  currentItemFontFamily: FONT_FAMILY.Nunito,
-  currentItemRoundness: "round" as const,
-};
+const rowSlug = (slug: string) => `canvas-${slug}`;
+const filePrefix = (slug: string) => `canvas-file-${slug}-`;
+const FILE_REF = "wbfile:";
 
-/** Seeded shapes were drawn sketchy; show every shape with clean lines. */
-const cleanLines = (elements: readonly ExcalidrawElement[]) =>
-  elements.map((el) => (el.roughness > 0 && el.type !== "freedraw" ? newElementWith(el, { roughness: 0 }) : el));
-const boardSlug = (slug: string) => `whiteboard-${slug}`;
-const filePrefix = (slug: string) => `whiteboard-file-${slug}-`;
-
-type Board = { id: string; title: string; elements: ExcalidrawElement[]; updatedAt: string };
-type BoardSummary = { slug: string; title: string };
+type Board = { id: string; title: string; doc: CanvasDoc; updatedAt: string };
 type Status = "loading" | "saved" | "saving" | "error" | "missing";
-
 const STATUS_TEXT: Record<Status, string> = {
   loading: "กำลังโหลด…",
   saved: "บันทึกแล้ว",
@@ -50,95 +29,86 @@ const STATUS_TEXT: Record<Status, string> = {
   missing: "ไม่พบบอร์ดนี้",
 };
 
-const parseElements = (content: string | null): ExcalidrawElement[] => {
+const parseContent = (content: string | null) => {
   try {
-    return (JSON.parse(content ?? "{}").elements ?? []) as ExcalidrawElement[];
+    return parseCanvas(JSON.parse(content ?? "{}"));
   } catch {
-    return [];
+    return parseCanvas({});
   }
 };
 
-async function loadOrSeed(slug: string, authorId: string | undefined): Promise<Board | null> {
+async function loadOrSeed(slug: string, authorId?: string): Promise<Board | null> {
   const select = "id, title, content, updated_at";
   const toBoard = (r: { id: string; title: string; content: string | null; updated_at: string | null }): Board => ({
     id: r.id,
     title: r.title,
-    elements: parseElements(r.content),
+    doc: parseContent(r.content),
     updatedAt: r.updated_at ?? "",
   });
-  const { data, error } = await supabase.from("wiki_pages").select(select).eq("slug", boardSlug(slug)).maybeSingle();
+  const { data, error } = await supabase.from("wiki_pages").select(select).eq("slug", rowSlug(slug)).maybeSingle();
   if (error) throw error;
   if (data) return toBoard(data);
   const seed = SEEDS[slug];
   if (!seed) return null;
-  const elements = convertToExcalidrawElements(seed.skeleton as Parameters<typeof convertToExcalidrawElements>[0], {
-    regenerateIds: false,
-  });
   const inserted = await supabase
     .from("wiki_pages")
     .insert({
-      slug: boardSlug(slug),
+      slug: rowSlug(slug),
       title: seed.title,
-      category: WHITEBOARD_CATEGORY,
-      content: JSON.stringify({ elements }),
+      category: CANVAS_CATEGORY,
+      content: JSON.stringify(parseCanvas(seed.doc)),
       author_id: authorId ?? null,
       is_published: true,
     })
     .select(select)
     .single();
   if (!inserted.error) return toBoard(inserted.data);
-  // a teammate seeded it first
-  const retry = await supabase.from("wiki_pages").select(select).eq("slug", boardSlug(slug)).single();
+  const retry = await supabase.from("wiki_pages").select(select).eq("slug", rowSlug(slug)).single();
   if (retry.error) throw retry.error;
   return toBoard(retry.data);
-}
-
-async function loadFiles(slug: string, skip: Set<string>): Promise<BinaryFileData[]> {
-  const { data, error } = await supabase
-    .from("wiki_pages")
-    .select("slug, content, created_at")
-    .eq("category", WHITEBOARD_FILE_CATEGORY)
-    .like("slug", `${filePrefix(slug)}%`);
-  if (error) throw error;
-  const files: BinaryFileData[] = [];
-  for (const row of data ?? []) {
-    const id = row.slug.slice(filePrefix(slug).length);
-    if (skip.has(id)) continue;
-    try {
-      const { mimeType, dataURL } = JSON.parse(row.content ?? "{}");
-      files.push({ id, mimeType, dataURL, created: Date.parse(row.created_at ?? "") } as BinaryFileData);
-    } catch {
-      // skip a damaged image row
-    }
-  }
-  return files;
 }
 
 export default function Whiteboard() {
   const { slug = DEFAULT_SLUG } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthContext();
-  const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
-  const [boards, setBoards] = useState<BoardSummary[]>([]);
+  const [doc, setDoc] = useState<CanvasDoc>({ nodes: [], edges: [] });
+  const [files, setFiles] = useState<Record<string, string>>({});
+  const [boards, setBoards] = useState<{ slug: string; title: string }[]>([]);
   const [status, setStatus] = useState<Status>("loading");
-  const savedVersion = useRef(-1);
-  const remoteElements = useRef<readonly ExcalidrawElement[]>([]);
+  const docRef = useRef(doc);
+  const remote = useRef<CanvasDoc>({ nodes: [], edges: [] });
   const lastSeen = useRef("");
-  const uploadedFiles = useRef(new Set<string>());
-  const saveTimer = useRef<number>();
+  const dirty = useRef(false);
   const saving = useRef(false);
+  const saveTimer = useRef<number>();
 
   useEffect(() => {
     supabase
       .from("wiki_pages")
       .select("slug, title")
-      .eq("category", WHITEBOARD_CATEGORY)
+      .eq("category", CANVAS_CATEGORY)
       .order("title")
-      .then(({ data }) =>
-        setBoards((data ?? []).map((b) => ({ slug: b.slug.replace(/^whiteboard-/, ""), title: b.title }))),
-      );
+      .then(({ data }) => setBoards((data ?? []).map((b) => ({ slug: b.slug.replace(/^canvas-/, ""), title: b.title }))));
   }, [board?.id]);
+
+  const loadFiles = useCallback(async () => {
+    const { data } = await supabase
+      .from("wiki_pages")
+      .select("slug, content")
+      .eq("category", CANVAS_FILE_CATEGORY)
+      .like("slug", `${filePrefix(slug)}%`);
+    const next: Record<string, string> = {};
+    for (const row of data ?? []) {
+      try {
+        next[FILE_REF + row.slug.slice(filePrefix(slug).length)] = JSON.parse(row.content ?? "{}").dataURL;
+      } catch {
+        // skip a damaged image row
+      }
+    }
+    setFiles(next);
+  }, [slug]);
 
   useEffect(() => {
     let alive = true;
@@ -148,144 +118,111 @@ export default function Whiteboard() {
       .then((b) => {
         if (!alive) return;
         if (!b) return setStatus("missing");
-        remoteElements.current = b.elements;
-        savedVersion.current = getSceneVersion(b.elements);
+        remote.current = b.doc;
+        docRef.current = b.doc;
         lastSeen.current = b.updatedAt;
-        uploadedFiles.current = new Set();
+        dirty.current = false;
+        setDoc(b.doc);
         setBoard(b);
         setStatus("saved");
+        void loadFiles();
       })
       .catch(() => alive && setStatus("error"));
     return () => {
       alive = false;
     };
-  }, [slug, user?.id]);
-
-  const pullFiles = useCallback(async () => {
-    if (!api) return;
-    const files = await loadFiles(slug, uploadedFiles.current);
-    files.forEach((f) => uploadedFiles.current.add(f.id));
-    if (files.length) api.addFiles(files);
-  }, [api, slug]);
-
-  useEffect(() => {
-    if (!api || !board) return;
-    const elements = cleanLines(board.elements);
-    api.updateScene({ elements, captureUpdate: CaptureUpdateAction.NEVER });
-    // open on the top of the board at a readable zoom instead of fitting the whole (tall) board
-    const visible = elements.filter((el) => !el.isDeleted);
-    const top = Math.min(...visible.map((el) => el.y));
-    const opening = visible.filter((el) => el.y <= top + OPENING_VIEW_HEIGHT);
-    if (opening.length) api.scrollToContent(opening, { fitToViewport: true, viewportZoomFactor: 0.95 });
-    void pullFiles();
-  }, [api, board, pullFiles]);
+  }, [slug, user?.id, loadFiles]);
 
   const save = useCallback(async () => {
-    if (!api || !board || saving.current) return;
-    const elements = api.getSceneElementsIncludingDeleted();
-    const version = getSceneVersion(elements);
-    if (version === savedVersion.current) return;
+    if (!board || saving.current || !dirty.current) return;
     saving.current = true;
+    dirty.current = false;
     setStatus("saving");
     try {
-      const fresh = Object.values(api.getFiles()).filter((f) => !uploadedFiles.current.has(f.id));
-      if (fresh.length) {
-        const { error } = await supabase.from("wiki_pages").upsert(
-          fresh.map((f) => ({
-            slug: `${filePrefix(slug)}${f.id}`,
-            title: `Whiteboard image ${f.id}`,
-            category: WHITEBOARD_FILE_CATEGORY,
-            content: JSON.stringify({ mimeType: f.mimeType, dataURL: f.dataURL }),
-            author_id: user?.id ?? null,
-            is_published: true,
-          })),
-          { onConflict: "slug", ignoreDuplicates: true },
-        );
-        if (error) return setStatus("error");
-        fresh.forEach((f) => uploadedFiles.current.add(f.id));
-      }
-      const merged = mergeElements(elements, remoteElements.current);
+      const merged = mergeDocs(docRef.current, remote.current);
       const { data, error } = await supabase
         .from("wiki_pages")
-        .update({ content: JSON.stringify({ elements: merged }) })
+        .update({ content: JSON.stringify(merged) })
         .eq("id", board.id)
         .select("updated_at")
         .single();
-      if (error) return setStatus("error");
-      remoteElements.current = merged;
-      savedVersion.current = version;
+      if (error) {
+        dirty.current = true;
+        return setStatus("error");
+      }
+      remote.current = merged;
       lastSeen.current = data.updated_at ?? lastSeen.current;
-      setStatus("saved");
+      setStatus(dirty.current ? "saving" : "saved");
     } finally {
       saving.current = false;
+      if (dirty.current) saveTimer.current = window.setTimeout(save, SAVE_DELAY_MS);
     }
-  }, [api, board, slug, user?.id]);
+  }, [board]);
 
-  const onChange = useCallback(() => {
-    if (!board) return;
-    window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(save, SAVE_DELAY_MS);
-  }, [board, save]);
+  const onChange = useCallback(
+    (next: CanvasDoc) => {
+      docRef.current = next;
+      setDoc(next);
+      dirty.current = true;
+      window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(save, SAVE_DELAY_MS);
+    },
+    [save],
+  );
 
   useEffect(() => {
-    if (!api || !board) return;
+    if (!board) return;
     const poll = window.setInterval(async () => {
       if (saving.current || document.hidden) return;
       const head = await supabase.from("wiki_pages").select("updated_at").eq("id", board.id).single();
       if (head.error || !head.data.updated_at || head.data.updated_at === lastSeen.current) return;
       const full = await supabase.from("wiki_pages").select("content, updated_at").eq("id", board.id).single();
       if (full.error) return;
-      const theirs = parseElements(full.data.content);
+      const theirs = parseContent(full.data.content);
       lastSeen.current = full.data.updated_at ?? lastSeen.current;
-      remoteElements.current = theirs;
-      const local = api.getSceneElementsIncludingDeleted();
-      const merged = mergeElements(local, theirs);
-      api.updateScene({ elements: merged, captureUpdate: CaptureUpdateAction.NEVER });
-      if (!hasNewerLocal(local, theirs)) savedVersion.current = getSceneVersion(merged);
-      void pullFiles();
+      remote.current = theirs;
+      const merged = mergeDocs(docRef.current, theirs);
+      docRef.current = merged;
+      setDoc(merged);
+      dirty.current = hasLocalChanges(merged, theirs);
+      void loadFiles();
     }, POLL_MS);
     return () => {
       window.clearInterval(poll);
       window.clearTimeout(saveTimer.current);
       void save();
     };
-  }, [api, board, save, pullFiles]);
+  }, [board, save, loadFiles]);
 
-  const addNote = () => {
-    if (!api) return;
-    const { scrollX, scrollY, zoom, width, height } = api.getAppState();
-    const w = 240;
-    const h = 160;
-    const [note, label] = convertToExcalidrawElements([
-      {
-        type: "rectangle",
-        x: -scrollX + width / 2 / zoom.value - w / 2,
-        y: -scrollY + height / 2 / zoom.value - h / 2,
-        width: w,
-        height: h,
-        backgroundColor: "#fff3bf",
-        fillStyle: "solid",
-        strokeColor: "#e0a800",
-        roughness: 0,
-        roundness: { type: 3 },
-        label: { text: "พิมพ์ข้อความ", fontSize: 18, fontFamily: FONT_FAMILY.Nunito },
-      },
-    ]);
-    api.updateScene({
-      elements: [...api.getSceneElementsIncludingDeleted(), note, label],
-      appState: { selectedElementIds: { [note.id]: true } },
-      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-    });
-  };
+  const onAddImage = useCallback(
+    async (dataUrl: string, mimeType: string) => {
+      const id = newId();
+      const { error } = await supabase.from("wiki_pages").insert({
+        slug: `${filePrefix(slug)}${id}`,
+        title: `Whiteboard image ${id}`,
+        category: CANVAS_FILE_CATEGORY,
+        content: JSON.stringify({ mimeType, dataURL: dataUrl }),
+        author_id: user?.id ?? null,
+        is_published: true,
+      });
+      if (error) {
+        setStatus("error");
+        return null;
+      }
+      setFiles((f) => ({ ...f, [FILE_REF + id]: dataUrl }));
+      return FILE_REF + id;
+    },
+    [slug, user?.id],
+  );
 
   const createBoard = async () => {
     const title = `บอร์ดใหม่ ${new Date().toLocaleDateString("th-TH")}`;
     const newSlug = `board-${Date.now().toString(36)}`;
     const { error } = await supabase.from("wiki_pages").insert({
-      slug: boardSlug(newSlug),
+      slug: rowSlug(newSlug),
       title,
-      category: WHITEBOARD_CATEGORY,
-      content: JSON.stringify({ elements: [] }),
+      category: CANVAS_CATEGORY,
+      content: JSON.stringify({ nodes: [], edges: [] }),
       author_id: user?.id ?? null,
       is_published: true,
     });
@@ -314,30 +251,17 @@ export default function Whiteboard() {
         <button type="button" onClick={createBoard} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">
           + บอร์ดใหม่
         </button>
-        <button
-          type="button"
-          onClick={addNote}
-          disabled={!board}
-          className="rounded-md bg-primary px-3 py-1 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-        >
-          + โน้ต
-        </button>
         <span role="status" className={`text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
           {STATUS_TEXT[status]}
         </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-background">
         {status === "missing" ? (
           <p className="p-6 text-sm text-muted-foreground">ไม่พบบอร์ดนี้ เลือกบอร์ดอื่นจากรายการด้านบน</p>
+        ) : board ? (
+          <CanvasBoard key={board.id} doc={doc} onChange={onChange} files={files} onAddImage={onAddImage} boardTitle={board.title} />
         ) : (
-          <Excalidraw
-            key={slug}
-            excalidrawAPI={setApi}
-            onChange={onChange}
-            langCode="th-TH"
-            UIOptions={UI_OPTIONS}
-            initialData={{ appState: CLEAN_STYLE }}
-          />
+          <p className="p-6 text-sm text-muted-foreground">{STATUS_TEXT[status]}</p>
         )}
       </div>
     </div>
