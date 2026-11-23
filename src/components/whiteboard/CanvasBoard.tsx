@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import {
+  FONT_FAMILIES,
+  FONT_SIZES,
+  FONT_WEIGHTS,
   PRESET_COLORS,
   newId,
   parseCanvas,
@@ -30,6 +33,21 @@ const HISTORY_LIMIT = 100;
 const SIDES: Side[] = ["top", "right", "bottom", "left"];
 const clampZ = (z: number) => Math.min(MAX_Z, Math.max(MIN_Z, z));
 
+// the board is always dark, with light cards, whatever the app theme
+const BOARD = {
+  bg: "#1c1c1e",
+  dot: "rgb(255 255 255 / 0.09)",
+  card: "#d6d6d6",
+  ink: "#141414",
+  group: "rgb(255 255 255 / 0.035)",
+  groupBorder: "rgb(255 255 255 / 0.14)",
+  label: "#f2f2f2",
+  link: "#9c9c9c",
+  select: "#f0973a",
+};
+const FONT_CSS =
+  "https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&family=Kanit:wght@300;400;500;600;700&family=Mitr:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap";
+
 function bounds(nodes: CanvasNode[]) {
   const minX = Math.min(...nodes.map((n) => n.x));
   const minY = Math.min(...nodes.map((n) => n.y));
@@ -55,12 +73,17 @@ const center = (n: CanvasNode): Point => ({ x: n.x + n.width / 2, y: n.y + n.hei
 
 const NORMAL: Record<Side, [number, number]> = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] };
 
+/** Right-angle route: step out of each side, then meet halfway along the leaving direction. */
 function curve(x1: number, y1: number, fs: Side, x2: number, y2: number, ts: Side | null) {
-  const k = Math.max(40, Math.hypot(x2 - x1, y2 - y1) / 3);
-  const c1 = [x1 + NORMAL[fs][0] * k, y1 + NORMAL[fs][1] * k];
-  const c2 = ts ? [x2 + NORMAL[ts][0] * k, y2 + NORMAL[ts][1] * k] : [x2, y2];
-  const mid = [(x1 + 3 * c1[0] + 3 * c2[0] + x2) / 8, (y1 + 3 * c1[1] + 3 * c2[1] + y2) / 8];
-  return { d: `M${x1},${y1} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${x2},${y2}`, mid };
+  const out = 24;
+  const p1 = [x1 + NORMAL[fs][0] * out, y1 + NORMAL[fs][1] * out];
+  const p2 = ts ? [x2 + NORMAL[ts][0] * out, y2 + NORMAL[ts][1] * out] : [x2, y2];
+  const vertical = fs === "top" || fs === "bottom";
+  const m = vertical ? (p1[1] + p2[1]) / 2 : (p1[0] + p2[0]) / 2;
+  const bend = vertical ? [[p1[0], m], [p2[0], m]] : [[m, p1[1]], [m, p2[1]]];
+  const pts = [[x1, y1], p1, ...bend, p2, [x2, y2]];
+  const mid = [(bend[0][0] + bend[1][0]) / 2, (bend[0][1] + bend[1][1]) / 2];
+  return { d: `M${pts.map((p) => p.join(",")).join(" L")}`, mid };
 }
 
 function edgePath(e: CanvasEdge, from: CanvasNode, to: CanvasNode) {
@@ -245,6 +268,21 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     if (nodeIds.size) patchNodes(nodeIds);
     if (edgeIds.size) patchEdges(edgeIds, { color });
   };
+
+  /** font, size or weight for every selected card and group label */
+  const setText = (patch: Pick<Partial<CanvasNode>, "fontFamily" | "fontSize" | "fontWeight">) => {
+    const ids = new Map<string, Partial<CanvasNode>>();
+    docRef.current.nodes.forEach((n) => selected.has(n.id) && (n.type === "text" || n.type === "group") && ids.set(n.id, patch));
+    if (ids.size) patchNodes(ids);
+  };
+
+  useEffect(() => {
+    if (document.querySelector(`link[href="${FONT_CSS}"]`)) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = FONT_CSS;
+    document.head.appendChild(link);
+  }, []);
 
   // ── wheel, keys, paste ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -509,6 +547,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const others = doc.nodes.filter((n) => n.type !== "group");
   const single = selected.size === 1 ? [...selected][0] : null;
   const singleNode = single ? nodesById.get(single) : undefined;
+  const hasTextSelected = doc.nodes.some((n) => selected.has(n.id) && (n.type === "text" || n.type === "group"));
   const linking = drag.current?.kind === "connect" ? drag.current : null;
   const linkFrom = linking ? nodesById.get(linking.from) : undefined;
   const handle = 12 / view.z;
@@ -516,26 +555,26 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const renderNode = (n: CanvasNode) => {
     const color = resolveColor(n.color);
     const isSel = selected.has(n.id);
+    const isGroup = n.type === "group";
     const style = {
       left: n.x,
       top: n.y,
       width: n.width,
       height: n.height,
-      borderColor: color ?? "hsl(var(--border))",
-      background:
-        n.type === "group"
-          ? color
-            ? `${color}14`
-            : "hsl(var(--muted) / 0.35)"
-          : color
-            ? `color-mix(in srgb, ${color} 12%, hsl(var(--card)))`
-            : "hsl(var(--card))",
-      boxShadow: isSel ? `0 0 0 ${2 / view.z}px hsl(var(--primary))` : undefined,
+      borderColor: isGroup ? (color ?? BOARD.groupBorder) : "transparent",
+      background: isGroup ? (color ? `${color}1f` : BOARD.group) : n.type === "file" ? "transparent" : (color ?? BOARD.card),
+      color: BOARD.ink,
+      boxShadow: isSel ? `0 0 0 ${2 / view.z}px ${BOARD.select}` : isGroup || n.type === "file" ? undefined : "0 1px 2px rgb(0 0 0 / 0.35)",
     } as const;
+    const textStyle = {
+      fontFamily: n.fontFamily ? `"${n.fontFamily}", var(--font-sans), sans-serif` : undefined,
+      fontSize: n.fontSize,
+      fontWeight: n.fontWeight,
+    };
     return (
       <div
         key={n.id}
-        className={`absolute rounded-lg border-2 ${n.type === "group" ? "border-dashed" : "shadow-sm"}`}
+        className={`absolute rounded-md ${isGroup ? "border" : "border-0"}`}
         style={style}
         onPointerDown={(e) => onPointerDownNode(e, n)}
         onDoubleClick={(e) => {
@@ -552,7 +591,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
           <div
             title="ดับเบิลคลิกเพื่อเปลี่ยนชื่อกลุ่ม"
             className="absolute left-0 whitespace-nowrap rounded-md px-2 py-0.5 text-base font-semibold"
-            style={{ top: -34, background: color ?? "hsl(var(--muted))", color: color ? "#fff" : undefined }}
+            style={{ top: -34, background: color ?? "transparent", color: color ? BOARD.ink : BOARD.label, ...textStyle }}
             onDoubleClick={(e) => {
               e.stopPropagation();
               const label = window.prompt("ชื่อกลุ่ม", n.label ?? "");
@@ -568,7 +607,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
               autoFocus
               defaultValue={n.text ?? ""}
               aria-label="แก้ไขการ์ด"
-              className="h-full w-full resize-none rounded-lg bg-background p-3 text-sm leading-relaxed outline-none"
+              className="h-full w-full resize-none rounded-md bg-white p-3 text-sm leading-relaxed text-neutral-900 outline-none"
+              style={textStyle}
               onPointerDown={(e) => e.stopPropagation()}
               onBlur={(e) => {
                 if (e.target.value !== (n.text ?? "")) patchNodes(new Map([[n.id, { text: e.target.value }]]));
@@ -579,7 +619,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
           ) : (
             <div
               data-scrollable
-              className="prose prose-sm h-full max-w-none overflow-auto p-3 text-sm leading-relaxed dark:prose-invert [&_h1]:mb-1 [&_h1]:mt-0 [&_h2]:mb-1 [&_h2]:mt-0 [&_h3]:mb-1 [&_h3]:mt-0 [&_p]:my-1 [&_ul]:my-1"
+              className="prose prose-sm h-full max-w-none overflow-auto p-3 text-sm leading-relaxed text-neutral-900 prose-headings:text-neutral-900 prose-strong:text-neutral-900 prose-li:marker:text-neutral-700 [&_h1]:mb-1 [&_h1]:mt-0 [&_h2]:mb-1 [&_h2]:mt-0 [&_h3]:mb-1 [&_h3]:mt-0 [&_p]:my-1 [&_ul]:my-1"
+              style={{ ...textStyle, color: BOARD.ink }}
             >
               <ReactMarkdown>{n.text || "*ดับเบิลคลิกเพื่อพิมพ์*"}</ReactMarkdown>
             </div>
@@ -588,7 +629,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
           (n.file && files[n.file] ? (
             <img src={files[n.file]} alt="" draggable={false} className="h-full w-full rounded-lg object-contain" />
           ) : (
-            <div className="flex h-full items-center justify-center p-3 text-center text-xs text-muted-foreground">{n.file}</div>
+            <div className="flex h-full items-center justify-center p-3 text-center text-xs" style={{ color: BOARD.label }}>{n.file}</div>
           ))}
         {n.type === "link" && (
           <a href={n.url} target="_blank" rel="noreferrer noopener" className="block h-full overflow-hidden p-3 text-sm text-primary underline" onPointerDown={(e) => e.stopPropagation()}>
@@ -604,16 +645,16 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                   key={side}
                   role="presentation"
                   title="ลากไปการ์ดอื่นเพื่อเชื่อมเส้น"
-                  className="absolute cursor-crosshair rounded-full border-2 border-primary bg-background"
-                  style={{ left: ax - handle / 2, top: ay - handle / 2, width: handle, height: handle }}
+                  className="absolute cursor-crosshair rounded-full border-2 bg-white"
+                  style={{ left: ax - handle / 2, top: ay - handle / 2, width: handle, height: handle, borderColor: BOARD.select }}
                   onPointerDown={(e) => onPointerDownHandle(e, n, side)}
                 />
               );
             })}
             <div
               role="presentation"
-              className="absolute cursor-nwse-resize rounded-sm bg-primary"
-              style={{ right: -handle / 2, bottom: -handle / 2, width: handle, height: handle }}
+              className="absolute cursor-nwse-resize rounded-sm"
+              style={{ right: -handle / 2, bottom: -handle / 2, width: handle, height: handle, background: BOARD.select }}
               onPointerDown={(e) => onPointerDownResize(e, n)}
             />
           </>
@@ -631,7 +672,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         className="h-full w-full touch-none select-none overflow-hidden"
         style={{
           cursor: drag.current?.kind === "pan" ? "grabbing" : "grab",
-          backgroundImage: "radial-gradient(hsl(var(--muted-foreground) / 0.25) 1px, transparent 1px)",
+          background: BOARD.bg,
+          backgroundImage: `radial-gradient(${BOARD.dot} 1px, transparent 1px)`,
           backgroundSize: `${24 * view.z}px ${24 * view.z}px`,
           backgroundPosition: `${view.x}px ${view.y}px`,
         }}
@@ -661,7 +703,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
               if (!from || !to) return null;
               const { d, mid } = edgePath(e, from, to);
               const isSel = selected.has(e.id);
-              const stroke = isSel ? "hsl(var(--primary))" : (resolveColor(e.color) ?? "hsl(var(--muted-foreground))");
+              const stroke = isSel ? BOARD.select : (resolveColor(e.color) ?? BOARD.link);
               return (
                 <g key={e.id}>
                   <path
@@ -690,7 +732,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                     markerStart={e.fromEnd === "arrow" ? "url(#canvas-arrow)" : undefined}
                   />
                   {e.label && (
-                    <text x={mid[0]} y={mid[1] - 6} textAnchor="middle" fontSize={14} fill={stroke} stroke="hsl(var(--background))" strokeWidth={4} paintOrder="stroke" className="pointer-events-none">
+                    <text x={mid[0]} y={mid[1] - 6} textAnchor="middle" fontSize={14} fill={BOARD.label} stroke={BOARD.bg} strokeWidth={4} paintOrder="stroke" className="pointer-events-none">
                       {e.label}
                     </text>
                   )}
@@ -699,7 +741,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
             })}
             {linking && linkFrom && linkEnd && (() => {
               const [x1, y1] = anchor(linkFrom, linking.side);
-              return <path d={curve(x1, y1, linking.side, linkEnd.x, linkEnd.y, null).d} fill="none" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="6 4" markerEnd="url(#canvas-arrow)" />;
+              return <path d={curve(x1, y1, linking.side, linkEnd.x, linkEnd.y, null).d} fill="none" stroke={BOARD.select} strokeWidth={2} strokeDasharray="6 4" markerEnd="url(#canvas-arrow)" />;
             })()}
             {box && (
               <rect
@@ -707,8 +749,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 y={Math.min(box.a.y, box.b.y)}
                 width={Math.abs(box.a.x - box.b.x)}
                 height={Math.abs(box.a.y - box.b.y)}
-                fill="hsl(var(--primary) / 0.08)"
-                stroke="hsl(var(--primary))"
+                fill="rgb(240 151 58 / 0.1)"
+                stroke={BOARD.select}
                 strokeWidth={1 / view.z}
                 strokeDasharray={`${4 / view.z} ${4 / view.z}`}
               />
@@ -751,6 +793,49 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 onClick={() => setColor(key)}
               />
             ))}
+            {hasTextSelected && (
+              <>
+                <span className="mx-1 h-5 w-px bg-border" />
+                <select
+                  aria-label="ฟอนต์"
+                  className="rounded-md border border-border bg-background px-1 py-0.5 text-sm"
+                  value={singleNode?.fontFamily ?? ""}
+                  onChange={(e) => setText({ fontFamily: e.target.value || undefined })}
+                >
+                  {FONT_FAMILIES.map((f) => (
+                    <option key={f.label} value={f.value} style={{ fontFamily: f.value || undefined }}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="ขนาดตัวอักษร"
+                  className="rounded-md border border-border bg-background px-1 py-0.5 text-sm tabular-nums"
+                  value={singleNode?.fontSize ?? ""}
+                  onChange={(e) => setText({ fontSize: e.target.value ? Number(e.target.value) : undefined })}
+                >
+                  <option value="">ขนาด</option>
+                  {FONT_SIZES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}px
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="ความหนาตัวอักษร"
+                  className="rounded-md border border-border bg-background px-1 py-0.5 text-sm"
+                  value={singleNode?.fontWeight ?? ""}
+                  onChange={(e) => setText({ fontWeight: e.target.value ? Number(e.target.value) : undefined })}
+                >
+                  <option value="">ความหนา</option>
+                  {FONT_WEIGHTS.map((w) => (
+                    <option key={w.value} value={w.value}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
             <button type="button" className={`${btn} text-destructive`} onClick={removeSelected}>
               ลบ
             </button>
