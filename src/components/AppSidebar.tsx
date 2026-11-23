@@ -17,6 +17,7 @@ const navItems = [
   { label: "Manager Dashboard", icon: ChartBarIcon, path: "/manager" },
   { label: "Organization Hub", icon: BuildingOffice2Icon, path: "/organization" },
   { label: "Wiki", icon: BookOpenIcon, path: "/wiki" },
+  { label: "Whiteboard", icon: Squares2X2Icon, path: "/whiteboard" },
   { label: "Meetings", icon: VideoCameraIcon, path: "/meetings" },
   { label: "On-site Work", icon: MapPinIcon, path: "/onsite-work" },
   { label: "Leave", icon: PaperAirplaneIcon, path: "/leave" },

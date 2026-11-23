@@ -33,7 +33,7 @@ export const PRESETS: PresetDefinition[] = [
     description: "Full operational access incl. dashboards & reports",
     pages: [
       "/", "/tasks", "/projects", "/customers", "/calendar", "/my-work",
-      "/team", "/workload", "/organization", "/wiki", "/meetings",
+      "/team", "/workload", "/organization", "/wiki", "/whiteboard", "/meetings",
       "/onsite-work", "/leave", "/okrs", "/reports", "/budget",
       "/notifications", "/manager", "/kpi/overview", "/kpi/evaluate",
       "/kpi/report",
@@ -45,7 +45,7 @@ export const PRESETS: PresetDefinition[] = [
     description: "Day-to-day team access",
     pages: [
       "/", "/tasks", "/projects", "/customers", "/calendar", "/my-work",
-      "/wiki", "/meetings", "/onsite-work", "/leave", "/notifications",
+      "/wiki", "/whiteboard", "/meetings", "/onsite-work", "/leave", "/notifications",
     ],
   },
   {
@@ -69,7 +69,7 @@ export const PRESETS: PresetDefinition[] = [
     description: "Limited access for interns",
     pages: [
       "/", "/my-work", "/tasks", "/projects", "/customers", "/calendar",
-      "/notifications"
+      "/whiteboard", "/notifications"
     ],
   },
 ];
