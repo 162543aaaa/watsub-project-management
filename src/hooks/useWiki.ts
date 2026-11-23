@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { autoSyncToGoogleSheets } from "@/utils/googleSheetsSync";
+import { HIDDEN_WIKI_CATEGORIES } from "@/lib/whiteboardStorage";
 
 export interface WikiPage {
   id: string;
@@ -30,6 +31,7 @@ export function useWiki() {
       .from("wiki_pages")
       .select("*")
       .eq("is_published", true)
+      .not("category", "in", `(${HIDDEN_WIKI_CATEGORIES.join(",")})`)
       .order("category", { ascending: true })
       .order("title", { ascending: true });
 
