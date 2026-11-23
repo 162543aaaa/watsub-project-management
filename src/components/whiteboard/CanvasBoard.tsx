@@ -211,13 +211,30 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
 
   const addImages = useCallback(
     async (fileList: FileList | File[], at?: { x: number; y: number }) => {
-      for (const file of Array.from(fileList).filter((f) => f.type.startsWith("image/"))) {
+      const images = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+      // several images go in a grid (dropped: from the drop point; picked or pasted: right of the board)
+      const many = images.length > 1;
+      const b = docRef.current.nodes.length ? bounds(docRef.current.nodes) : { minX: 0, minY: 0, w: 0, h: 0 };
+      const origin = at ?? (many ? { x: b.minX + b.w + 160, y: b.minY } : undefined);
+      const COLS = 4;
+      const CELL = 480;
+      const GAP = 40;
+      let rowTop = origin?.y ?? 0;
+      let rowHeight = 0;
+      for (const [i, file] of images.entries()) {
         const dataUrl = await readDataUrl(file);
         const ref = await onAddImage(dataUrl, file.type);
         if (!ref) continue;
         const { w, h } = await imageSize(dataUrl);
-        const width = Math.min(480, w);
-        addNode({ type: "file", file: ref, width, height: Math.round((h / w) * width), x: at?.x, y: at?.y });
+        const width = Math.min(CELL, w);
+        const height = Math.round((h / w) * width);
+        if (i > 0 && i % COLS === 0) {
+          rowTop += rowHeight + GAP;
+          rowHeight = 0;
+        }
+        rowHeight = Math.max(rowHeight, height);
+        const pos = origin ? { x: origin.x + (i % COLS) * (CELL + GAP), y: rowTop } : {};
+        addNode({ type: "file", file: ref, width, height, ...pos });
       }
     },
     [addNode, onAddImage],
@@ -411,7 +428,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     <div className="relative h-full w-full">
       <div
         ref={viewportRef}
-        className="h-full w-full touch-none overflow-hidden"
+        className="h-full w-full touch-none select-none overflow-hidden"
         style={{
           cursor: drag.current?.kind === "pan" ? "grabbing" : "grab",
           backgroundImage: "radial-gradient(hsl(var(--muted-foreground) / 0.25) 1px, transparent 1px)",
