@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
 import CanvasBoard from "@/components/whiteboard/CanvasBoard";
 import { hasLocalChanges, mergeDocs, newId, parseCanvas, type CanvasDoc } from "@/lib/canvasDoc";
-import { CANVAS_CATEGORY, CANVAS_FILE_CATEGORY } from "@/lib/whiteboardStorage";
+import { CANVAS_CATEGORY, CANVAS_FILE_CATEGORY, CANVAS_VERSION_CATEGORY } from "@/lib/whiteboardStorage";
 import pattaniCanvas from "@/data/whiteboards/pattani-passport.canvas.json";
 
 // Boards are JSON Canvas documents (the Obsidian Canvas format) stored as unlisted wiki_pages rows,
@@ -17,7 +17,10 @@ const SAVE_DELAY_MS = 1000;
 const POLL_MS = 4000;
 const rowSlug = (slug: string) => `canvas-${slug}`;
 const filePrefix = (slug: string) => `canvas-file-${slug}-`;
+const versionPrefix = (slug: string) => `canvas-ver-${slug}-`;
 const FILE_REF = "wbfile:";
+const VERSION_EVERY_MS = 10 * 60 * 1000;
+const VERSIONS_KEPT = 30;
 
 type Board = { id: string; title: string; doc: CanvasDoc; updatedAt: string };
 type Status = "loading" | "saved" | "saving" | "error" | "missing";
@@ -83,6 +86,71 @@ export default function Whiteboard() {
   const dirty = useRef(false);
   const saving = useRef(false);
   const saveTimer = useRef<number>();
+  const lastVersionAt = useRef(0);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [versions, setVersions] = useState<{ slug: string; created_at: string | null }[]>([]);
+  const [restoreRequest, setRestoreRequest] = useState<{ doc: CanvasDoc; key: number } | null>(null);
+
+  // keep the last saved state as a version before this session's edits overwrite it, then every 10 minutes
+  const snapshot = useCallback(async (state: CanvasDoc) => {
+    if (Date.now() - lastVersionAt.current < VERSION_EVERY_MS) return;
+    lastVersionAt.current = Date.now();
+    const { error } = await supabase.from("wiki_pages").insert({
+      slug: `${versionPrefix(slug)}${Date.now()}`,
+      title: `Whiteboard version ${new Date().toISOString()}`,
+      category: CANVAS_VERSION_CATEGORY,
+      content: JSON.stringify(state),
+      author_id: user?.id ?? null,
+      is_published: true,
+    });
+    if (error) return;
+    const { data: old } = await supabase
+      .from("wiki_pages")
+      .select("id")
+      .eq("category", CANVAS_VERSION_CATEGORY)
+      .like("slug", `${versionPrefix(slug)}%`)
+      .order("created_at", { ascending: false })
+      .range(VERSIONS_KEPT, VERSIONS_KEPT + 50);
+    if (old?.length) await supabase.from("wiki_pages").delete().in("id", old.map((r) => r.id));
+  }, [slug, user?.id]);
+
+  const loadVersions = useCallback(async () => {
+    const { data } = await supabase
+      .from("wiki_pages")
+      .select("slug, created_at")
+      .eq("category", CANVAS_VERSION_CATEGORY)
+      .like("slug", `${versionPrefix(slug)}%`)
+      .order("created_at", { ascending: false })
+      .limit(VERSIONS_KEPT);
+    setVersions(data ?? []);
+  }, [slug]);
+
+  const restoreVersion = async (versionSlug: string) => {
+    const { data } = await supabase.from("wiki_pages").select("content").eq("slug", versionSlug).single();
+    if (!data) return;
+    setRestoreRequest({ doc: parseContent(data.content), key: Date.now() });
+    setHistoryOpen(false);
+  };
+
+  const renameBoard = async () => {
+    if (!board) return;
+    const title = window.prompt("ชื่อบอร์ด", board.title)?.trim();
+    if (!title || title === board.title) return;
+    const { error } = await supabase.from("wiki_pages").update({ title }).eq("id", board.id);
+    if (error) return setStatus("error");
+    setBoard({ ...board, title });
+    setBoards((list) => list.map((b) => (b.slug === slug ? { ...b, title } : b)));
+  };
+
+  const deleteBoard = async () => {
+    if (!board || !window.confirm(`ลบบอร์ด "${board.title}" พร้อมรูปและประวัติทั้งหมด? กู้คืนไม่ได้`)) return;
+    await supabase.from("wiki_pages").delete().like("slug", `${filePrefix(slug)}%`).eq("category", CANVAS_FILE_CATEGORY);
+    await supabase.from("wiki_pages").delete().like("slug", `${versionPrefix(slug)}%`).eq("category", CANVAS_VERSION_CATEGORY);
+    const { error } = await supabase.from("wiki_pages").delete().eq("id", board.id);
+    if (error) return setStatus("error");
+    const next = boards.find((b) => b.slug !== slug)?.slug ?? DEFAULT_SLUG;
+    navigate(`/whiteboard/${next}`);
+  };
 
   useEffect(() => {
     supabase
@@ -121,6 +189,9 @@ export default function Whiteboard() {
         remote.current = b.doc;
         docRef.current = b.doc;
         lastSeen.current = b.updatedAt;
+        lastVersionAt.current = 0;
+        setRestoreRequest(null);
+        setHistoryOpen(false);
         dirty.current = false;
         setDoc(b.doc);
         setBoard(b);
@@ -139,6 +210,7 @@ export default function Whiteboard() {
     dirty.current = false;
     setStatus("saving");
     try {
+      void snapshot(remote.current);
       const merged = mergeDocs(docRef.current, remote.current);
       const { data, error } = await supabase
         .from("wiki_pages")
@@ -157,7 +229,7 @@ export default function Whiteboard() {
       saving.current = false;
       if (dirty.current) saveTimer.current = window.setTimeout(save, SAVE_DELAY_MS);
     }
-  }, [board]);
+  }, [board, snapshot]);
 
   const onChange = useCallback(
     (next: CanvasDoc) => {
@@ -251,15 +323,58 @@ export default function Whiteboard() {
         <button type="button" onClick={createBoard} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">
           + บอร์ดใหม่
         </button>
+        <button type="button" onClick={renameBoard} disabled={!board} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted disabled:opacity-50">
+          เปลี่ยนชื่อ
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setHistoryOpen((o) => !o);
+            void loadVersions();
+          }}
+          disabled={!board}
+          aria-expanded={historyOpen}
+          className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted disabled:opacity-50"
+        >
+          ประวัติ
+        </button>
+        <button type="button" onClick={deleteBoard} disabled={!board} className="rounded-md border border-border px-3 py-1 text-sm text-destructive hover:bg-muted disabled:opacity-50">
+          ลบบอร์ด
+        </button>
         <span role="status" className={`text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
           {STATUS_TEXT[status]}
         </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-background">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-background">
+        {historyOpen && (
+          <aside className="absolute right-3 top-14 z-10 max-h-[70%] w-72 overflow-auto rounded-lg border border-border bg-background p-3 shadow-lg">
+            <h2 className="mb-1 text-sm font-semibold">ประวัติเวอร์ชัน</h2>
+            <p className="mb-2 text-xs text-muted-foreground">บันทึกอัตโนมัติทุก 10 นาทีที่มีการแก้ เก็บไว้ {VERSIONS_KEPT} เวอร์ชันล่าสุด กู้คืนแล้วกด ↶ ย้อนได้</p>
+            {versions.length === 0 && <p className="text-xs text-muted-foreground">ยังไม่มีเวอร์ชันที่บันทึกไว้</p>}
+            <ul className="space-y-1">
+              {versions.map((v) => (
+                <li key={v.slug} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="tabular-nums">{v.created_at ? new Date(v.created_at).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }) : "-"}</span>
+                  <button type="button" className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted" onClick={() => void restoreVersion(v.slug)}>
+                    กู้คืน
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        )}
         {status === "missing" ? (
           <p className="p-6 text-sm text-muted-foreground">ไม่พบบอร์ดนี้ เลือกบอร์ดอื่นจากรายการด้านบน</p>
         ) : board ? (
-          <CanvasBoard key={board.id} doc={doc} onChange={onChange} files={files} onAddImage={onAddImage} boardTitle={board.title} />
+          <CanvasBoard
+            key={board.id}
+            doc={doc}
+            onChange={onChange}
+            files={files}
+            onAddImage={onAddImage}
+            boardTitle={board.title}
+            restoreRequest={restoreRequest}
+          />
         ) : (
           <p className="p-6 text-sm text-muted-foreground">{STATUS_TEXT[status]}</p>
         )}

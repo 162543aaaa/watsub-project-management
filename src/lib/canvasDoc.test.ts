@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasLocalChanges, mergeDocs, parseCanvas, toObsidianCanvas, type CanvasDoc, type CanvasNode } from "./canvasDoc";
+import { hasLocalChanges, mergeDocs, parseCanvas, restoreDoc, toObsidianCanvas, type CanvasDoc, type CanvasNode } from "./canvasDoc";
 
 const node = (id: string, ts: number, text = id): CanvasNode => ({ id, ts, type: "text", x: 0, y: 0, width: 10, height: 10, text });
 
@@ -35,6 +35,23 @@ describe("hasLocalChanges", () => {
     expect(hasLocalChanges({ nodes: [node("a", 2)], edges: [] }, remote)).toBe(true);
     expect(hasLocalChanges({ nodes: [node("a", 1)], edges: [], deleted: { b: 3 } }, remote)).toBe(true);
     expect(hasLocalChanges({ nodes: [node("a", 1)], edges: [] }, remote)).toBe(false);
+  });
+});
+
+describe("restoreDoc", () => {
+  it("brings back removed and changed items as fresh edits that survive a merge", () => {
+    const before: CanvasDoc = { nodes: [node("a", 1, "old"), node("b", 1)], edges: [] };
+    const now: CanvasDoc = { nodes: [node("a", 5, "new"), node("c", 5)], edges: [], deleted: { b: 5 } };
+    const restored = restoreDoc(before, now, 9);
+    expect(restored.nodes.map((n) => [n.id, n.text, n.ts])).toEqual([["a", "old", 9], ["b", "b", 9]]);
+    expect(restored.deleted?.c).toBe(9);
+    const merged = mergeDocs(restored, now);
+    expect(merged.nodes.map((n) => [n.id, n.text]).sort()).toEqual([["a", "old"], ["b", "b"]]);
+  });
+
+  it("keeps unchanged items as they are", () => {
+    const same = node("a", 3);
+    expect(restoreDoc({ nodes: [same], edges: [] }, { nodes: [same], edges: [] }, 9).nodes[0].ts).toBe(3);
   });
 });
 

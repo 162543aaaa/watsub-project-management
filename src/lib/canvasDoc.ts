@@ -79,6 +79,31 @@ export function hasLocalChanges(local: CanvasDoc, remote: CanvasDoc): boolean {
   return Object.entries(local.deleted ?? {}).some(([id, ts]) => (remote.deleted?.[id] ?? 0) < ts);
 }
 
+const sameItem = (a: Stamped, b: Stamped) => {
+  const { ts: _a, ...ra } = a;
+  const { ts: _b, ...rb } = b;
+  return JSON.stringify(ra) === JSON.stringify(rb);
+};
+
+/**
+ * Turn the board back into `target` (an undo step or a saved version) as a fresh edit:
+ * items that differ get a new timestamp and items not in `target` are marked deleted,
+ * so the restore wins over older copies on teammates' screens.
+ */
+export function restoreDoc(target: CanvasDoc, current: CanvasDoc, now = Date.now()): CanvasDoc {
+  const restamp = <T extends Stamped>(items: T[], currentItems: T[]) => {
+    const mine = new Map(currentItems.map((i) => [i.id, i]));
+    return items.map((i) => {
+      const cur = mine.get(i.id);
+      return cur && sameItem(cur, i) ? cur : { ...i, ts: now };
+    });
+  };
+  const keep = new Set([...target.nodes, ...target.edges].map((i) => i.id));
+  const deleted = { ...current.deleted };
+  for (const i of [...current.nodes, ...current.edges]) if (!keep.has(i.id)) deleted[i.id] = now;
+  return { nodes: restamp(target.nodes, current.nodes), edges: restamp(target.edges, current.edges), deleted };
+}
+
 /** Read an Obsidian .canvas file (or a stored board) into a CanvasDoc, dropping anything malformed. */
 export function parseCanvas(raw: unknown): CanvasDoc {
   const obj = (raw ?? {}) as Partial<CanvasDoc>;
