@@ -3,8 +3,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   CaptureUpdateAction,
   Excalidraw,
+  FONT_FAMILY,
   convertToExcalidrawElements,
   getSceneVersion,
+  newElementWith,
 } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI, BinaryFileData } from "@excalidraw/excalidraw/types";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
@@ -22,6 +24,17 @@ const SEEDS: Record<string, { title: string; skeleton: unknown[] }> = {
 };
 const SAVE_DELAY_MS = 1200;
 const POLL_MS = 4000;
+const OPENING_VIEW_HEIGHT = 1400;
+const UI_OPTIONS = { canvasActions: { clearCanvas: false, loadScene: false, export: false as const } };
+const CLEAN_STYLE = {
+  currentItemRoughness: 0,
+  currentItemFontFamily: FONT_FAMILY.Nunito,
+  currentItemRoundness: "round" as const,
+};
+
+/** Seeded shapes were drawn sketchy; show every shape with clean lines. */
+const cleanLines = (elements: readonly ExcalidrawElement[]) =>
+  elements.map((el) => (el.roughness > 0 && el.type !== "freedraw" ? newElementWith(el, { roughness: 0 }) : el));
 const boardSlug = (slug: string) => `whiteboard-${slug}`;
 const filePrefix = (slug: string) => `whiteboard-file-${slug}-`;
 
@@ -157,8 +170,13 @@ export default function Whiteboard() {
 
   useEffect(() => {
     if (!api || !board) return;
-    api.updateScene({ elements: board.elements, captureUpdate: CaptureUpdateAction.NEVER });
-    api.scrollToContent(undefined, { fitToContent: true });
+    const elements = cleanLines(board.elements);
+    api.updateScene({ elements, captureUpdate: CaptureUpdateAction.NEVER });
+    // open on the top of the board at a readable zoom instead of fitting the whole (tall) board
+    const visible = elements.filter((el) => !el.isDeleted);
+    const top = Math.min(...visible.map((el) => el.y));
+    const opening = visible.filter((el) => el.y <= top + OPENING_VIEW_HEIGHT);
+    if (opening.length) api.scrollToContent(opening, { fitToViewport: true, viewportZoomFactor: 0.95 });
     void pullFiles();
   }, [api, board, pullFiles]);
 
@@ -233,6 +251,33 @@ export default function Whiteboard() {
     };
   }, [api, board, save, pullFiles]);
 
+  const addNote = () => {
+    if (!api) return;
+    const { scrollX, scrollY, zoom, width, height } = api.getAppState();
+    const w = 240;
+    const h = 160;
+    const [note, label] = convertToExcalidrawElements([
+      {
+        type: "rectangle",
+        x: -scrollX + width / 2 / zoom.value - w / 2,
+        y: -scrollY + height / 2 / zoom.value - h / 2,
+        width: w,
+        height: h,
+        backgroundColor: "#fff3bf",
+        fillStyle: "solid",
+        strokeColor: "#e0a800",
+        roughness: 0,
+        roundness: { type: 3 },
+        label: { text: "พิมพ์ข้อความ", fontSize: 18, fontFamily: FONT_FAMILY.Nunito },
+      },
+    ]);
+    api.updateScene({
+      elements: [...api.getSceneElementsIncludingDeleted(), note, label],
+      appState: { selectedElementIds: { [note.id]: true } },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    });
+  };
+
   const createBoard = async () => {
     const title = `บอร์ดใหม่ ${new Date().toLocaleDateString("th-TH")}`;
     const newSlug = `board-${Date.now().toString(36)}`;
@@ -248,7 +293,7 @@ export default function Whiteboard() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] flex-col gap-2">
+    <div className="flex h-[calc(100dvh-4rem)] flex-col gap-2 px-3 pb-3 pt-2 sm:px-4">
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor="whiteboard-select" className="text-sm font-medium">
           บอร์ด
@@ -269,6 +314,14 @@ export default function Whiteboard() {
         <button type="button" onClick={createBoard} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">
           + บอร์ดใหม่
         </button>
+        <button
+          type="button"
+          onClick={addNote}
+          disabled={!board}
+          className="rounded-md bg-primary px-3 py-1 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        >
+          + โน้ต
+        </button>
         <span role="status" className={`text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
           {STATUS_TEXT[status]}
         </span>
@@ -282,7 +335,8 @@ export default function Whiteboard() {
             excalidrawAPI={setApi}
             onChange={onChange}
             langCode="th-TH"
-            initialData={{ appState: { currentItemFontFamily: 6 } }}
+            UIOptions={UI_OPTIONS}
+            initialData={{ appState: CLEAN_STYLE }}
           />
         )}
       </div>
