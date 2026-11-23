@@ -19,6 +19,10 @@ export interface CanvasNode extends Stamped {
   file?: string;
   url?: string;
   label?: string;
+  /** text styling; extra fields that Obsidian keeps but ignores */
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: number;
 }
 
 export interface CanvasEdge extends Stamped {
@@ -39,14 +43,32 @@ export interface CanvasDoc {
   deleted?: Record<string, number>;
 }
 
+// solid card fills that keep dark text readable
 export const PRESET_COLORS: Record<string, string> = {
-  "1": "#e03131",
-  "2": "#f08c00",
-  "3": "#e8b400",
-  "4": "#2f9e44",
-  "5": "#1098ad",
-  "6": "#7048e8",
+  "1": "#f47c7c",
+  "2": "#f0973a",
+  "3": "#f2cc5b",
+  "4": "#6fd07f",
+  "5": "#5aaaf2",
+  "6": "#a99ff0",
 };
+
+export const FONT_FAMILIES: { label: string; value: string }[] = [
+  { label: "ค่าเริ่มต้น", value: "" },
+  { label: "Sarabun", value: "Sarabun" },
+  { label: "Prompt", value: "Prompt" },
+  { label: "Kanit", value: "Kanit" },
+  { label: "Mitr", value: "Mitr" },
+  { label: "IBM Plex Sans Thai", value: "IBM Plex Sans Thai" },
+];
+export const FONT_SIZES = [12, 14, 16, 18, 24, 32, 48];
+export const FONT_WEIGHTS: { label: string; value: number }[] = [
+  { label: "บาง", value: 300 },
+  { label: "ปกติ", value: 400 },
+  { label: "กลาง", value: 500 },
+  { label: "หนา", value: 600 },
+  { label: "หนามาก", value: 700 },
+];
 
 export const resolveColor = (color?: string) => (color ? (PRESET_COLORS[color] ?? color) : undefined);
 
