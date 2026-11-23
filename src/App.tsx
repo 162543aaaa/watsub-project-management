@@ -37,6 +37,7 @@ const KpiAdmin = lazy(() => import("./pages/kpi/KpiAdmin"));
 const KpiDashboard = lazy(() => import("./pages/kpi/KpiDashboard"));
 const KpiPeriodSummary = lazy(() => import("./pages/kpi/KpiPeriodSummary"));
 const Wiki = lazy(() => import("./pages/Wiki"));
+const Whiteboard = lazy(() => import("./pages/Whiteboard"));
 const WikiArticle = lazy(() => import("./pages/WikiArticle"));
 const Workload = lazy(() => import("./pages/Workload"));
 const Organization = lazy(() => import("./pages/Organization"));
@@ -103,6 +104,8 @@ const App = () => (
                 <Route path="/kpi/admin/summary/:periodId" element={<KpiPeriodSummary />} />
                 <Route path="/kpi/dashboard" element={<KpiDashboard />} />
                 <Route path="/wiki" element={<Wiki />} />
+                <Route path="/whiteboard" element={<Whiteboard />} />
+                <Route path="/whiteboard/:slug" element={<Whiteboard />} />
                 <Route path="/wiki/:slug" element={<WikiArticle />} />
                 <Route path="/workload" element={<Workload />} />
                 <Route path="/organization" element={<Organization />} />

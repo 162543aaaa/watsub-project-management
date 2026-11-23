@@ -59,6 +59,7 @@ const moreGroups = [
     label: "Studio",
     items: [
       { label: "Wiki", icon: BookOpenIcon, path: "/wiki" },
+      { label: "Whiteboard", icon: Squares2X2Icon, path: "/whiteboard" },
       { label: "Budget", icon: WalletIcon, path: "/budget" },
       { label: "KPI", icon: ArrowTrendingUpIcon, path: "/kpi/overview" },
       { label: "Reports", icon: ChartBarIcon, path: "/reports" },

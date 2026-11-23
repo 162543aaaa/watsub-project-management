@@ -12,6 +12,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/manager": "Studio Overview",
   "/organization": "Organization",
   "/wiki": "Company Wiki",
+  "/whiteboard": "Whiteboard",
   "/meetings": "Meetings",
   "/onsite-work": "On-site Work",
   "/leave": "Leave",

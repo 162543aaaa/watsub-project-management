@@ -11,6 +11,7 @@ const routeLoaders: Record<string, () => Promise<unknown>> = {
   "/manager": () => import("@/pages/ManagerDashboard"),
   "/organization": () => import("@/pages/Organization"),
   "/wiki": () => import("@/pages/Wiki"),
+  "/whiteboard": () => import("@/pages/Whiteboard"),
   "/meetings": () => import("@/pages/Meetings"),
   "/onsite-work": () => import("@/pages/OnsiteWork"),
   "/leave": () => import("@/pages/Leave"),
