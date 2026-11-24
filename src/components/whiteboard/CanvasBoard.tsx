@@ -148,6 +148,8 @@ const ICONS = {
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
   collapse: "M15 6l-6 6 6 6",
   tools: "M4 6h16M4 12h16M4 18h16",
+  expand: "M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7",
+  shrink: "M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7",
 };
 function Icon({ name }: { name: keyof typeof ICONS }) {
   return (
@@ -167,6 +169,19 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const [linkEnd, setLinkEnd] = useState<Point | null>(null);
   const [manyMode, setManyMode] = useState(false);
   const [pen, setPen] = useState(false);
+  // board only, covering the app's nav (and the browser's bars where the Fullscreen API exists)
+  const [full, setFull] = useState(false);
+  const toggleFull = () => {
+    const next = !full;
+    setFull(next);
+    if (next) document.documentElement.requestFullscreen?.().catch(() => {});
+    else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  };
+  useEffect(() => {
+    const sync = () => !document.fullscreenElement && setFull(false);
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
   const [toolsOpen, setToolsOpen] = useState(() => localStorage.getItem("canvas-tools") !== "0");
   useEffect(() => localStorage.setItem("canvas-tools", toolsOpen ? "1" : "0"), [toolsOpen]);
   const [stroke, setStroke] = useState<Point[] | null>(null);
@@ -434,6 +449,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       } else if (e.key === "Escape") {
         setSelected(new Set());
         setPen(false);
+        setFull(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -892,7 +908,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const btn = `inline-flex items-center justify-center rounded-md hover:bg-white/10 disabled:opacity-40 ${coarse ? "min-h-10 min-w-10 px-3 py-2 text-base" : "px-2 py-1 text-sm"}`;
 
   return (
-    <div className="relative h-full w-full">
+    <div className={full ? "fixed inset-0 z-[60]" : "relative h-full w-full"}>
       <div
         ref={viewportRef}
         className="h-full w-full touch-none select-none overflow-hidden"
@@ -1085,6 +1101,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                       className={`${btn} justify-start text-left ${"danger" in a && a.danger ? "text-destructive" : ""}`}
                       onClick={() => {
                         setMenuOpen(false);
+                        if (full) toggleFull();
                         a.onClick();
                       }}
                     >
@@ -1179,6 +1196,9 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         </button>
         <button type="button" className={btn} onClick={() => fitTo(doc.nodes)} title="ดูทั้งหมด" aria-label="ดูทั้งหมด">
           <Icon name="fit" />
+        </button>
+        <button type="button" className={btn} onClick={toggleFull} title={full ? "ออกจากเต็มจอ (Esc)" : "เต็มจอ: แสดงเฉพาะไวท์บอร์ด"} aria-label={full ? "ออกจากเต็มจอ" : "เต็มจอ"} aria-pressed={full}>
+          <Icon name={full ? "shrink" : "expand"} />
         </button>
       </div>
 
