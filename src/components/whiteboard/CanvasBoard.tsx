@@ -127,6 +127,28 @@ interface Props {
   menuActions?: { label: string; onClick: () => void; danger?: boolean }[];
 }
 
+// 24px stroke icons for the toolbar
+const ICONS = {
+  undo: "M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3",
+  redo: "m15 14 5-5-5-5M20 9H9a5 5 0 0 0 0 10h3",
+  card: "M4 5h16v14H4zM12 9v6M9 12h6",
+  group: "M3 3h4M3 3v4M21 3h-4M21 3v4M3 21h4M3 21v-4M21 21h-4M21 21v-4M8 8h8v8H8z",
+  image: "M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5M15 9.5a1 1 0 1 0 0-.01",
+  many: "M4 4h7v7H4zM13 13h7v7h-7zM14 6.5l2 2 4-4M5 16.5l2 2 4-4",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  trash: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
+  minus: "M5 12h14",
+  plus: "M12 5v14M5 12h14",
+  fit: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+};
+function Icon({ name }: { name: keyof typeof ICONS }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={ICONS[name]} />
+    </svg>
+  );
+}
+
 export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTitle, restoreRequest, menuActions = [] }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
@@ -691,7 +713,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     );
   };
 
-  const btn = `rounded-md hover:bg-muted disabled:opacity-40 ${coarse ? "min-h-10 min-w-10 px-3 py-2 text-base" : "px-2 py-1 text-sm"}`;
+  const btn = `inline-flex items-center justify-center rounded-md hover:bg-muted disabled:opacity-40 ${coarse ? "min-h-10 min-w-10 px-3 py-2 text-base" : "px-2 py-1 text-sm"}`;
 
   return (
     <div className="relative h-full w-full">
@@ -789,21 +811,21 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       </div>
 
       <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1 rounded-lg border border-border bg-background/95 p-1 shadow-sm">
-        <button type="button" className={btn} onClick={undo} disabled={!past.current.length} title="ย้อนกลับ (Ctrl+Z)">
-          ↶
+        <button type="button" className={btn} onClick={undo} disabled={!past.current.length} title="ย้อนกลับ (Ctrl+Z)" aria-label="ย้อนกลับ">
+          <Icon name="undo" />
         </button>
-        <button type="button" className={btn} onClick={redo} disabled={!future.current.length} title="ทำซ้ำ (Ctrl+Y)">
-          ↷
+        <button type="button" className={btn} onClick={redo} disabled={!future.current.length} title="ทำซ้ำ (Ctrl+Y)" aria-label="ทำซ้ำ">
+          <Icon name="redo" />
         </button>
         <span className="mx-1 h-5 w-px bg-border" />
-        <button type="button" className={btn} onClick={() => setEditing(addNode({ type: "text", text: "", width: 260, height: 120 }).id)}>
-          + การ์ด
+        <button type="button" className={btn} onClick={() => setEditing(addNode({ type: "text", text: "", width: 260, height: 120 }).id)} title="เพิ่มการ์ด" aria-label="เพิ่มการ์ด">
+          <Icon name="card" />
         </button>
-        <button type="button" className={btn} onClick={() => addNode({ type: "group", label: "กลุ่มใหม่", width: 600, height: 400 })}>
-          + กลุ่ม
+        <button type="button" className={btn} onClick={() => addNode({ type: "group", label: "กลุ่มใหม่", width: 600, height: 400 })} title="เพิ่มกลุ่ม" aria-label="เพิ่มกลุ่ม">
+          <Icon name="group" />
         </button>
-        <label className={`cursor-pointer ${btn}`}>
-          + รูป
+        <label className={`cursor-pointer ${btn}`} title="เพิ่มรูป" aria-label="เพิ่มรูป">
+          <Icon name="image" />
           <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => e.target.files && void addImages(e.target.files)} />
         </label>
         <button
@@ -811,13 +833,14 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
           className={`${btn} ${manyMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
           aria-pressed={manyMode}
           onClick={() => setManyMode((m) => !m)}
-          title="แตะการ์ดเพื่อเลือกหลายอัน หรือลากพื้นที่ว่างเพื่อตีกรอบ (เหมือนกด Shift)"
+          title="เลือกหลายอัน: แตะการ์ดทีละใบ หรือลากพื้นที่ว่างเพื่อตีกรอบ (เหมือนกด Shift)"
+          aria-label="เลือกหลายอัน"
         >
-          เลือกหลายอัน
+          <Icon name="many" />
         </button>
         <div className="relative">
-          <button type="button" className={btn} aria-label="เมนูบอร์ด" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}>
-            ⋯
+          <button type="button" className={btn} aria-label="เมนูบอร์ด" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)} title="เมนูบอร์ด">
+            <Icon name="more" />
           </button>
           {menuOpen && (
             <div className="absolute left-0 top-full z-10 mt-1 flex w-64 flex-col rounded-lg border border-border bg-background p-1 shadow-lg">
@@ -905,23 +928,23 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 </select>
               </>
             )}
-            <button type="button" className={`${btn} text-destructive`} onClick={removeSelected}>
-              ลบ
+            <button type="button" className={`${btn} text-destructive`} onClick={removeSelected} title="ลบที่เลือก (Delete)" aria-label="ลบที่เลือก">
+              <Icon name="trash" />
             </button>
           </>
         )}
       </div>
 
       <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border border-border bg-background/95 p-1 text-sm shadow-sm">
-        <button type="button" aria-label="ซูมออก" className={btn} onClick={() => zoomBy(1 / 1.25)}>
-          −
+        <button type="button" aria-label="ซูมออก" className={btn} onClick={() => zoomBy(1 / 1.25)} title="ซูมออก">
+          <Icon name="minus" />
         </button>
         <span className="w-12 text-center tabular-nums">{Math.round(view.z * 100)}%</span>
-        <button type="button" aria-label="ซูมเข้า" className={btn} onClick={() => zoomBy(1.25)}>
-          +
+        <button type="button" aria-label="ซูมเข้า" className={btn} onClick={() => zoomBy(1.25)} title="ซูมเข้า">
+          <Icon name="plus" />
         </button>
-        <button type="button" className={btn} onClick={() => fitTo(doc.nodes)}>
-          ดูทั้งหมด
+        <button type="button" className={btn} onClick={() => fitTo(doc.nodes)} title="ดูทั้งหมด" aria-label="ดูทั้งหมด">
+          <Icon name="fit" />
         </button>
       </div>
 
