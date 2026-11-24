@@ -178,6 +178,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const pressTimer = useRef<number>();
   const drag = useRef<Drag | null>(null);
   const pointers = useRef(new Map<number, Point>());
+  // Procreate-style taps: fingers that land and lift quickly without moving (2 undo, 3 redo, 4 toggle tools)
+  const tap = useRef<{ t: number; max: number; starts: Map<number, Point>; moved: boolean } | null>(null);
   const past = useRef<CanvasDoc[]>([]);
   const future = useRef<CanvasDoc[]>([]);
   const opened = useRef(false);
@@ -497,7 +499,20 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
 
   const onPointerDownCapture = (e: ReactPointerEvent) => {
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (startPinchIfTwo()) e.stopPropagation();
+    if (e.pointerType === "touch") {
+      if (pointers.current.size === 1 || !tap.current) tap.current = { t: e.timeStamp, max: 0, starts: new Map(), moved: false };
+      tap.current.starts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      tap.current.max = Math.max(tap.current.max, pointers.current.size);
+    }
+    // Apple Pencil draws straight away, like Procreate; fingers keep panning and selecting
+    if (e.pointerType === "pen" && !pen && !isTyping(e.target) && !(e.target as HTMLElement).closest("[role=presentation]")) {
+      e.stopPropagation();
+      return onPointerDownDraw(e);
+    }
+    if (pointers.current.size >= 2) {
+      if (pointers.current.size === 2) startPinchIfTwo();
+      e.stopPropagation();
+    }
   };
 
   const onPointerDownDraw = (e: ReactPointerEvent) => {
@@ -505,7 +520,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     const p = toWorld(e.clientX, e.clientY);
     drag.current = { kind: "draw", pts: [p] };
     setStroke([p]);
-    setSelected(new Set());
+    setEditing(null);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
@@ -585,6 +600,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
 
   const onPointerMove = (e: ReactPointerEvent) => {
     if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const ts = tap.current?.starts.get(e.pointerId);
+    if (ts && Math.hypot(e.clientX - ts.x, e.clientY - ts.y) > 12) tap.current!.moved = true;
     const d = drag.current;
     if (!d) return;
     if (d.kind === "pinch") {
@@ -647,8 +664,24 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       setLinkEnd(null);
     }
     if (d?.kind === "box") setBox(null);
+    if (tap.current && pointers.current.size === 0) {
+      const t = tap.current;
+      tap.current = null;
+      if (!t.moved && t.max >= 2 && e.timeStamp - t.t < 350) {
+        if (t.max === 2) undo();
+        else if (t.max === 3) redo();
+        else setToolsOpen((o) => !o);
+      }
+    }
     if (d?.kind === "draw") {
       setStroke(null);
+      if (d.pts.length === 1) {
+        // a pencil tap selects (and a second tap edits) like a finger tap
+        const p = d.pts[0];
+        const hit = [...docRef.current.nodes].reverse().find((n) => p.x >= n.x && p.x <= n.x + n.width && p.y >= n.y && p.y <= n.y + n.height);
+        if (hit && hit.type === "text" && hit.shape !== "pen" && selected.size === 1 && selected.has(hit.id)) setEditing(hit.id);
+        else setSelected(hit ? new Set([hit.id]) : new Set());
+      }
       if (d.pts.length > 1) {
         const xs = d.pts.map((q) => q.x);
         const ys = d.pts.map((q) => q.y);
