@@ -25,6 +25,7 @@ const ALL_PAGES = [
   { path: "/manager", label: "Manager Dashboard" },
   { path: "/organization", label: "Organization Hub" },
   { path: "/wiki", label: "Wiki" },
+  { path: "/whiteboard", label: "Whiteboard" },
   { path: "/meetings", label: "Meetings" },
   { path: "/onsite-work", label: "On-site Work" },
   { path: "/leave", label: "Leave" },
