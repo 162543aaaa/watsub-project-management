@@ -811,7 +811,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     );
   };
 
-  const btn = `inline-flex items-center justify-center rounded-md hover:bg-muted disabled:opacity-40 ${coarse ? "min-h-10 min-w-10 px-3 py-2 text-base" : "px-2 py-1 text-sm"}`;
+  const btn = `inline-flex items-center justify-center rounded-md hover:bg-white/10 disabled:opacity-40 ${coarse ? "min-h-10 min-w-10 px-3 py-2 text-base" : "px-2 py-1 text-sm"}`;
 
   return (
     <div className="relative h-full w-full">
@@ -912,14 +912,14 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         {pen && <div className="absolute inset-0" style={{ cursor: "crosshair" }} onPointerDown={onPointerDownDraw} />}
       </div>
 
-      <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1 rounded-lg border border-border bg-background/95 p-1 shadow-sm">
+      <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1 rounded-lg border border-white/10 bg-[#2a2a2c] text-neutral-100 p-1 shadow-sm">
         <button type="button" className={btn} onClick={undo} disabled={!past.current.length} title="ย้อนกลับ (Ctrl+Z)" aria-label="ย้อนกลับ">
           <Icon name="undo" />
         </button>
         <button type="button" className={btn} onClick={redo} disabled={!future.current.length} title="ทำซ้ำ (Ctrl+Y)" aria-label="ทำซ้ำ">
           <Icon name="redo" />
         </button>
-        <span className="mx-1 h-5 w-px bg-border" />
+        <span className="mx-1 h-5 w-px bg-white/15" />
         <button type="button" className={btn} onClick={() => setEditing(addNode({ type: "text", text: "", width: 260, height: 120 }).id)} title="เพิ่มการ์ด" aria-label="เพิ่มการ์ด">
           <Icon name="card" />
         </button>
@@ -931,7 +931,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
             <Icon name="shape" />
           </button>
           {shapeMenu && (
-            <div className="absolute left-0 top-full z-10 mt-1 flex flex-col rounded-lg border border-border bg-background p-1 shadow-lg">
+            <div className="absolute left-0 top-full z-10 mt-1 flex flex-col rounded-lg border border-white/10 bg-[#2a2a2c] p-1 text-neutral-100 shadow-lg">
               {([["ellipse", "วงกลม"], ["diamond", "ข้าวหลามตัด"], ["triangle", "สามเหลี่ยม"]] as const).map(([shape, label]) => (
                 <button
                   key={shape}
@@ -977,7 +977,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
             <Icon name="more" />
           </button>
           {menuOpen && (
-            <div className="absolute left-0 top-full z-10 mt-1 flex w-64 flex-col rounded-lg border border-border bg-background p-1 shadow-lg">
+            <div className="absolute left-0 top-full z-10 mt-1 flex w-64 flex-col rounded-lg border border-white/10 bg-[#2a2a2c] p-1 text-neutral-100 shadow-lg">
               {[
                 ...menuActions.filter((a) => !a.danger),
                 { label: "นำเข้า .canvas", onClick: () => importRef.current?.click() },
@@ -987,7 +987,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 <button
                   key={a.label}
                   type="button"
-                  className={`${btn} text-left ${"danger" in a && a.danger ? "text-destructive" : ""}`}
+                  className={`${btn} justify-start text-left ${"danger" in a && a.danger ? "text-destructive" : ""}`}
                   onClick={() => {
                     setMenuOpen(false);
                     a.onClick();
@@ -996,7 +996,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                   {a.label}
                 </button>
               ))}
-              <p className="border-t border-border px-2 pt-2 text-xs leading-relaxed text-muted-foreground">
+              <p className="border-t border-white/10 px-2 pt-2 text-xs leading-relaxed text-neutral-400">
                 {coarse
                   ? "แตะการ์ดอีกครั้งเพื่อแก้ไข · กดค้างที่พื้นที่ว่างเพื่อเพิ่มการ์ด · ลากจุดข้างการ์ดเพื่อเชื่อม · สองนิ้วซูม"
                   : "ดับเบิลคลิกเพื่อเพิ่ม/แก้ไข · ลากจุดข้างการ์ดเพื่อเชื่อม · Shift เลือกหลายอัน · Ctrl+Z ย้อน · Ctrl+ล้อเมาส์ซูม"}
@@ -1006,9 +1006,9 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         </div>
         {selected.size > 0 && (
           <>
-            <span className="mx-1 h-5 w-px bg-border" />
-            <span className="px-1 text-xs text-muted-foreground">เลือก {selected.size}</span>
-            <button type="button" aria-label="ไม่มีสี" className="h-5 w-5 rounded-full border border-border bg-card" onClick={() => setColor(undefined)} />
+            <span className="mx-1 h-5 w-px bg-white/15" />
+            <span className="px-1 text-xs text-neutral-400">เลือก {selected.size}</span>
+            <button type="button" aria-label="ไม่มีสี" className="h-5 w-5 rounded-full border border-white/30 bg-[#d6d6d6]" onClick={() => setColor(undefined)} />
             {Object.entries(PRESET_COLORS).map(([key, hex]) => (
               <button
                 key={key}
@@ -1021,10 +1021,10 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
             ))}
             {hasTextSelected && (
               <>
-                <span className="mx-1 h-5 w-px bg-border" />
+                <span className="mx-1 h-5 w-px bg-white/15" />
                 <select
                   aria-label="ฟอนต์"
-                  className="rounded-md border border-border bg-background px-1 py-0.5 text-sm"
+                  className="rounded-md border border-white/15 bg-[#1c1c1e] px-1 text-neutral-100 py-0.5 text-sm"
                   value={singleNode?.fontFamily ?? ""}
                   onChange={(e) => setText({ fontFamily: e.target.value || undefined })}
                 >
@@ -1036,7 +1036,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 </select>
                 <select
                   aria-label="ขนาดตัวอักษร"
-                  className="rounded-md border border-border bg-background px-1 py-0.5 text-sm tabular-nums"
+                  className="rounded-md border border-white/15 bg-[#1c1c1e] px-1 text-neutral-100 py-0.5 text-sm tabular-nums"
                   value={singleNode?.fontSize ?? ""}
                   onChange={(e) => setText({ fontSize: e.target.value ? Number(e.target.value) : undefined })}
                 >
@@ -1049,7 +1049,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 </select>
                 <select
                   aria-label="ความหนาตัวอักษร"
-                  className="rounded-md border border-border bg-background px-1 py-0.5 text-sm"
+                  className="rounded-md border border-white/15 bg-[#1c1c1e] px-1 text-neutral-100 py-0.5 text-sm"
                   value={singleNode?.fontWeight ?? ""}
                   onChange={(e) => setText({ fontWeight: e.target.value ? Number(e.target.value) : undefined })}
                 >
@@ -1072,7 +1072,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         )}
       </div>
 
-      <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border border-border bg-background/95 p-1 text-sm shadow-sm">
+      <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border border-white/10 bg-[#2a2a2c] text-neutral-100 p-1 text-sm shadow-sm">
         <button type="button" aria-label="ซูมออก" className={btn} onClick={() => zoomBy(1 / 1.25)} title="ซูมออก">
           <Icon name="minus" />
         </button>

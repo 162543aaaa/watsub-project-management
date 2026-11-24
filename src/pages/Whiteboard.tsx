@@ -329,20 +329,20 @@ export default function Whiteboard() {
       </div>
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {historyOpen && (
-          <aside className="absolute right-3 top-14 z-10 max-h-[70%] w-72 overflow-auto rounded-lg border border-border bg-background p-3 shadow-lg">
+          <aside className="absolute right-3 top-14 z-10 max-h-[70%] w-72 overflow-auto rounded-lg border border-white/10 bg-[#2a2a2c] p-3 shadow-lg">
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-sm font-semibold">ประวัติเวอร์ชัน</h2>
-              <button type="button" aria-label="ปิด" className="rounded-md px-2 py-1 text-sm hover:bg-muted" onClick={() => setHistoryOpen(false)}>
+              <button type="button" aria-label="ปิด" className="rounded-md px-2 py-1 text-sm hover:bg-white/10" onClick={() => setHistoryOpen(false)}>
                 ✕
               </button>
             </div>
-            <p className="mb-2 text-xs text-muted-foreground">บันทึกอัตโนมัติทุก 10 นาทีที่มีการแก้ เก็บไว้ {VERSIONS_KEPT} เวอร์ชันล่าสุด กู้คืนแล้วกด ↶ ย้อนได้</p>
-            {versions.length === 0 && <p className="text-xs text-muted-foreground">ยังไม่มีเวอร์ชันที่บันทึกไว้</p>}
+            <p className="mb-2 text-xs text-neutral-400">บันทึกอัตโนมัติทุก 10 นาทีที่มีการแก้ เก็บไว้ {VERSIONS_KEPT} เวอร์ชันล่าสุด กู้คืนแล้วกด ↶ ย้อนได้</p>
+            {versions.length === 0 && <p className="text-xs text-neutral-400">ยังไม่มีเวอร์ชันที่บันทึกไว้</p>}
             <ul className="space-y-1">
               {versions.map((v) => (
                 <li key={v.slug} className="flex items-center justify-between gap-2 text-sm">
                   <span className="tabular-nums">{v.created_at ? new Date(v.created_at).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }) : "-"}</span>
-                  <button type="button" className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted" onClick={() => void restoreVersion(v.slug)}>
+                  <button type="button" className="rounded-md border border-white/15 px-2 py-0.5 text-xs hover:bg-white/10" onClick={() => void restoreVersion(v.slug)}>
                     กู้คืน
                   </button>
                 </li>
@@ -351,7 +351,7 @@ export default function Whiteboard() {
           </aside>
         )}
         {status === "missing" ? (
-          <p className="p-6 text-sm text-muted-foreground">ไม่พบบอร์ดนี้ เลือกบอร์ดอื่นจากรายการด้านบน</p>
+          <p className="p-6 text-sm text-neutral-400">ไม่พบบอร์ดนี้ เลือกบอร์ดอื่นจากรายการด้านบน</p>
         ) : board ? (
           <CanvasBoard
             key={board.id}
@@ -374,7 +374,7 @@ export default function Whiteboard() {
             ]}
           />
         ) : (
-          <p className="p-6 text-sm text-muted-foreground">{STATUS_TEXT[status]}</p>
+          <p className="p-6 text-sm text-neutral-400">{STATUS_TEXT[status]}</p>
         )}
       </div>
     </div>
