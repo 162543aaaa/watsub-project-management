@@ -283,6 +283,31 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     [apply],
   );
 
+  // card text is saved while typing (after a short pause), on leaving the card, and when the tab is hidden
+  const pendingText = useRef<{ id: string; text: string } | null>(null);
+  const textTimer = useRef<number>();
+  const textRecorded = useRef(false);
+  const commitText = useCallback(() => {
+    window.clearTimeout(textTimer.current);
+    const p = pendingText.current;
+    pendingText.current = null;
+    if (!p || docRef.current.nodes.find((n) => n.id === p.id)?.text === p.text) return;
+    patchNodes(new Map([[p.id, { text: p.text }]]), !textRecorded.current);
+    textRecorded.current = true;
+  }, [patchNodes]);
+  useEffect(() => {
+    textRecorded.current = false;
+  }, [editing]);
+  useEffect(() => {
+    const flush = () => document.visibilityState === "hidden" && commitText();
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", commitText);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", commitText);
+    };
+  }, [commitText]);
+
   const addNode = useCallback(
     (partial: Omit<CanvasNode, "id" | "ts" | "x" | "y"> & Partial<Pick<CanvasNode, "x" | "y">>) => {
       const el = viewportRef.current!;
@@ -770,8 +795,14 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
               className="h-full w-full resize-none rounded-md bg-white p-3 text-sm leading-relaxed text-neutral-900 outline-none"
               style={textStyle}
               onPointerDown={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                pendingText.current = { id: n.id, text: e.target.value };
+                window.clearTimeout(textTimer.current);
+                textTimer.current = window.setTimeout(commitText, 600);
+              }}
               onBlur={(e) => {
-                if (e.target.value !== (n.text ?? "")) patchNodes(new Map([[n.id, { text: e.target.value }]]));
+                pendingText.current = { id: n.id, text: e.target.value };
+                commitText();
                 setEditing(null);
               }}
               onKeyDown={(e) => e.key === "Escape" && (e.currentTarget as HTMLTextAreaElement).blur()}
