@@ -211,10 +211,15 @@ export default function Whiteboard() {
     setStatus("saving");
     try {
       void snapshot(remote.current);
+      // read-merge-write: start from what is stored now, so a teammate's edits are kept, not overwritten
+      const latest = await supabase.from("wiki_pages").select("content").eq("id", board.id).single();
+      if (!latest.error) remote.current = parseContent(latest.data.content);
       const merged = mergeDocs(docRef.current, remote.current);
+      // the table has no updated_at trigger: stamp it so other screens' polls notice the change
+      const stamp = new Date().toISOString();
       const { data, error } = await supabase
         .from("wiki_pages")
-        .update({ content: JSON.stringify(merged) })
+        .update({ content: JSON.stringify(merged), updated_at: stamp })
         .eq("id", board.id)
         .select("updated_at")
         .single();
@@ -223,7 +228,10 @@ export default function Whiteboard() {
         return setStatus("error");
       }
       remote.current = merged;
-      lastSeen.current = data.updated_at ?? lastSeen.current;
+      lastSeen.current = data.updated_at ?? stamp;
+      const shown = mergeDocs(docRef.current, merged);
+      docRef.current = shown;
+      setDoc(shown);
       setStatus(dirty.current ? "saving" : "saved");
     } finally {
       saving.current = false;
