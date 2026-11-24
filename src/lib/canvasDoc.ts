@@ -27,6 +27,8 @@ export interface CanvasNode extends Stamped {
   shape?: "ellipse" | "diamond" | "triangle" | "pen";
   /** pen stroke points as flat x,y pairs scaled to 0..1000 of the node box */
   path?: number[];
+  /** locked items can't be moved, resized or deleted until unlocked */
+  locked?: boolean;
 }
 
 export interface CanvasEdge extends Stamped {
