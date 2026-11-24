@@ -302,14 +302,14 @@ export default function Whiteboard() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] flex-col gap-2 px-3 pb-3 pt-2 sm:px-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="flex h-[calc(100dvh-4rem)] flex-col bg-[#1c1c1e] text-neutral-100">
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2 sm:px-4">
         <label htmlFor="whiteboard-select" className="text-sm font-medium">
           บอร์ด
         </label>
         <select
           id="whiteboard-select"
-          className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+          className="rounded-md border border-white/15 bg-[#2a2a2c] px-2 py-1 text-sm text-neutral-100"
           value={slug}
           onChange={(e) => navigate(`/whiteboard/${e.target.value}`)}
         >
@@ -320,14 +320,14 @@ export default function Whiteboard() {
             </option>
           ))}
         </select>
-        <button type="button" onClick={createBoard} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">
+        <button type="button" onClick={createBoard} className="rounded-md border border-white/15 px-3 py-1 text-sm hover:bg-white/10">
           + บอร์ดใหม่
         </button>
-        <span role="status" className={`text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+        <span role="status" className={`text-sm ${status === "error" ? "text-red-400" : "text-neutral-400"}`}>
           {STATUS_TEXT[status]}
         </span>
       </div>
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-background">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {historyOpen && (
           <aside className="absolute right-3 top-14 z-10 max-h-[70%] w-72 overflow-auto rounded-lg border border-border bg-background p-3 shadow-lg">
             <div className="mb-1 flex items-center justify-between">

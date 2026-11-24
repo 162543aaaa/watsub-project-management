@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasLocalChanges, mergeDocs, parseCanvas, restoreDoc, toObsidianCanvas, type CanvasDoc, type CanvasNode } from "./canvasDoc";
+import { cloneItems, hasLocalChanges, mergeDocs, parseCanvas, restoreDoc, toObsidianCanvas, type CanvasDoc, type CanvasNode } from "./canvasDoc";
 
 const node = (id: string, ts: number, text = id): CanvasNode => ({ id, ts, type: "text", x: 0, y: 0, width: 10, height: 10, text });
 
@@ -64,5 +64,20 @@ describe("parseCanvas / toObsidianCanvas", () => {
     expect(doc.nodes.map((n) => n.id)).toEqual(["a"]);
     expect(doc.edges.map((e) => e.id)).toEqual(["e1"]);
     expect(toObsidianCanvas(doc).nodes[0]).not.toHaveProperty("ts");
+  });
+});
+
+describe("cloneItems", () => {
+  it("gives copies new ids, shifts them, keeps groups first and relinks inner edges only", () => {
+    const g: CanvasNode = { ...node("g", 1), type: "group" };
+    const out = cloneItems([node("a", 1), g, node("b", 1)], [
+      { id: "e1", fromNode: "a", toNode: "b" },
+      { id: "e2", fromNode: "a", toNode: "z" },
+    ], 40, 7);
+    expect(out.nodes[0].type).toBe("group");
+    expect(out.nodes.every((n) => !["a", "b", "g"].includes(n.id) && n.x === 40 && n.ts === 7)).toBe(true);
+    expect(out.edges).toHaveLength(1);
+    const ids = new Set(out.nodes.map((n) => n.id));
+    expect(ids.has(out.edges[0].fromNode) && ids.has(out.edges[0].toNode)).toBe(true);
   });
 });
