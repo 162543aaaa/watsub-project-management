@@ -146,6 +146,8 @@ const ICONS = {
   shape: "M7 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8M14 14h7v7h-7zM17 3l4 7h-8z",
   pen: "M4 20l4-1L19 8a2.1 2.1 0 0 0-3-3L5 16zM14 7l3 3",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
+  collapse: "M15 6l-6 6 6 6",
+  tools: "M4 6h16M4 12h16M4 18h16",
 };
 function Icon({ name }: { name: keyof typeof ICONS }) {
   return (
@@ -165,6 +167,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const [linkEnd, setLinkEnd] = useState<Point | null>(null);
   const [manyMode, setManyMode] = useState(false);
   const [pen, setPen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(() => localStorage.getItem("canvas-tools") !== "0");
+  useEffect(() => localStorage.setItem("canvas-tools", toolsOpen ? "1" : "0"), [toolsOpen]);
   const [stroke, setStroke] = useState<Point[] | null>(null);
   const [shapeMenu, setShapeMenu] = useState(false);
   const clip = useRef<{ nodes: CanvasNode[]; edges: CanvasEdge[]; pasted: number } | null>(null);
@@ -912,101 +916,121 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         {pen && <div className="absolute inset-0" style={{ cursor: "crosshair" }} onPointerDown={onPointerDownDraw} />}
       </div>
 
-      <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1 rounded-lg border border-white/10 bg-[#2a2a2c] text-neutral-100 p-1 shadow-sm">
-        <button type="button" className={btn} onClick={undo} disabled={!past.current.length} title="ย้อนกลับ (Ctrl+Z)" aria-label="ย้อนกลับ">
-          <Icon name="undo" />
-        </button>
-        <button type="button" className={btn} onClick={redo} disabled={!future.current.length} title="ทำซ้ำ (Ctrl+Y)" aria-label="ทำซ้ำ">
-          <Icon name="redo" />
-        </button>
-        <span className="mx-1 h-5 w-px bg-white/15" />
-        <button type="button" className={btn} onClick={() => setEditing(addNode({ type: "text", text: "", width: 260, height: 120 }).id)} title="เพิ่มการ์ด" aria-label="เพิ่มการ์ด">
-          <Icon name="card" />
-        </button>
-        <button type="button" className={btn} onClick={() => addNode({ type: "group", label: "กลุ่มใหม่", width: 600, height: 400 })} title="เพิ่มกลุ่ม" aria-label="เพิ่มกลุ่ม">
-          <Icon name="group" />
-        </button>
-        <div className="relative">
-          <button type="button" className={btn} title="เพิ่มรูปทรง" aria-label="เพิ่มรูปทรง" aria-expanded={shapeMenu} onClick={() => setShapeMenu((o) => !o)}>
-            <Icon name="shape" />
-          </button>
-          {shapeMenu && (
-            <div className="absolute left-0 top-full z-10 mt-1 flex flex-col rounded-lg border border-white/10 bg-[#2a2a2c] p-1 text-neutral-100 shadow-lg">
-              {([["ellipse", "วงกลม"], ["diamond", "ข้าวหลามตัด"], ["triangle", "สามเหลี่ยม"]] as const).map(([shape, label]) => (
-                <button
-                  key={shape}
-                  type="button"
-                  className={`${btn} justify-start whitespace-nowrap`}
-                  onClick={() => {
-                    setShapeMenu(false);
-                    addNode({ type: "text", text: "", shape, width: 200, height: 200 });
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="absolute left-3 top-3 flex flex-col items-center gap-1 rounded-lg border border-white/10 bg-[#2a2a2c] text-neutral-100 p-1 shadow-sm">
         <button
           type="button"
-          className={`${btn} ${pen ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
-          aria-pressed={pen}
-          onClick={() => setPen((v) => !v)}
-          title="ปากกา: วาดเส้นอิสระ (กดอีกครั้งหรือ Esc เพื่อเลิก) ใช้สองนิ้วซูมได้"
-          aria-label="ปากกา"
+          className={btn}
+          aria-expanded={toolsOpen}
+          onClick={() => {
+            setToolsOpen((o) => !o);
+            setMenuOpen(false);
+            setShapeMenu(false);
+          }}
+          title={toolsOpen ? "ซ่อนเครื่องมือ" : "แสดงเครื่องมือ"}
+          aria-label={toolsOpen ? "ซ่อนเครื่องมือ" : "แสดงเครื่องมือ"}
         >
-          <Icon name="pen" />
+          <Icon name={toolsOpen ? "collapse" : "tools"} />
         </button>
-        <label className={`cursor-pointer ${btn}`} title="เพิ่มรูป" aria-label="เพิ่มรูป">
-          <Icon name="image" />
-          <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => e.target.files && void addImages(e.target.files)} />
-        </label>
-        <button
-          type="button"
-          className={`${btn} ${manyMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
-          aria-pressed={manyMode}
-          onClick={() => setManyMode((m) => !m)}
-          title="เลือกหลายอัน: แตะการ์ดทีละใบ หรือลากพื้นที่ว่างเพื่อตีกรอบ (เหมือนกด Shift)"
-          aria-label="เลือกหลายอัน"
-        >
-          <Icon name="many" />
-        </button>
-        <div className="relative">
-          <button type="button" className={btn} aria-label="เมนูบอร์ด" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)} title="เมนูบอร์ด">
-            <Icon name="more" />
-          </button>
-          {menuOpen && (
-            <div className="absolute left-0 top-full z-10 mt-1 flex w-64 flex-col rounded-lg border border-white/10 bg-[#2a2a2c] p-1 text-neutral-100 shadow-lg">
-              {[
-                ...menuActions.filter((a) => !a.danger),
-                { label: "นำเข้า .canvas", onClick: () => importRef.current?.click() },
-                { label: "ส่งออก .canvas", onClick: exportCanvas },
-                ...menuActions.filter((a) => a.danger),
-              ].map((a) => (
-                <button
-                  key={a.label}
-                  type="button"
-                  className={`${btn} justify-start text-left ${"danger" in a && a.danger ? "text-destructive" : ""}`}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    a.onClick();
-                  }}
-                >
-                  {a.label}
-                </button>
-              ))}
-              <p className="border-t border-white/10 px-2 pt-2 text-xs leading-relaxed text-neutral-400">
-                {coarse
-                  ? "แตะการ์ดอีกครั้งเพื่อแก้ไข · กดค้างที่พื้นที่ว่างเพื่อเพิ่มการ์ด · ลากจุดข้างการ์ดเพื่อเชื่อม · สองนิ้วซูม"
-                  : "ดับเบิลคลิกเพื่อเพิ่ม/แก้ไข · ลากจุดข้างการ์ดเพื่อเชื่อม · Shift เลือกหลายอัน · Ctrl+Z ย้อน · Ctrl+ล้อเมาส์ซูม"}
-              </p>
-            </div>
-          )}
-        </div>
-        {selected.size > 0 && (
+        {toolsOpen && (
           <>
-            <span className="mx-1 h-5 w-px bg-white/15" />
+            <span className="my-0.5 h-px w-5 bg-white/15" />
+            <button type="button" className={btn} onClick={undo} disabled={!past.current.length} title="ย้อนกลับ (Ctrl+Z)" aria-label="ย้อนกลับ">
+              <Icon name="undo" />
+            </button>
+            <button type="button" className={btn} onClick={redo} disabled={!future.current.length} title="ทำซ้ำ (Ctrl+Y)" aria-label="ทำซ้ำ">
+              <Icon name="redo" />
+            </button>
+            <span className="my-0.5 h-px w-5 bg-white/15" />
+            <button type="button" className={btn} onClick={() => setEditing(addNode({ type: "text", text: "", width: 260, height: 120 }).id)} title="เพิ่มการ์ด" aria-label="เพิ่มการ์ด">
+              <Icon name="card" />
+            </button>
+            <button type="button" className={btn} onClick={() => addNode({ type: "group", label: "กลุ่มใหม่", width: 600, height: 400 })} title="เพิ่มกลุ่ม" aria-label="เพิ่มกลุ่ม">
+              <Icon name="group" />
+            </button>
+            <div className="relative">
+              <button type="button" className={btn} title="เพิ่มรูปทรง" aria-label="เพิ่มรูปทรง" aria-expanded={shapeMenu} onClick={() => setShapeMenu((o) => !o)}>
+                <Icon name="shape" />
+              </button>
+              {shapeMenu && (
+                <div className="absolute left-full top-0 z-10 ml-2 flex flex-col rounded-lg border border-white/10 bg-[#2a2a2c] p-1 text-neutral-100 shadow-lg">
+                  {([["ellipse", "วงกลม"], ["diamond", "ข้าวหลามตัด"], ["triangle", "สามเหลี่ยม"]] as const).map(([shape, label]) => (
+                    <button
+                      key={shape}
+                      type="button"
+                      className={`${btn} justify-start whitespace-nowrap`}
+                      onClick={() => {
+                        setShapeMenu(false);
+                        addNode({ type: "text", text: "", shape, width: 200, height: 200 });
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              className={`${btn} ${pen ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
+              aria-pressed={pen}
+              onClick={() => setPen((v) => !v)}
+              title="ปากกา: วาดเส้นอิสระ (กดอีกครั้งหรือ Esc เพื่อเลิก) ใช้สองนิ้วซูมได้"
+              aria-label="ปากกา"
+            >
+              <Icon name="pen" />
+            </button>
+            <label className={`cursor-pointer ${btn}`} title="เพิ่มรูป" aria-label="เพิ่มรูป">
+              <Icon name="image" />
+              <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => e.target.files && void addImages(e.target.files)} />
+            </label>
+            <button
+              type="button"
+              className={`${btn} ${manyMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
+              aria-pressed={manyMode}
+              onClick={() => setManyMode((m) => !m)}
+              title="เลือกหลายอัน: แตะการ์ดทีละใบ หรือลากพื้นที่ว่างเพื่อตีกรอบ (เหมือนกด Shift)"
+              aria-label="เลือกหลายอัน"
+            >
+              <Icon name="many" />
+            </button>
+            <div className="relative">
+              <button type="button" className={btn} aria-label="เมนูบอร์ด" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)} title="เมนูบอร์ด">
+                <Icon name="more" />
+              </button>
+              {menuOpen && (
+                <div className="absolute left-full top-0 z-10 ml-2 flex w-64 flex-col rounded-lg border border-white/10 bg-[#2a2a2c] p-1 text-neutral-100 shadow-lg">
+                  {[
+                    ...menuActions.filter((a) => !a.danger),
+                    { label: "นำเข้า .canvas", onClick: () => importRef.current?.click() },
+                    { label: "ส่งออก .canvas", onClick: exportCanvas },
+                    ...menuActions.filter((a) => a.danger),
+                  ].map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      className={`${btn} justify-start text-left ${"danger" in a && a.danger ? "text-destructive" : ""}`}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        a.onClick();
+                      }}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                  <p className="border-t border-white/10 px-2 pt-2 text-xs leading-relaxed text-neutral-400">
+                    {coarse
+                      ? "แตะการ์ดอีกครั้งเพื่อแก้ไข · กดค้างที่พื้นที่ว่างเพื่อเพิ่มการ์ด · ลากจุดข้างการ์ดเพื่อเชื่อม · สองนิ้วซูม"
+                      : "ดับเบิลคลิกเพื่อเพิ่ม/แก้ไข · ลากจุดข้างการ์ดเพื่อเชื่อม · Shift เลือกหลายอัน · Ctrl+Z ย้อน · Ctrl+ล้อเมาส์ซูม"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {selected.size > 0 && (
+        <div className="absolute left-[4.5rem] top-3 flex max-w-[calc(100%-6rem)] flex-wrap items-center gap-1 rounded-lg border border-white/10 bg-[#2a2a2c] text-neutral-100 p-1 shadow-sm">
             <span className="px-1 text-xs text-neutral-400">เลือก {selected.size}</span>
             <button type="button" aria-label="ไม่มีสี" className="h-5 w-5 rounded-full border border-white/30 bg-[#d6d6d6]" onClick={() => setColor(undefined)} />
             {Object.entries(PRESET_COLORS).map(([key, hex]) => (
@@ -1068,9 +1092,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
             <button type="button" className={`${btn} text-destructive`} onClick={removeSelected} title="ลบที่เลือก (Delete)" aria-label="ลบที่เลือก">
               <Icon name="trash" />
             </button>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border border-white/10 bg-[#2a2a2c] text-neutral-100 p-1 text-sm shadow-sm">
         <button type="button" aria-label="ซูมออก" className={btn} onClick={() => zoomBy(1 / 1.25)} title="ซูมออก">
