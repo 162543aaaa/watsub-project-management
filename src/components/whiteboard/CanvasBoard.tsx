@@ -295,6 +295,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     patchNodes(new Map([[p.id, { text: p.text }]]), !textRecorded.current);
     textRecorded.current = true;
   }, [patchNodes]);
+  // tapping the board or another card unmounts the textarea without a blur: save what was typed then
+  useEffect(() => commitText, [editing, commitText]);
   useEffect(() => {
     textRecorded.current = false;
   }, [editing]);
