@@ -20,7 +20,7 @@ import {
 type View = { x: number; y: number; z: number };
 type Point = { x: number; y: number };
 type Drag =
-  | { kind: "pan"; sx: number; sy: number; view: View }
+  | { kind: "pan"; sx: number; sy: number; view: View; tapEdit?: string | null }
   | { kind: "move"; sx: number; sy: number; start: Map<string, Point>; recorded: boolean; tapEdit: string | null }
   | { kind: "resize"; sx: number; sy: number; id: string; w: number; h: number; recorded: boolean }
   | { kind: "box"; start: Point; additive: Set<string> }
@@ -150,6 +150,8 @@ const ICONS = {
   tools: "M4 6h16M4 12h16M4 18h16",
   expand: "M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7",
   shrink: "M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7",
+  lock: "M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4",
+  unlock: "M6 11h12v10H6zM8 11V7a4 4 0 0 1 7.5-2",
 };
 function Icon({ name }: { name: keyof typeof ICONS }) {
   return (
@@ -348,14 +350,16 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   );
 
   const removeSelected = useCallback(() => {
-    if (!selected.size) return;
-    const now = Date.now();
     const { nodes, edges, deleted = {} } = docRef.current;
-    const goneEdges = edges.filter((e) => selected.has(e.id) || selected.has(e.fromNode) || selected.has(e.toNode));
+    const locked = new Set(nodes.filter((n) => n.locked).map((n) => n.id));
+    const removable = new Set([...selected].filter((id) => !locked.has(id)));
+    if (!removable.size) return;
+    const now = Date.now();
+    const goneEdges = edges.filter((e) => removable.has(e.id) || removable.has(e.fromNode) || removable.has(e.toNode));
     const nextDeleted = { ...deleted };
-    selected.forEach((id) => (nextDeleted[id] = now));
+    removable.forEach((id) => (nextDeleted[id] = now));
     goneEdges.forEach((e) => (nextDeleted[e.id] = now));
-    apply({ nodes: nodes.filter((n) => !selected.has(n.id)), edges: edges.filter((e) => !goneEdges.includes(e)), deleted: nextDeleted });
+    apply({ nodes: nodes.filter((n) => !removable.has(n.id)), edges: edges.filter((e) => !goneEdges.includes(e)), deleted: nextDeleted });
     setSelected(new Set());
   }, [apply, selected]);
 
@@ -375,6 +379,12 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     apply({ ...d, nodes: [...groups, ...d.nodes, ...out.nodes.filter((n) => n.type !== "group")], edges: [...d.edges, ...out.edges] });
     setSelected(new Set(out.nodes.map((n) => n.id)));
   }, [apply]);
+
+  const toggleLock = () => {
+    const picked = docRef.current.nodes.filter((n) => selected.has(n.id));
+    const lock = !picked.every((n) => n.locked);
+    patchNodes(new Map(picked.map((n) => [n.id, { locked: lock || undefined }])));
+  };
 
   const duplicate = () => {
     if (copySelected()) pasteClip();
@@ -592,11 +602,14 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     setSelected(sel);
     const start = new Map<string, Point>();
     const nodes = docRef.current.nodes;
-    nodes.filter((x) => sel.has(x.id)).forEach((x) => {
+    nodes.filter((x) => sel.has(x.id) && !x.locked).forEach((x) => {
       start.set(x.id, { x: x.x, y: x.y });
-      if (x.type === "group") nodes.filter((c) => isInside(c, x)).forEach((c) => start.set(c.id, { x: c.x, y: c.y }));
+      if (x.type === "group") nodes.filter((c) => isInside(c, x) && !c.locked).forEach((c) => start.set(c.id, { x: c.x, y: c.y }));
     });
-    drag.current = { kind: "move", sx: e.clientX, sy: e.clientY, start, recorded: false, tapEdit };
+    // dragging a locked card pans the board instead, so big locked cards don't get in the way on iPad
+    drag.current = start.size
+      ? { kind: "move", sx: e.clientX, sy: e.clientY, start, recorded: false, tapEdit }
+      : { kind: "pan", sx: e.clientX, sy: e.clientY, view, tapEdit };
     // capture on the card itself, so a double-click still lands on the card
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -712,6 +725,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       }
     }
     if (d?.kind === "move" && !d.recorded && d.tapEdit) setEditing(d.tapEdit);
+    if (d?.kind === "pan" && d.tapEdit && Math.abs(viewRef.current.x - d.view.x) + Math.abs(viewRef.current.y - d.view.y) < 4) setEditing(d.tapEdit);
     window.clearTimeout(pressTimer.current);
     drag.current = pointers.current.size === 1 && d?.kind === "pinch" ? null : pointers.current.size ? d : null;
   };
@@ -761,6 +775,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const others = doc.nodes.filter((n) => n.type !== "group");
   const single = selected.size === 1 ? [...selected][0] : null;
   const singleNode = single ? nodesById.get(single) : undefined;
+  const pickedNodes = doc.nodes.filter((n) => selected.has(n.id));
+  const selectionLocked = pickedNodes.length > 0 && pickedNodes.every((n) => n.locked);
   const hasTextSelected = doc.nodes.some((n) => selected.has(n.id) && (n.type === "text" || n.type === "group"));
   const linking = drag.current?.kind === "connect" ? drag.current : null;
   const linkFrom = linking ? nodesById.get(linking.from) : undefined;
@@ -878,6 +894,13 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
             {n.url}
           </a>
         )}
+        {n.locked && (
+          <div className="pointer-events-none absolute -right-2 -top-2 rounded-full p-1" style={{ background: BOARD.select, color: BOARD.ink, transform: `scale(${Math.min(2.5, 1 / view.z)})`, transformOrigin: "100% 0" }} aria-label="ล็อกอยู่">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d={ICONS.lock} />
+            </svg>
+          </div>
+        )}
         {single === n.id && (
           <>
             {SIDES.map((side) => {
@@ -893,12 +916,14 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 />
               );
             })}
-            <div
-              role="presentation"
-              className="absolute cursor-nwse-resize rounded-sm"
-              style={{ right: -handle / 2, bottom: -handle / 2, width: handle, height: handle, background: BOARD.select }}
-              onPointerDown={(e) => onPointerDownResize(e, n)}
-            />
+            {!n.locked && (
+              <div
+                role="presentation"
+                className="absolute cursor-nwse-resize rounded-sm"
+                style={{ right: -handle / 2, bottom: -handle / 2, width: handle, height: handle, background: BOARD.select }}
+                onPointerDown={(e) => onPointerDownResize(e, n)}
+              />
+            )}
           </>
         )}
       </div>
@@ -1177,6 +1202,16 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 </select>
               </>
             )}
+            <button
+              type="button"
+              className={`${btn} ${selectionLocked ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
+              onClick={toggleLock}
+              aria-pressed={selectionLocked}
+              title={selectionLocked ? "ปลดล็อก: ย้าย ย่อขยาย และลบได้อีกครั้ง" : "ล็อก: กันย้าย ย่อขยาย และลบโดยไม่ตั้งใจ (ยังแก้ข้อความได้)"}
+              aria-label={selectionLocked ? "ปลดล็อก" : "ล็อก"}
+            >
+              <Icon name={selectionLocked ? "lock" : "unlock"} />
+            </button>
             <button type="button" className={btn} onClick={duplicate} title="ทำซ้ำที่เลือก (Ctrl+D) · คัดลอก/วาง Ctrl+C / Ctrl+V" aria-label="ทำซ้ำที่เลือก">
               <Icon name="copy" />
             </button>
