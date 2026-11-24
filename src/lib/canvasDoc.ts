@@ -23,6 +23,10 @@ export interface CanvasNode extends Stamped {
   fontFamily?: string;
   fontSize?: number;
   fontWeight?: number;
+  /** drawn as a shape or a pen stroke instead of a card; Obsidian shows these as plain cards */
+  shape?: "ellipse" | "diamond" | "triangle" | "pen";
+  /** pen stroke points as flat x,y pairs scaled to 0..1000 of the node box */
+  path?: number[];
 }
 
 export interface CanvasEdge extends Stamped {
@@ -71,6 +75,18 @@ export const FONT_WEIGHTS: { label: string; value: number }[] = [
 ];
 
 export const resolveColor = (color?: string) => (color ? (PRESET_COLORS[color] ?? color) : undefined);
+
+/** Copies of `nodes` (and the edges between them) with new ids, shifted by `offset`; groups stay first. */
+export function cloneItems(nodes: CanvasNode[], edges: CanvasEdge[], offset: number, now = Date.now()) {
+  const ids = new Map(nodes.map((n) => [n.id, newId()]));
+  const copies = nodes
+    .map((n) => ({ ...n, id: ids.get(n.id)!, x: n.x + offset, y: n.y + offset, ts: now }))
+    .sort((a, b) => Number(b.type === "group") - Number(a.type === "group"));
+  const links = edges
+    .filter((e) => ids.has(e.fromNode) && ids.has(e.toNode))
+    .map((e) => ({ ...e, id: newId(), fromNode: ids.get(e.fromNode)!, toNode: ids.get(e.toNode)!, ts: now }));
+  return { nodes: copies, edges: links };
+}
 
 export const newId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 

@@ -5,6 +5,7 @@ import {
   FONT_SIZES,
   FONT_WEIGHTS,
   PRESET_COLORS,
+  cloneItems,
   newId,
   parseCanvas,
   resolveColor,
@@ -24,7 +25,8 @@ type Drag =
   | { kind: "resize"; sx: number; sy: number; id: string; w: number; h: number; recorded: boolean }
   | { kind: "box"; start: Point; additive: Set<string> }
   | { kind: "connect"; from: string; side: Side }
-  | { kind: "pinch"; dist: number; mid: Point; view: View };
+  | { kind: "pinch"; dist: number; mid: Point; view: View }
+  | { kind: "draw"; pts: Point[] };
 
 const MIN_Z = 0.1;
 const MAX_Z = 3;
@@ -43,6 +45,7 @@ const BOARD = {
   groupBorder: "rgb(255 255 255 / 0.14)",
   label: "#f2f2f2",
   link: "#9c9c9c",
+  pen: "#f47c7c",
   select: "#f0973a",
 };
 const FONT_CSS =
@@ -140,6 +143,9 @@ const ICONS = {
   minus: "M5 12h14",
   plus: "M12 5v14M5 12h14",
   fit: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  shape: "M7 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8M14 14h7v7h-7zM17 3l4 7h-8z",
+  pen: "M4 20l4-1L19 8a2.1 2.1 0 0 0-3-3L5 16zM14 7l3 3",
+  copy: "M9 9h11v11H9zM5 15H4V4h11v1",
 };
 function Icon({ name }: { name: keyof typeof ICONS }) {
   return (
@@ -158,6 +164,10 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const [box, setBox] = useState<{ a: Point; b: Point } | null>(null);
   const [linkEnd, setLinkEnd] = useState<Point | null>(null);
   const [manyMode, setManyMode] = useState(false);
+  const [pen, setPen] = useState(false);
+  const [stroke, setStroke] = useState<Point[] | null>(null);
+  const [shapeMenu, setShapeMenu] = useState(false);
+  const clip = useRef<{ nodes: CanvasNode[]; edges: CanvasEdge[]; pasted: number } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   // finger or pen as the main pointer (iPad, phone): bigger targets, tap-to-edit, long-press to add
   const [coarse] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches);
@@ -293,6 +303,27 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     setSelected(new Set());
   }, [apply, selected]);
 
+  const copySelected = useCallback(() => {
+    const nodes = docRef.current.nodes.filter((n) => selected.has(n.id));
+    if (nodes.length) clip.current = { nodes, edges: docRef.current.edges, pasted: 0 };
+    return nodes.length > 0;
+  }, [selected]);
+
+  const pasteClip = useCallback(() => {
+    const c = clip.current;
+    if (!c) return;
+    c.pasted += 1;
+    const out = cloneItems(c.nodes, c.edges, 40 * c.pasted);
+    const d = docRef.current;
+    const groups = out.nodes.filter((n) => n.type === "group");
+    apply({ ...d, nodes: [...groups, ...d.nodes, ...out.nodes.filter((n) => n.type !== "group")], edges: [...d.edges, ...out.edges] });
+    setSelected(new Set(out.nodes.map((n) => n.id)));
+  }, [apply]);
+
+  const duplicate = () => {
+    if (copySelected()) pasteClip();
+  };
+
   const setColor = (color: string | undefined) => {
     const nodeIds = new Map<string, Partial<CanvasNode>>();
     const edgeIds = new Set<string>();
@@ -351,14 +382,22 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       } else if (mod && e.key.toLowerCase() === "a") {
         e.preventDefault();
         setSelected(new Set(docRef.current.nodes.map((n) => n.id)));
+      } else if (mod && e.key.toLowerCase() === "c") {
+        copySelected();
+      } else if (mod && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        if (copySelected()) pasteClip();
       } else if ((e.key === "Delete" || e.key === "Backspace") && selected.size) {
         e.preventDefault();
         removeSelected();
-      } else if (e.key === "Escape") setSelected(new Set());
+      } else if (e.key === "Escape") {
+        setSelected(new Set());
+        setPen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [editing, selected, removeSelected, undo, redo]);
+  }, [editing, selected, removeSelected, undo, redo, copySelected, pasteClip]);
 
   const addImages = useCallback(
     async (fileList: FileList | File[], at?: Point) => {
@@ -398,11 +437,14 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       if (imgs.length) {
         e.preventDefault();
         void addImages(imgs);
+      } else if (clip.current) {
+        e.preventDefault();
+        pasteClip();
       }
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addImages, editing]);
+  }, [addImages, editing, pasteClip]);
 
   // ── pointers ───────────────────────────────────────────────────────────────
   const startPinchIfTwo = () => {
@@ -419,10 +461,20 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     if (startPinchIfTwo()) e.stopPropagation();
   };
 
+  const onPointerDownDraw = (e: ReactPointerEvent) => {
+    if (e.button !== 0 || drag.current?.kind === "pinch") return;
+    const p = toWorld(e.clientX, e.clientY);
+    drag.current = { kind: "draw", pts: [p] };
+    setStroke([p]);
+    setSelected(new Set());
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
   const onPointerDownBg = (e: ReactPointerEvent) => {
     if (e.button !== 0 || e.target !== e.currentTarget || drag.current?.kind === "pinch") return;
     setEditing(null);
     setMenuOpen(false);
+    setShapeMenu(false);
     if (e.shiftKey || manyMode) {
       const p = toWorld(e.clientX, e.clientY);
       drag.current = { kind: "box", start: p, additive: new Set(selected) };
@@ -449,6 +501,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     if (e.button !== 0 || editing === n.id || drag.current?.kind === "pinch") return;
     e.stopPropagation();
     setMenuOpen(false);
+    setShapeMenu(false);
     const multi = e.shiftKey || manyMode;
     if (multi && n.type === "group") {
       // boards are mostly groups: Shift+drag inside one draws a selection box, as on empty space
@@ -517,6 +570,13 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       return setSelected(new Set([...d.additive, ...hit]));
     }
     if (d.kind === "connect") return setLinkEnd(toWorld(e.clientX, e.clientY));
+    if (d.kind === "draw") {
+      const p = toWorld(e.clientX, e.clientY);
+      const last = d.pts[d.pts.length - 1];
+      if (Math.hypot(p.x - last.x, p.y - last.y) * view.z < 2) return;
+      d.pts.push(p);
+      return setStroke([...d.pts]);
+    }
     const dx = (e.clientX - d.sx) / view.z;
     const dy = (e.clientY - d.sy) / view.z;
     if (Math.abs(dx) + Math.abs(dy) < 1) return;
@@ -527,7 +587,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       d.start.forEach((p, id) => patches.set(id, { x: Math.round(p.x + dx), y: Math.round(p.y + dy) }));
       return patchNodes(patches, first);
     }
-    patchNodes(new Map([[d.id, { width: Math.max(80, Math.round(d.w + dx)), height: Math.max(40, Math.round(d.h + dy)) }]]), first);
+    const min = docRef.current.nodes.find((n) => n.id === d.id)?.shape ? 16 : 0;
+    patchNodes(new Map([[d.id, { width: Math.max(min || 80, Math.round(d.w + dx)), height: Math.max(min || 40, Math.round(d.h + dy)) }]]), first);
   };
 
   const onPointerUp = (e: ReactPointerEvent) => {
@@ -547,6 +608,21 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       setLinkEnd(null);
     }
     if (d?.kind === "box") setBox(null);
+    if (d?.kind === "draw") {
+      setStroke(null);
+      if (d.pts.length > 1) {
+        const xs = d.pts.map((q) => q.x);
+        const ys = d.pts.map((q) => q.y);
+        const pad = 4;
+        const x = Math.min(...xs) - pad;
+        const y = Math.min(...ys) - pad;
+        const width = Math.max(16, Math.max(...xs) + pad - x);
+        const height = Math.max(16, Math.max(...ys) + pad - y);
+        const path = d.pts.flatMap((q) => [Math.round(((q.x - x) / width) * 1000), Math.round(((q.y - y) / height) * 1000)]);
+        addNode({ type: "text", text: "", shape: "pen", path, x, y, width: Math.round(width), height: Math.round(height) });
+        setSelected(new Set());
+      }
+    }
     if (d?.kind === "move" && !d.recorded && d.tapEdit) setEditing(d.tapEdit);
     window.clearTimeout(pressTimer.current);
     drag.current = pointers.current.size === 1 && d?.kind === "pinch" ? null : pointers.current.size ? d : null;
@@ -606,15 +682,16 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     const color = resolveColor(n.color);
     const isSel = selected.has(n.id);
     const isGroup = n.type === "group";
+    const shape = n.type === "text" ? n.shape : undefined;
     const style = {
       left: n.x,
       top: n.y,
       width: n.width,
       height: n.height,
       borderColor: isGroup ? (color ?? BOARD.groupBorder) : "transparent",
-      background: isGroup ? (color ? `${color}1f` : BOARD.group) : n.type === "file" ? "transparent" : (color ?? BOARD.card),
+      background: isGroup ? (color ? `${color}1f` : BOARD.group) : n.type === "file" || shape ? "transparent" : (color ?? BOARD.card),
       color: BOARD.ink,
-      boxShadow: isSel ? `0 0 0 ${2 / view.z}px ${BOARD.select}` : isGroup || n.type === "file" ? undefined : "0 1px 2px rgb(0 0 0 / 0.35)",
+      boxShadow: isSel ? `0 0 0 ${2 / view.z}px ${BOARD.select}` : isGroup || n.type === "file" || shape ? undefined : "0 1px 2px rgb(0 0 0 / 0.35)",
     } as const;
     const textStyle = {
       fontFamily: n.fontFamily ? `"${n.fontFamily}", var(--font-sans), sans-serif` : undefined,
@@ -629,7 +706,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         onPointerDown={(e) => onPointerDownNode(e, n)}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          if (n.type === "text") setEditing(n.id);
+          if (n.type === "text" && shape !== "pen") setEditing(n.id);
           if (n.type === "group") {
             // like Obsidian: double-click inside a group adds a card there
             const p = toWorld(e.clientX, e.clientY);
@@ -651,7 +728,28 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
             {n.label || "กลุ่ม"}
           </div>
         )}
+        {shape && (
+          <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+            {shape === "pen" ? (
+              <polyline
+                points={(n.path ?? []).join(" ")}
+                fill="none"
+                stroke={color ?? BOARD.pen}
+                strokeWidth={4 * view.z}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            ) : (
+              <path
+                d={shape === "ellipse" ? "M0 500a500 500 0 1 0 1000 0a500 500 0 1 0-1000 0" : shape === "diamond" ? "M500 0L1000 500L500 1000L0 500z" : "M500 0L1000 1000H0z"}
+                fill={color ?? BOARD.card}
+              />
+            )}
+          </svg>
+        )}
         {n.type === "text" &&
+          shape !== "pen" &&
           (editing === n.id ? (
             <textarea
               autoFocus
@@ -669,10 +767,10 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
           ) : (
             <div
               data-scrollable
-              className="prose prose-sm h-full max-w-none overflow-auto p-3 text-sm leading-relaxed text-neutral-900 prose-headings:text-neutral-900 prose-strong:text-neutral-900 prose-li:marker:text-neutral-700 [&_h1]:mb-1 [&_h1]:mt-0 [&_h2]:mb-1 [&_h2]:mt-0 [&_h3]:mb-1 [&_h3]:mt-0 [&_p]:my-1 [&_ul]:my-1"
-              style={{ ...textStyle, color: BOARD.ink }}
+              style={{ ...textStyle, color: BOARD.ink, ...(shape && { padding: shape === "triangle" ? "45% 22% 6%" : shape === "diamond" ? "22%" : "15%" }) }}
+              className={`relative prose prose-sm h-full max-w-none overflow-auto p-3 ${shape ? "flex flex-col items-center justify-center text-center" : ""} text-sm leading-relaxed text-neutral-900 prose-headings:text-neutral-900 prose-strong:text-neutral-900 prose-li:marker:text-neutral-700 [&_h1]:mb-1 [&_h1]:mt-0 [&_h2]:mb-1 [&_h2]:mt-0 [&_h3]:mb-1 [&_h3]:mt-0 [&_p]:my-1 [&_ul]:my-1`}
             >
-              <ReactMarkdown>{n.text || "*ดับเบิลคลิกเพื่อพิมพ์*"}</ReactMarkdown>
+              <ReactMarkdown>{n.text || (shape ? "" : "*ดับเบิลคลิกเพื่อพิมพ์*")}</ReactMarkdown>
             </div>
           ))}
         {n.type === "file" &&
@@ -793,6 +891,9 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
               const [x1, y1] = anchor(linkFrom, linking.side);
               return <path d={curve(x1, y1, linking.side, linkEnd.x, linkEnd.y, null).d} fill="none" stroke={BOARD.select} strokeWidth={2} strokeDasharray="6 4" markerEnd="url(#canvas-arrow)" />;
             })()}
+            {stroke && stroke.length > 1 && (
+              <polyline points={stroke.map((q) => `${q.x},${q.y}`).join(" ")} fill="none" stroke={BOARD.pen} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+            )}
             {box && (
               <rect
                 x={Math.min(box.a.x, box.b.x)}
@@ -808,6 +909,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
           </svg>
           <div className="pointer-events-auto">{others.map(renderNode)}</div>
         </div>
+        {pen && <div className="absolute inset-0" style={{ cursor: "crosshair" }} onPointerDown={onPointerDownDraw} />}
       </div>
 
       <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1 rounded-lg border border-border bg-background/95 p-1 shadow-sm">
@@ -823,6 +925,38 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         </button>
         <button type="button" className={btn} onClick={() => addNode({ type: "group", label: "กลุ่มใหม่", width: 600, height: 400 })} title="เพิ่มกลุ่ม" aria-label="เพิ่มกลุ่ม">
           <Icon name="group" />
+        </button>
+        <div className="relative">
+          <button type="button" className={btn} title="เพิ่มรูปทรง" aria-label="เพิ่มรูปทรง" aria-expanded={shapeMenu} onClick={() => setShapeMenu((o) => !o)}>
+            <Icon name="shape" />
+          </button>
+          {shapeMenu && (
+            <div className="absolute left-0 top-full z-10 mt-1 flex flex-col rounded-lg border border-border bg-background p-1 shadow-lg">
+              {([["ellipse", "วงกลม"], ["diamond", "ข้าวหลามตัด"], ["triangle", "สามเหลี่ยม"]] as const).map(([shape, label]) => (
+                <button
+                  key={shape}
+                  type="button"
+                  className={`${btn} justify-start whitespace-nowrap`}
+                  onClick={() => {
+                    setShapeMenu(false);
+                    addNode({ type: "text", text: "", shape, width: 200, height: 200 });
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          className={`${btn} ${pen ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
+          aria-pressed={pen}
+          onClick={() => setPen((v) => !v)}
+          title="ปากกา: วาดเส้นอิสระ (กดอีกครั้งหรือ Esc เพื่อเลิก) ใช้สองนิ้วซูมได้"
+          aria-label="ปากกา"
+        >
+          <Icon name="pen" />
         </button>
         <label className={`cursor-pointer ${btn}`} title="เพิ่มรูป" aria-label="เพิ่มรูป">
           <Icon name="image" />
@@ -928,6 +1062,9 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
                 </select>
               </>
             )}
+            <button type="button" className={btn} onClick={duplicate} title="ทำซ้ำที่เลือก (Ctrl+D) · คัดลอก/วาง Ctrl+C / Ctrl+V" aria-label="ทำซ้ำที่เลือก">
+              <Icon name="copy" />
+            </button>
             <button type="button" className={`${btn} text-destructive`} onClick={removeSelected} title="ลบที่เลือก (Delete)" aria-label="ลบที่เลือก">
               <Icon name="trash" />
             </button>
