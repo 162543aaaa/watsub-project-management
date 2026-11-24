@@ -215,6 +215,14 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     setView({ z, x, y: pad - b.minY * z });
   }, [doc.nodes]);
 
+  // typing at 40% zoom gives unreadable text: bring the card being edited to 100%, centred
+  useEffect(() => {
+    const el = viewportRef.current;
+    const n = editing ? docRef.current.nodes.find((x) => x.id === editing) : undefined;
+    if (!el || !n || viewRef.current.z >= 0.9) return;
+    setView({ z: 1, x: Math.round(el.clientWidth / 2 - (n.x + n.width / 2)), y: Math.round(el.clientHeight / 3 - n.y) });
+  }, [editing]);
+
   // ── history ────────────────────────────────────────────────────────────────
   const record = useCallback(() => {
     past.current.push(docRef.current);
