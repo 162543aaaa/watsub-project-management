@@ -242,6 +242,21 @@ export default function Whiteboard() {
     [save],
   );
 
+  // leaving the tab or app (iPad home, closing the page) saves right away instead of after the delay
+  useEffect(() => {
+    const flush = (e: Event) => {
+      if ((e.type === "visibilitychange" && document.visibilityState !== "hidden") || !dirty.current) return;
+      window.clearTimeout(saveTimer.current);
+      void save();
+    };
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [save]);
+
   useEffect(() => {
     if (!board) return;
     const poll = window.setInterval(async () => {
