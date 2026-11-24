@@ -15,9 +15,13 @@ export default function Layout() {
       ["/", "/my-work", "/tasks", "/projects", "/customers", "/calendar"].forEach(prefetchRoute);
     };
 
-    if ("requestIdleCallback" in window) {
-      const idleId = window.requestIdleCallback(warmRoutes, { timeout: 2500 });
-      return () => window.cancelIdleCallback(idleId);
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    if (typeof idleWindow.requestIdleCallback === "function") {
+      const idleId = idleWindow.requestIdleCallback(warmRoutes, { timeout: 2500 });
+      return () => idleWindow.cancelIdleCallback?.(idleId);
     }
 
     const timer = window.setTimeout(warmRoutes, 1200);

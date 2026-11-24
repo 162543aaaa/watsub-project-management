@@ -27,6 +27,8 @@ import { CSS } from "@dnd-kit/utilities";
 type TaskStatus = "To Do" | "In Progress" | "Done";
 type TaskPriority = "Low" | "Medium" | "High";
 const COLUMNS: TaskStatus[] = ["To Do", "In Progress", "Done"];
+const isTaskStatus = (status: unknown): status is TaskStatus =>
+  typeof status === "string" && COLUMNS.some((column) => column === status);
 const YEARS = [2025, 2026, 2027];
 const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -444,7 +446,15 @@ export default function Tasks() {
           return;
         }
         if (data) {
-          setLocalTasks(prev => prev.map(t => t.id === form.id ? { ...t, ...data } : t));
+          const savedStatus = isTaskStatus(data.status) ? data.status : form.status;
+          setLocalTasks(prev => prev.map(t => t.id === form.id ? {
+            ...t,
+            ...form,
+            status: savedStatus ?? t.status,
+            task_type,
+            project_id: project_id ?? undefined,
+            customer_id: customer_id ?? undefined,
+          } : t));
         }
         toast({ title: "อัปเดตงานสำเร็จ!" });
       } else {
