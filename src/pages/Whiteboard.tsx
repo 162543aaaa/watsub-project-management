@@ -323,24 +323,6 @@ export default function Whiteboard() {
         <button type="button" onClick={createBoard} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">
           + บอร์ดใหม่
         </button>
-        <button type="button" onClick={renameBoard} disabled={!board} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted disabled:opacity-50">
-          เปลี่ยนชื่อ
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setHistoryOpen((o) => !o);
-            void loadVersions();
-          }}
-          disabled={!board}
-          aria-expanded={historyOpen}
-          className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted disabled:opacity-50"
-        >
-          ประวัติ
-        </button>
-        <button type="button" onClick={deleteBoard} disabled={!board} className="rounded-md border border-border px-3 py-1 text-sm text-destructive hover:bg-muted disabled:opacity-50">
-          ลบบอร์ด
-        </button>
         <span role="status" className={`text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
           {STATUS_TEXT[status]}
         </span>
@@ -348,7 +330,12 @@ export default function Whiteboard() {
       <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-background">
         {historyOpen && (
           <aside className="absolute right-3 top-14 z-10 max-h-[70%] w-72 overflow-auto rounded-lg border border-border bg-background p-3 shadow-lg">
-            <h2 className="mb-1 text-sm font-semibold">ประวัติเวอร์ชัน</h2>
+            <div className="mb-1 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">ประวัติเวอร์ชัน</h2>
+              <button type="button" aria-label="ปิด" className="rounded-md px-2 py-1 text-sm hover:bg-muted" onClick={() => setHistoryOpen(false)}>
+                ✕
+              </button>
+            </div>
             <p className="mb-2 text-xs text-muted-foreground">บันทึกอัตโนมัติทุก 10 นาทีที่มีการแก้ เก็บไว้ {VERSIONS_KEPT} เวอร์ชันล่าสุด กู้คืนแล้วกด ↶ ย้อนได้</p>
             {versions.length === 0 && <p className="text-xs text-muted-foreground">ยังไม่มีเวอร์ชันที่บันทึกไว้</p>}
             <ul className="space-y-1">
@@ -374,6 +361,17 @@ export default function Whiteboard() {
             onAddImage={onAddImage}
             boardTitle={board.title}
             restoreRequest={restoreRequest}
+            menuActions={[
+              { label: "เปลี่ยนชื่อบอร์ด", onClick: renameBoard },
+              {
+                label: "ประวัติเวอร์ชัน",
+                onClick: () => {
+                  setHistoryOpen(true);
+                  void loadVersions();
+                },
+              },
+              { label: "ลบบอร์ด", onClick: deleteBoard, danger: true },
+            ]}
           />
         ) : (
           <p className="p-6 text-sm text-muted-foreground">{STATUS_TEXT[status]}</p>

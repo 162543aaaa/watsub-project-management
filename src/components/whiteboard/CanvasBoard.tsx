@@ -20,7 +20,7 @@ type View = { x: number; y: number; z: number };
 type Point = { x: number; y: number };
 type Drag =
   | { kind: "pan"; sx: number; sy: number; view: View }
-  | { kind: "move"; sx: number; sy: number; start: Map<string, Point>; recorded: boolean }
+  | { kind: "move"; sx: number; sy: number; start: Map<string, Point>; recorded: boolean; tapEdit: string | null }
   | { kind: "resize"; sx: number; sy: number; id: string; w: number; h: number; recorded: boolean }
   | { kind: "box"; start: Point; additive: Set<string> }
   | { kind: "connect"; from: string; side: Side }
@@ -123,9 +123,11 @@ interface Props {
   boardTitle: string;
   /** a version picked from history, applied as an undoable edit */
   restoreRequest?: { doc: CanvasDoc; key: number } | null;
+  /** board-level actions shown in the ⋯ menu (rename, history, delete) */
+  menuActions?: { label: string; onClick: () => void; danger?: boolean }[];
 }
 
-export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTitle, restoreRequest }: Props) {
+export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTitle, restoreRequest, menuActions = [] }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const [view, setView] = useState<View>({ x: 0, y: 0, z: 0.5 });
@@ -133,6 +135,11 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const [editing, setEditing] = useState<string | null>(null);
   const [box, setBox] = useState<{ a: Point; b: Point } | null>(null);
   const [linkEnd, setLinkEnd] = useState<Point | null>(null);
+  const [manyMode, setManyMode] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // finger or pen as the main pointer (iPad, phone): bigger targets, tap-to-edit, long-press to add
+  const [coarse] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches);
+  const pressTimer = useRef<number>();
   const drag = useRef<Drag | null>(null);
   const pointers = useRef(new Map<number, Point>());
   const past = useRef<CanvasDoc[]>([]);
@@ -165,8 +172,11 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     opened.current = true;
     const b = bounds(doc.nodes);
     const pad = 40;
-    const z = clampZ(Math.min(1, (el.clientWidth - pad * 2) / b.w, (el.clientHeight - pad * 2) / Math.min(b.h, OPENING_HEIGHT)));
-    setView({ z, x: (el.clientWidth - b.w * z) / 2 - b.minX * z, y: pad - b.minY * z });
+    const fit = Math.min(1, (el.clientWidth - pad * 2) / b.w, (el.clientHeight - pad * 2) / Math.min(b.h, OPENING_HEIGHT));
+    // on a narrow screen (iPad portrait) fitting the whole width makes text unreadable: keep it legible and start at the left
+    const z = clampZ(Math.max(fit, 0.4));
+    const x = fit < 0.4 ? pad - b.minX * z : (el.clientWidth - b.w * z) / 2 - b.minX * z;
+    setView({ z, x, y: pad - b.minY * z });
   }, [doc.nodes]);
 
   // ── history ────────────────────────────────────────────────────────────────
@@ -390,13 +400,25 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const onPointerDownBg = (e: ReactPointerEvent) => {
     if (e.button !== 0 || e.target !== e.currentTarget || drag.current?.kind === "pinch") return;
     setEditing(null);
-    if (e.shiftKey) {
+    setMenuOpen(false);
+    if (e.shiftKey || manyMode) {
       const p = toWorld(e.clientX, e.clientY);
       drag.current = { kind: "box", start: p, additive: new Set(selected) };
       setBox({ a: p, b: p });
     } else {
       setSelected(new Set());
       drag.current = { kind: "pan", sx: e.clientX, sy: e.clientY, view };
+      if (e.pointerType !== "mouse") {
+        // long-press on empty space adds a card, since a finger has no double-click
+        const at = toWorld(e.clientX, e.clientY);
+        window.clearTimeout(pressTimer.current);
+        pressTimer.current = window.setTimeout(() => {
+          const d = drag.current;
+          if (d?.kind !== "pan" || Math.abs(viewRef.current.x - d.view.x) + Math.abs(viewRef.current.y - d.view.y) > 10) return;
+          drag.current = null;
+          setEditing(addNode({ type: "text", text: "", width: 260, height: 120, x: Math.round(at.x - 130), y: Math.round(at.y - 60) }).id);
+        }, 550);
+      }
     }
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -404,7 +426,9 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const onPointerDownNode = (e: ReactPointerEvent, n: CanvasNode) => {
     if (e.button !== 0 || editing === n.id || drag.current?.kind === "pinch") return;
     e.stopPropagation();
-    if (e.shiftKey && n.type === "group") {
+    setMenuOpen(false);
+    const multi = e.shiftKey || manyMode;
+    if (multi && n.type === "group") {
       // boards are mostly groups: Shift+drag inside one draws a selection box, as on empty space
       const p = toWorld(e.clientX, e.clientY);
       drag.current = { kind: "box", start: p, additive: new Set(selected) };
@@ -413,7 +437,9 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       return;
     }
     let sel = selected;
-    if (e.shiftKey) {
+    // on touch, tapping a card that is already the only selection opens it for editing
+    const tapEdit = e.pointerType !== "mouse" && !multi && n.type === "text" && selected.size === 1 && selected.has(n.id) ? n.id : null;
+    if (multi) {
       sel = new Set(selected);
       if (sel.has(n.id)) sel.delete(n.id);
       else sel.add(n.id);
@@ -425,7 +451,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       start.set(x.id, { x: x.x, y: x.y });
       if (x.type === "group") nodes.filter((c) => isInside(c, x)).forEach((c) => start.set(c.id, { x: c.x, y: c.y }));
     });
-    drag.current = { kind: "move", sx: e.clientX, sy: e.clientY, start, recorded: false };
+    drag.current = { kind: "move", sx: e.clientX, sy: e.clientY, start, recorded: false, tapEdit };
     // capture on the card itself, so a double-click still lands on the card
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -499,6 +525,8 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
       setLinkEnd(null);
     }
     if (d?.kind === "box") setBox(null);
+    if (d?.kind === "move" && !d.recorded && d.tapEdit) setEditing(d.tapEdit);
+    window.clearTimeout(pressTimer.current);
     drag.current = pointers.current.size === 1 && d?.kind === "pinch" ? null : pointers.current.size ? d : null;
   };
 
@@ -550,7 +578,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
   const hasTextSelected = doc.nodes.some((n) => selected.has(n.id) && (n.type === "text" || n.type === "group"));
   const linking = drag.current?.kind === "connect" ? drag.current : null;
   const linkFrom = linking ? nodesById.get(linking.from) : undefined;
-  const handle = 12 / view.z;
+  const handle = (coarse ? 26 : 12) / view.z;
 
   const renderNode = (n: CanvasNode) => {
     const color = resolveColor(n.color);
@@ -663,7 +691,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
     );
   };
 
-  const btn = "rounded-md px-2 py-1 text-sm hover:bg-muted disabled:opacity-40";
+  const btn = `rounded-md hover:bg-muted disabled:opacity-40 ${coarse ? "min-h-10 min-w-10 px-3 py-2 text-base" : "px-2 py-1 text-sm"}`;
 
   return (
     <div className="relative h-full w-full">
@@ -778,6 +806,47 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
           + รูป
           <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => e.target.files && void addImages(e.target.files)} />
         </label>
+        <button
+          type="button"
+          className={`${btn} ${manyMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
+          aria-pressed={manyMode}
+          onClick={() => setManyMode((m) => !m)}
+          title="แตะการ์ดเพื่อเลือกหลายอัน หรือลากพื้นที่ว่างเพื่อตีกรอบ (เหมือนกด Shift)"
+        >
+          เลือกหลายอัน
+        </button>
+        <div className="relative">
+          <button type="button" className={btn} aria-label="เมนูบอร์ด" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}>
+            ⋯
+          </button>
+          {menuOpen && (
+            <div className="absolute left-0 top-full z-10 mt-1 flex w-64 flex-col rounded-lg border border-border bg-background p-1 shadow-lg">
+              {[
+                ...menuActions.filter((a) => !a.danger),
+                { label: "นำเข้า .canvas", onClick: () => importRef.current?.click() },
+                { label: "ส่งออก .canvas", onClick: exportCanvas },
+                ...menuActions.filter((a) => a.danger),
+              ].map((a) => (
+                <button
+                  key={a.label}
+                  type="button"
+                  className={`${btn} text-left ${"danger" in a && a.danger ? "text-destructive" : ""}`}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    a.onClick();
+                  }}
+                >
+                  {a.label}
+                </button>
+              ))}
+              <p className="border-t border-border px-2 pt-2 text-xs leading-relaxed text-muted-foreground">
+                {coarse
+                  ? "แตะการ์ดอีกครั้งเพื่อแก้ไข · กดค้างที่พื้นที่ว่างเพื่อเพิ่มการ์ด · ลากจุดข้างการ์ดเพื่อเชื่อม · สองนิ้วซูม"
+                  : "ดับเบิลคลิกเพื่อเพิ่ม/แก้ไข · ลากจุดข้างการ์ดเพื่อเชื่อม · Shift เลือกหลายอัน · Ctrl+Z ย้อน · Ctrl+ล้อเมาส์ซูม"}
+              </p>
+            </div>
+          )}
+        </div>
         {selected.size > 0 && (
           <>
             <span className="mx-1 h-5 w-px bg-border" />
@@ -856,19 +925,7 @@ export default function CanvasBoard({ doc, onChange, files, onAddImage, boardTit
         </button>
       </div>
 
-      <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-border bg-background/95 p-1 text-sm shadow-sm">
-        <button type="button" className={btn} onClick={() => importRef.current?.click()}>
-          นำเข้า .canvas
-        </button>
-        <input ref={importRef} type="file" accept=".canvas,.json,application/json" className="sr-only" onChange={(e) => e.target.files?.[0] && void importCanvas(e.target.files[0])} />
-        <button type="button" className={btn} onClick={exportCanvas}>
-          ส่งออก .canvas
-        </button>
-      </div>
-
-      <p className="pointer-events-none absolute right-3 top-3 hidden max-w-sm rounded-md bg-background/80 px-2 py-1 text-right text-xs text-muted-foreground lg:block">
-        ลากพื้นหลัง = เลื่อน · Shift+ลาก = เลือกหลายการ์ด · Ctrl+ล้อเมาส์ = ซูม · ดับเบิลคลิก = เพิ่ม/แก้การ์ด · ลากจุดข้างการ์ด = เชื่อมเส้น · ดับเบิลคลิกเส้น = ใส่ป้าย
-      </p>
+      <input ref={importRef} type="file" accept=".canvas,.json,application/json" className="sr-only" onChange={(e) => e.target.files?.[0] && void importCanvas(e.target.files[0])} />
     </div>
   );
 }
